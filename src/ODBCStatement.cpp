@@ -361,7 +361,7 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
                 continue;
             }
 
-            if ((*p) == '%' && (p == str->getBuffer() || !isalnum(*(p-1)))) { // found value marker
+            if ((*p) == '%' && (p == str->getBuffer() || !isalnum(*(p-1)))) { // Found value marker.
                 int offset = p - str->getBuffer();
 
                 p++;
