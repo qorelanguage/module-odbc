@@ -29,6 +29,7 @@
 #define _QORE_ODBCSTATEMENT_H
 
 #include <cstring>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -37,18 +38,19 @@
 #include <sqlext.h>
 
 #include "qore/common.h"
+#include "qore/QoreEncoding.h"
 #include "qore/QoreString.h"
 #include "qore/QoreStringNode.h"
 #include "qore/AbstractQoreNode.h"
+#include "qore/AbstractPrivateData.h"
 #include "qore/BinaryNode.h"
+#include "qore/QoreHashNode.h"
 #include "qore/Datasource.h"
 #include "qore/ExceptionSink.h"
 #include "qore/DateTimeNode.h"
 #include "qore/QoreBoolNode.h"
 #include "qore/QoreBigIntNode.h"
-#include "qore/QoreEncoding.h"
 #include "qore/QoreFloatNode.h"
-#include "qore/QoreHashNode.h"
 #include "qore/QoreListNode.h"
 #include "qore/QoreNullNode.h"
 
@@ -88,11 +90,13 @@ private:
     int fetchResultColumnMetadata(ExceptionSink* xsink);
 
     //! Get one row of the result set.
-    /** @param xsink exception sink
+    /** @param row row number from 0, used for error descriptions only
+        @param status status of the function, 0 for OK, -1 for error, 1 after reaching the end of the result-set
+        @param xsink exception sink
 
         @return one result-set row
      */
-    QoreHashNode* getRowIntern(ExceptionSink* xsink);
+    QoreHashNode* getRowIntern(int row, int& status, ExceptionSink* xsink);
 
     //! Get a column's value and return a Qore node made from it.
     /** @param row row number from 0, used for error descriptions only
