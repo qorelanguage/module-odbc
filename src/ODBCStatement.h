@@ -61,8 +61,6 @@ class ODBCConnection;
 //! A class representing one ODBC SQL statement.
 class ODBCStatement {
 private:
-    const int COLUMN_VALUE_BUF_SIZE = 4096;
-
     //! ODBC connection wrapper.
     ODBCConnection* conn;
 
@@ -180,7 +178,6 @@ public:
 };
 
 inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBCResultColumn& rcol, ExceptionSink* xsink) {
-    char buf[COLUMN_VALUE_BUF_SIZE];
     SQLLEN indicator;
     SQLRETURN ret;
     switch(rcol.dataType) {
@@ -266,7 +263,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
                 }
             }
             break;
-        
+
             /*SimpleRefHolder<QoreStringNode> val(new QoreStringNode);
             while (true) {
                 ret = SQLGetData(stmt, column, SQL_C_CHAR, buf, COLUMN_VALUE_BUF_SIZE, &indicator);
@@ -364,30 +361,30 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
         }*/
 
         // Time types.
-        /*case SQL_TYPE_TIMESTAMP: {
-            // TODO
-            ret = SQLGetData(stmt, column, SQL_C_CHAR, buf, sizeof(buf), &indicator);
+        case SQL_TYPE_TIMESTAMP: {
+            TIMESTAMP_STRUCT val;
+            ret = SQLGetData(stmt, column, SQL_C_TYPE_TIMESTAMP, &val, sizeof(TIMESTAMP_STRUCT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                // TODO
+                return new DateTimeNode(val.year, val.month, val.day, val.hour, val.minute, val.second, val.fraction/1000000, false);
             }
             break;
         }
         case SQL_TYPE_TIME: {
-            // TODO
-            ret = SQLGetData(stmt, column, SQL_C_CHAR, buf, sizeof(buf), &indicator);
+            TIME_STRUCT val;
+            ret = SQLGetData(stmt, column, SQL_C_TYPE_TIME, &val, sizeof(TIME_STRUCT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                // TODO
+                return DateTimeNode::makeRelative(0, 0, 0, val.hour, val.minute, val.second, 0);
             }
             break;
         }
         case SQL_TYPE_DATE: {
-            // TODO
-            ret = SQLGetData(stmt, column, SQL_C_CHAR, buf, sizeof(buf), &indicator);
+            DATE_STRUCT val;
+            ret = SQLGetData(stmt, column, SQL_C_TYPE_DATE, &val, sizeof(DATE_STRUCT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                // TODO
+                return new DateTimeNode(val.year, val.month, val.day, 0, 0, 0, 0, false);
             }
             break;
-        }*/
+        }
 
         // Interval types.
         case SQL_INTERVAL_MONTH: {
