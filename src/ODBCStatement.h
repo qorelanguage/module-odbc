@@ -72,6 +72,8 @@ private:
     //! Temporary holder for params.
     TempParamHolder tmp;
 
+    ReferenceHolder<QoreListNode> params;
+
     //! Result columns metadata.
     std::vector<ODBCResultColumn> resColumns;
 
@@ -123,7 +125,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int parse(const QoreString* str, const QoreListNode* args, ExceptionSink* xsink);
+    int parse(QoreString* str, const QoreListNode* args, ExceptionSink* xsink);
 
     //! Bind a simple list of SQL parameters.
     /** @param args SQL parameters
@@ -134,10 +136,16 @@ private:
     int bind(const QoreListNode* args, ExceptionSink* xsink);
 
     //! Disabled copy constructor.
-    DLLLOCAL ODBCStatement(const ODBCStatement& s) {}
+    DLLLOCAL ODBCStatement(const ODBCStatement& s) : params(0, 0) {}
 
     //! Disabled assignment operator.
     DLLLOCAL ODBCStatement& operator=(const ODBCStatement& s) { return *this; }
+
+    enum E_SQL_COMMENT_TYPE {
+        ESCS_NONE = 0,
+        ESCS_LINE,
+        ESCS_BLOCK
+    };
 
 public:
     //! Constructor.
@@ -256,7 +264,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 std::unique_ptr<char> buf(new char[indicator]);
                 if (buf.get() == NULL) {
-                    ErrorHelper::exception(xsink, "DBI:ODBC:MEMORY-ERROR",
+                    xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
                         "could not allocate buffer for result character data of row #%d, column #%d", row, column);
                     return 0;
                 }
@@ -300,7 +308,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 std::unique_ptr<char> buf(new char[indicator]);
                 if (buf.get() == NULL) {
-                    ErrorHelper::exception(xsink, "DBI:ODBC:MEMORY-ERROR",
+                    xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
                         "could not allocate buffer for result character data of row #%d, column #%d", row, column);
                     return 0;
                 }
@@ -325,7 +333,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
                 SQLLEN size = indicator;
                 std::unique_ptr<char> buf(new char[size]);
                 if (buf.get() == NULL) {
-                    ErrorHelper::exception(xsink, "DBI:ODBC:MEMORY-ERROR",
+                    xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
                         "could not allocate buffer for result binary data of row #%d, column #%d", row, column);
                     return 0;
                 }
@@ -566,7 +574,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
         default: {
             std::stringstream s("do not know how to handle result value of type '%d'");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            ErrorHelper::exception(xsink, "DBI:ODBC:RESULT-ERROR", s.str().c_str(), rcol.dataType);
+            xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.str().c_str(), rcol.dataType);
             return 0;
         }
     }
@@ -579,7 +587,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
     if (!SQL_SUCCEEDED(ret)) { // error
         std::stringstream s("error occured when getting value of row #%d, column #%d");
         ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-        ErrorHelper::exception(xsink, "DBI:ODBC:RESULT-ERROR", s.str().c_str(), row, column);
+        xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.str().c_str(), row, column);
     }
 
     return 0;

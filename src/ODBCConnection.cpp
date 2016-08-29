@@ -38,7 +38,7 @@ ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xs
     // Allocate an environment handle.
     ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
     if (!SQL_SUCCEEDED(ret)) { // error
-        xsink->raiseException("DBI:ODBC:ENV-HANDLE-ERROR", "could not allocate an environment handle", xsink);
+        xsink->raiseException("DBI:ODBC:ENV-HANDLE-ERROR", "could not allocate an environment handle");
         return;
     }
 
@@ -48,7 +48,7 @@ ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xs
     // Allocate a connection handle.
     ret = SQLAllocHandle(SQL_HANDLE_DBC, env, &dbConn);
     if (!SQL_SUCCEEDED(ret)) { // error
-        xsink->raiseException("DBI:ODBC:CONNECTION-HANDLE-ERROR", "could not allocate a connection handle", xsink);
+        xsink->raiseException("DBI:ODBC:CONNECTION-HANDLE-ERROR", "could not allocate a connection handle");
         return;
     }
 

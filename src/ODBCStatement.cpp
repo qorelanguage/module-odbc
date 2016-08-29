@@ -30,6 +30,7 @@
 #include <memory>
 
 #include "qore/QoreLib.h"
+#include "qore/DBI.h"
 
 #include "ODBCConnection.h"
 
@@ -38,7 +39,7 @@
 //     Public methods     //
 ///////////////////////////
 
-ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) : conn(c) {
+ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) : conn(c), params(new QoreListNode, xsink) {
     conn->allocStatementHandle(stmt, xsink);
     if (*xsink)
         return;
@@ -46,7 +47,10 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) : conn(c) 
     // TODO
 }
 
-ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) : conn(static_cast<ODBCConnection*>(ds->getPrivateData())) {
+ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
+    conn(static_cast<ODBCConnection*>(ds->getPrivateData())),
+    params(new QoreListNode, xsink)
+{
     conn->allocStatementHandle(stmt, xsink);
     if (*xsink)
         return;
@@ -122,7 +126,7 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink) {
         if (!SQL_SUCCEEDED(ret)) { // error
             std::stringstream s("error occured when fetching row #%d");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            ErrorHelper::exception(xsink, "DBI:ODBC:FETCH-ERROR", s.str().c_str(), row);
+            xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.str().c_str(), row);
             return 0;
         }
 
@@ -197,7 +201,7 @@ int ODBCStatement::exec(const QoreString* qstr, const QoreListNode* args, Except
     if (parse(str.get(), args, xsink))
         return -1;
 
-    if (bind(args, xsink))
+    if (bind(*params, xsink))
         return -1;
 
     return execIntern(str->getBuffer(), xsink);
@@ -232,7 +236,7 @@ int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
         if (!SQL_SUCCEEDED(ret)) { // error
             std::stringstream s("error occured when fetching result column metadata of column #%d");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            ErrorHelper::exception(xsink, "DBI:ODBC:COLUMN-METADATA-ERROR", s.str().c_str(), i+1);
+            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.str().c_str(), i+1);
             return -1;
         }
 
@@ -243,7 +247,7 @@ int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
         if (!SQL_SUCCEEDED(ret)) { // error
             std::stringstream s("error occured when fetching name of result column #%d");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            ErrorHelper::exception(xsink, "DBI:ODBC:COLUMN-METADATA-ERROR", s.str().c_str(), i+1);
+            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.str().c_str(), i+1);
             return -1;
         }
     }
@@ -259,7 +263,7 @@ QoreHashNode* ODBCStatement::getRowIntern(int row, int& status, ExceptionSink* x
     if (!SQL_SUCCEEDED(ret)) { // error
         std::stringstream s("error occured when fetching row #%d");
         ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-        ErrorHelper::exception(xsink, "DBI:ODBC:FETCH-ERROR", s.str().c_str(), row);
+        xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.str().c_str(), row);
         status = -1; // Error.
         return 0;
     }
@@ -316,8 +320,102 @@ int ODBCStatement::execIntern(const char* str, ExceptionSink* xsink) {
     return 0;
 }
 
-int ODBCStatement::parse(const QoreString* str, const QoreListNode* args, ExceptionSink* xsink) {
-    // TODO
+int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSink* xsink) {
+    char quote = 0;
+    const char *p = str->getBuffer();
+    QoreString tmp;
+    int index = 0;
+    E_SQL_COMMENT_TYPE comment = ESCS_NONE;
+
+    while (*p) {
+        if (!quote) {
+            if (comment == ESCS_NONE) {
+                if ((*p) == '-' && (*(p+1)) == '-') {
+                    comment = ESCS_LINE;
+                    p += 2;
+                    continue;
+                }
+
+                if ((*p) == '/' && (*(p+1)) == '*') {
+                    comment = ESCS_BLOCK;
+                    p += 2;
+                    continue;
+                }
+            }
+            else {
+                if (comment == ESCS_LINE) {
+                    if ((*p) == '\n' || ((*p) == '\r'))
+                        comment = ESCS_NONE;
+                    ++p;
+                    continue;
+                }
+
+                assert(comment == ESCS_BLOCK);
+                if ((*p) == '*' && (*(p+1)) == '/') {
+                    comment = ESCS_NONE;
+                    p += 2;
+                    continue;
+                }
+
+                ++p;
+                continue;
+            }
+
+            if ((*p) == '%' && (p == str->getBuffer() || !isalnum(*(p-1)))) { // found value marker
+                int offset = p - str->getBuffer();
+
+                p++;
+                const AbstractQoreNode* v = args ? args->retrieve_entry(index++) : NULL;
+                if ((*p) == 'd') {
+                    DBI_concat_numeric(&tmp, v);
+                    str->replace(offset, 2, &tmp);
+                    p = str->getBuffer() + offset + tmp.strlen();
+                    tmp.clear();
+                    continue;
+                }
+                if ((*p) == 's') {
+                    if (DBI_concat_string(&tmp, v, xsink))
+                        return -1;
+                    str->replace(offset, 2, &tmp);
+                    p = str->getBuffer() + offset + tmp.strlen();
+                    tmp.clear();
+                    continue;
+                }
+                if ((*p) != 'v') {
+                    xsink->raiseException("DBI-EXEC-PARSE-EXCEPTION", "invalid value specification (expecting '%v' or '%%d', got %%%c)", *p);
+                    return -1;
+                }
+                p++;
+                if (isalpha(*p)) {
+                    xsink->raiseException("DBI-EXEC-PARSE-EXCEPTION", "invalid value specification (expecting '%v' or '%%d', got %%v%c*)", *p);
+                    return -1;
+                }
+
+                str->replace(offset, 2, "?");
+                p = str->getBuffer() + offset + 1;
+                params->push(v->refSelf());
+                continue;
+            }
+
+            // Allow escaping of '%' characters.
+            if ((*p) == '\\' && (*(p+1) == ':' || *(p+1) == '%')) {
+                str->splice(p - str->getBuffer(), 1, xsink);
+                p += 2;
+                continue;
+            }
+        }
+
+        if (((*p) == '\'') || ((*p) == '\"')) {
+            if (!quote)
+                quote = *p;
+            else if (quote == (*p))
+                quote = 0;
+            p++;
+            continue;
+        }
+
+        p++;
+    }
     return 0;
 }
 
@@ -414,7 +512,7 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
             default: {
                 std::stringstream s("do not know how to bind values of type '%s'");
                 ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-                ErrorHelper::exception(xsink, "DBI:ODBC:BIND-ERROR", s.str().c_str(), arg->getTypeName());
+                xsink->raiseException("DBI:ODBC:BIND-ERROR", s.str().c_str(), arg->getTypeName());
                 return -1;
             }
         } //  switch
@@ -422,7 +520,7 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
         if (!SQL_SUCCEEDED(ret)) { // error
             std::stringstream s("failed binding parameter with index %d of type '%s'");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            ErrorHelper::exception(xsink, "DBI:ODBC:BIND-ERROR", s.str().c_str(), i, arg->getTypeName());
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", s.str().c_str(), i, arg->getTypeName());
             return -1;
         }
     }

@@ -44,20 +44,6 @@ private:
     DLLLOCAL ErrorHelper();
     DLLLOCAL ~ErrorHelper();
 public:
-    //! Raise an exception with description according to the passed format and arguments.
-    static void exception(ExceptionSink* xsink, const char* err, const char* fmt, ...) {
-        SimpleRefHolder<QoreStringNode> estr(new QoreStringNode);
-        va_list args;
-        while (fmt) {
-            va_start(args, fmt);
-            int rc = estr->vsprintf(fmt, args);
-            va_end(args);
-            if (!rc)
-                break;
-        }
-        xsink->raiseException(err, estr->getBuffer());
-    }
-
     //! Extract ODBC diagnostic records and output them to a stringstream.
     static void extractDiag(SQLSMALLINT handleType, SQLHANDLE& handle, std::stringstream& s) {
         SQLINTEGER i = 1;
