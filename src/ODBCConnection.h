@@ -57,12 +57,18 @@ private:
     //! ODBC connection handle.
     SQLHDBC dbConn;
 
+    //! Version of the connected DBMS;
+    int serverVersion;
+
     //! Extract ODBC diagnostic and raise a Qore exception.
     /** @param err error "code"
         @param desc error description
         @param xsink exception sink
      */
     void handleDbcError(const char* err, const char* desc, ExceptionSink *xsink);
+
+    //! Parse ODBC DBMS version string.
+    void parseServerVersion(const char* str);
 
 public:
     //! Constructor.

@@ -35,7 +35,7 @@
 #include "ODBCStatement.h"
 
 
-ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xsink) : ds(d) {
+ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xsink) : ds(d), serverVersion(0) {
     SQLRETURN ret;
     // Allocate an environment handle.
     ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
@@ -68,7 +68,13 @@ ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xs
         return;
     }
 
-    // server version
+    // Get DBMS (server) version.
+    char dbmsVerStr[128]; // Will contain ver in the form "01.02.0034"
+    SQLSMALLINT unused;
+    ret = SQLGetInfoA(dbConn, SQL_DBMS_VER, dbmsVerStr, 128, &unused);
+    if (SQL_SUCCEEDED(ret)) {
+        parseServerVersion(dbmsVerStr);
+    }
 
     // timezones
 
@@ -174,8 +180,7 @@ AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink*
 }
 
 int ODBCConnection::getServerVersion() const {
-    // TODO
-    return 0;
+    return serverVersion;
 }
 
 void ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) {
@@ -189,5 +194,24 @@ void ODBCConnection::handleDbcError(const char* err, const char* desc, Exception
     std::stringstream s(desc);
     ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
     xsink->raiseException(err, s.str().c_str());
+}
+
+// Version string is in the form "xx.xx.xxxx".
+void ODBCConnection::parseServerVersion(const char* str) {
+    int major, minor, sub;
+    major = minor = sub = 0;
+
+    major += (str[0] - 48) * 10;
+    major += str[1] - 48;
+
+    minor += (str[3] - 48) * 10;
+    minor += str[4] - 48;
+
+    sub += (str[6] - 48) * 1000;
+    sub += (str[7] - 48) * 100;
+    sub += (str[8] - 48) * 10;
+    sub += str[9] - 48;
+
+    serverVersion = major*1000000 + minor*10000 + sub;
 }
 
