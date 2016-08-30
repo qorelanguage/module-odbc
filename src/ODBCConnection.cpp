@@ -29,6 +29,8 @@
 
 #include <memory>
 
+#include "qore/QoreLib.h"
+
 #include "ErrorHelper.h"
 #include "ODBCStatement.h"
 
@@ -42,7 +44,7 @@ ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xs
         return;
     }
 
-    // We want ODBC 3 support.
+    // Use ODBC version 3.
     SQLSetEnvAttr(env, SQL_ATTR_ODBC_VERSION, (void*) SQL_OV_ODBC3, 0);
 
     // Allocate a connection handle.
@@ -97,6 +99,13 @@ ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xs
 }
 
 ODBCConnection::~ODBCConnection() {
+    while (true) {
+        SQLRETURN ret = SQLDisconnect(dbConn);
+        if (SQL_SUCCEEDED(ret))
+            break;
+        qore_usleep(50*1000); // Sleep in intervals of 50 ms until disconnected.
+    }
+
     // Free up allocated handles.
     SQLFreeHandle(SQL_HANDLE_DBC, dbConn);
     SQLFreeHandle(SQL_HANDLE_ENV, env);
