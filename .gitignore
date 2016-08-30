@@ -29,6 +29,7 @@ src/*.dox.h
 src/qc_*.cpp
 src/ql_*.cpp
 src/QC_*.cpp
+build/
 
 # temporary doc files
 docs/*.tag
