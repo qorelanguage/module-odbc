@@ -57,8 +57,11 @@ private:
     //! ODBC connection handle.
     SQLHDBC dbConn;
 
-    //! Version of the connected DBMS;
-    int serverVersion;
+    //! Version of the used ODBC DB driver.
+    int clientVer;
+
+    //! Version of the connected DBMS.
+    int serverVer;
 
     //! Extract ODBC diagnostic and raise a Qore exception.
     /** @param err error "code"
@@ -67,8 +70,12 @@ private:
      */
     void handleDbcError(const char* err, const char* desc, ExceptionSink *xsink);
 
-    //! Parse ODBC DBMS version string.
-    void parseServerVersion(const char* str);
+    //! Parse ODBC version string.
+    /** @param str version string
+
+        @return version in the form: major*1000000 + minor*10000 + sub
+     */
+    int parseOdbcVersion(const char* str);
 
 public:
     //! Constructor.
@@ -130,7 +137,25 @@ public:
      */
     DLLLOCAL AbstractQoreNode* execRaw(const QoreString* qstr, ExceptionSink* xsink);
 
-    DLLLOCAL int getServerVersion() const;
+    //! Allocate an ODBC statement handle.
+    /** @param stmt ODBC statement handle
+        @param xsink exception sink
+     */
+    DLLLOCAL void allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink);
+
+    //! Return ODBC driver (client) version.
+    /** @return version in the form: major*1000000 + minor*10000 + sub
+     */
+    DLLLOCAL int getClientVersion() const {
+        return clientVer;
+    }
+
+    //! Return DBMS (server) version.
+    /** @return version in the form: major*1000000 + minor*10000 + sub
+     */
+    DLLLOCAL int getServerVersion() const {
+        return serverVer;
+    }
 
     DLLLOCAL Datasource* getDs() const {
         return ds;
@@ -139,12 +164,6 @@ public:
     DLLLOCAL bool wasInTransaction() const {
         return ds->activeTransaction();
     }
-
-    //! Allocate an ODBC statement handle.
-    /** @param stmt ODBC statement handle
-        @param xsink exception sink
-     */
-    DLLLOCAL void allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink);
 };
 
 #endif // _QORE_ODBCCONNECTION_H

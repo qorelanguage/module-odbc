@@ -149,8 +149,8 @@ static int odbc_rollback(Datasource* ds, ExceptionSink* xsink) {
 }
 
 static AbstractQoreNode* odbc_get_client_version(const Datasource* ds, ExceptionSink* xsink) {
-    // TODO
-    return 0;
+    ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    return new QoreBigIntNode(conn->getClientVersion());
 }
 
 static AbstractQoreNode* odbc_get_server_version(Datasource* ds, ExceptionSink* xsink) {
@@ -179,8 +179,8 @@ QoreStringNode *odbc_module_init() {
     methods.add(QDBI_METHOD_ROLLBACK, odbc_rollback);
     methods.add(QDBI_METHOD_BEGIN_TRANSACTION, odbc_begin_transaction);
     methods.add(QDBI_METHOD_ABORT_TRANSACTION_START, odbc_rollback);
-    methods.add(QDBI_METHOD_GET_SERVER_VERSION, odbc_get_server_version);
     methods.add(QDBI_METHOD_GET_CLIENT_VERSION, odbc_get_client_version);
+    methods.add(QDBI_METHOD_GET_SERVER_VERSION, odbc_get_server_version);
 
     // prepared statement stuff
 

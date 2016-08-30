@@ -35,7 +35,7 @@
 #include "ODBCStatement.h"
 
 
-ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xsink) : ds(d), serverVersion(0) {
+ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xsink) : ds(d), clientVer(0), serverVer(0) {
     SQLRETURN ret;
     // Allocate an environment handle.
     ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
@@ -69,11 +69,17 @@ ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xs
     }
 
     // Get DBMS (server) version.
-    char dbmsVerStr[128]; // Will contain ver in the form "01.02.0034"
+    char verStr[128]; // Will contain ver in the form "01.02.0034"
     SQLSMALLINT unused;
-    ret = SQLGetInfoA(dbConn, SQL_DBMS_VER, dbmsVerStr, 128, &unused);
+    ret = SQLGetInfoA(dbConn, SQL_DBMS_VER, verStr, 128, &unused);
     if (SQL_SUCCEEDED(ret)) {
-        parseServerVersion(dbmsVerStr);
+        serverVer = parseOdbcVersion(verStr);
+    }
+
+    // Get ODBC DB driver version.
+    ret = SQLGetInfoA(dbConn, SQL_DRIVER_VER, verStr, 128, &unused);
+    if (SQL_SUCCEEDED(ret)) {
+        clientVer = parseOdbcVersion(verStr);
     }
 
     // timezones
@@ -179,10 +185,6 @@ AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink*
     return new QoreBigIntNode(res.rowsAffected());
 }
 
-int ODBCConnection::getServerVersion() const {
-    return serverVersion;
-}
-
 void ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) {
     SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, dbConn, &stmt);
     if (!SQL_SUCCEEDED(ret)) { // error
@@ -197,7 +199,7 @@ void ODBCConnection::handleDbcError(const char* err, const char* desc, Exception
 }
 
 // Version string is in the form "xx.xx.xxxx".
-void ODBCConnection::parseServerVersion(const char* str) {
+int ODBCConnection::parseOdbcVersion(const char* str) {
     int major, minor, sub;
     major = minor = sub = 0;
 
@@ -212,6 +214,6 @@ void ODBCConnection::parseServerVersion(const char* str) {
     sub += (str[8] - 48) * 10;
     sub += str[9] - 48;
 
-    serverVersion = major*1000000 + minor*10000 + sub;
+    return major*1000000 + minor*10000 + sub;
 }
 
