@@ -301,7 +301,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
         case SQL_WCHAR:
         case SQL_WVARCHAR:
         case SQL_WLONGVARCHAR: {
-            wchar_t unused[1];
+            SQLWCHAR unused[1];
             ret = SQLGetData(stmt, column, SQL_C_WCHAR, unused, 0, &indicator); // Find out data size.
             if (ret == SQL_NO_DATA) // No data, therefore returning empty string.
                 return new QoreStringNode;
@@ -312,7 +312,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
                         "could not allocate buffer for result character data of row #%d, column #%d", row, column);
                     return 0;
                 }
-                ret = SQLGetData(stmt, column, SQL_C_WCHAR, reinterpret_cast<wchar_t*>(buf.get()), indicator, &indicator);
+                ret = SQLGetData(stmt, column, SQL_C_WCHAR, reinterpret_cast<SQLWCHAR*>(buf.get()), indicator, &indicator);
                 if (SQL_SUCCEEDED(ret)) {
                     SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator-1, indicator, QEM.findCreate("UTF-16")));
                     return str.release();

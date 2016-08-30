@@ -382,12 +382,12 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
                     continue;
                 }
                 if ((*p) != 'v') {
-                    xsink->raiseException("DBI-EXEC-PARSE-EXCEPTION", "invalid value specification (expecting '%v' or '%%d', got %%%c)", *p);
+                    xsink->raiseException("DBI:ODBC:PARSE-ERROR", "invalid value specification (expecting '%v' or '%%d', got %%%c)", *p);
                     return -1;
                 }
                 p++;
                 if (isalpha(*p)) {
-                    xsink->raiseException("DBI-EXEC-PARSE-EXCEPTION", "invalid value specification (expecting '%v' or '%%d', got %%v%c*)", *p);
+                    xsink->raiseException("DBI:ODBC:PARSE-ERROR", "invalid value specification (expecting '%v' or '%%d', got %%v%c*)", *p);
                     return -1;
                 }
 
@@ -437,7 +437,7 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
                 qore_size_t len = tstr->size();
                 char* cstr = tmp.addC(tstr.giveBuffer());
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR,
-                    len, 0, reinterpret_cast<wchar_t*>(cstr), len, 0);
+                    len, 0, reinterpret_cast<SQLWCHAR*>(cstr), len, 0);
                 break;
             }
             case NT_NUMBER: {
