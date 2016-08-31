@@ -161,12 +161,9 @@ public:
         return serverVer;
     }
 
-    DLLLOCAL Datasource* getDs() const {
+    //! Return datasource of the connection.
+    DLLLOCAL Datasource* getDatasource() const {
         return ds;
-    }
-
-    DLLLOCAL bool wasInTransaction() const {
-        return ds->activeTransaction();
     }
 };
 

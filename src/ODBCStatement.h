@@ -63,12 +63,14 @@ class ODBCConnection;
 //! A class representing one ODBC SQL statement.
 class ODBCStatement {
 private:
+    //! Possible comment types. Used in the parse() method.
     enum SQLCommentType {
         ESCT_NONE = 0,
         ESCT_LINE,
         ESCT_BLOCK
     };
 
+    //! Possible states when running getRowIntern() method.
     enum GetRowInternStatus {
         EGRIS_OK = 0,
         EGRIS_END,
@@ -84,6 +86,7 @@ private:
     //! Temporary holder for params.
     TempParamHolder tmp;
 
+    //! Parameters which will be used in the statement.
     ReferenceHolder<QoreListNode> params;
 
     //! Result columns metadata.
@@ -163,6 +166,7 @@ public:
     //! Destructor.
     DLLLOCAL ~ODBCStatement();
 
+    //! Return how many rows were affected by the executed statement.
     DLLLOCAL int rowsAffected();
 
     //! Return if there are any results available.

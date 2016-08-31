@@ -45,6 +45,10 @@ private:
     DLLLOCAL ~ErrorHelper();
 public:
     //! Extract ODBC diagnostic records and output them to a stringstream.
+    /** @param handleType type of the ODBC handle
+        @param handle ODBC handle
+        @param s stringstream where the output will be written to
+     */
     static void extractDiag(SQLSMALLINT handleType, SQLHANDLE& handle, std::stringstream& s) {
         SQLINTEGER i = 1;
         SQLINTEGER native;
@@ -61,6 +65,11 @@ public:
         }
     }
 
+    //! Extract ODBC state for the first record.
+    /** @param handleType type of the ODBC handle
+        @param handle ODBC handle
+        @param buf buffer where the ODBC state will be written to
+     */
     static void extractState(SQLSMALLINT handleType, SQLHANDLE& handle, char* buf) {
         SQLINTEGER native;
         SQLSMALLINT textLen;
