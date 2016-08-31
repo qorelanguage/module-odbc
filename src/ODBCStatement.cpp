@@ -152,16 +152,16 @@ QoreListNode* ODBCStatement::getOutputList(ExceptionSink* xsink) {
         return 0;
 
     int row = 1;
-    int status;
+    GetRowInternStatus status;
     while (true) {
         ReferenceHolder<QoreHashNode> h(getRowIntern(row++, status, xsink), xsink);
-        if (status == 0) {
+        if (status == EGRIS_OK) { // Ok.
             l->push(h.release());
         }
-        else if (status == 1) {
+        else if (status == EGRIS_END) { // End of result-set.
             break;
         }
-        else { // status == -1
+        else { // status == EGRIS_ERROR
             return 0;
         }
     }
@@ -174,18 +174,18 @@ QoreHashNode* ODBCStatement::getSingleRow(ExceptionSink* xsink) {
         return 0;
 
     int row = 1;
-    int status;
+    GetRowInternStatus status;
     ReferenceHolder<QoreHashNode> h(getRowIntern(row++, status, xsink), xsink);
-    if (status == 0) { // Ok. Now have to check that there is only one row of data.
+    if (status == EGRIS_OK) { // Ok. Now have to check that there is only one row of data.
         ReferenceHolder<QoreHashNode> h2(getRowIntern(row, status, xsink), xsink);
-        if (status == 0) {
+        if (status == EGRIS_OK) {
             xsink->raiseException("DBI:ODBC:SELECT-ROW-ERROR", "SQL passed to selectRow() returned more than 1 row");
             return 0;
         }
-        if (status == -1)
+        if (status == EGRIS_ERROR)
             return 0;
     }
-    else if (status == 1 || status == -1) { // No data or error.
+    else if (status == EGRIS_END || status == EGRIS_ERROR) { // No data or error.
         return 0;
     }
 
@@ -254,41 +254,35 @@ int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
     return 0;
 }
 
-QoreHashNode* ODBCStatement::getRowIntern(int row, int& status, ExceptionSink* xsink) {
+QoreHashNode* ODBCStatement::getRowIntern(int row, GetRowInternStatus& status, ExceptionSink* xsink) {
     SQLRETURN ret = SQLFetch(stmt);
     if (ret == SQL_NO_DATA) { // Reached the end of the result-set.
-        status = 1;
+        status = EGRIS_END;
         return 0;
     }
     if (!SQL_SUCCEEDED(ret)) { // error
         std::stringstream s("error occured when fetching row #%d");
         ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.str().c_str(), row);
-        status = -1; // Error.
+        status = EGRIS_ERROR;
         return 0;
     }
 
     ReferenceHolder<QoreHashNode> h(new QoreHashNode, xsink); // Row hash.
-    if (*xsink)
+    if (*xsink) {
+        status = EGRIS_ERROR;
         return 0;
+    }
 
     int columns = resColumns.size();
     for (int i = 0; i < columns; i++) {
         ODBCResultColumn& col = resColumns[i];
         ReferenceHolder<AbstractQoreNode> n(xsink);
-        /*switch(col.dataType) {
-            case : {
-                break;
-            }
-            default: {
-                std::stringstream s("do not know how to handle result value of type '%d'");
-                ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-                ErrorHelper::exception(xsink, "DBI:ODBC:RESULT-ERROR", s.str(), col.dataType);
-                status = -1; // Error.
-                return 0;
-            }
-        }*/
         n = getColumnValue(row, i+1, col, xsink);
+        if (*xsink) {
+            status = EGRIS_ERROR;
+            return 0;
+        }
 
         HashAssignmentHelper hah(**h, col.name);
         if (*hah) { // Find a unique column name.
@@ -307,7 +301,7 @@ QoreHashNode* ODBCStatement::getRowIntern(int row, int& status, ExceptionSink* x
         hah.assign(n.release(), xsink);
     }
 
-    status = 0; // Everything ok.
+    status = EGRIS_OK;
     return h.release();
 }
 
@@ -325,34 +319,34 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
     const char *p = str->getBuffer();
     QoreString tmp;
     int index = 0;
-    E_SQL_COMMENT_TYPE comment = ESCS_NONE;
+    SQLCommentType comment = ESCT_NONE;
 
     while (*p) {
         if (!quote) {
-            if (comment == ESCS_NONE) {
+            if (comment == ESCT_NONE) {
                 if ((*p) == '-' && (*(p+1)) == '-') {
-                    comment = ESCS_LINE;
+                    comment = ESCT_LINE;
                     p += 2;
                     continue;
                 }
 
                 if ((*p) == '/' && (*(p+1)) == '*') {
-                    comment = ESCS_BLOCK;
+                    comment = ESCT_BLOCK;
                     p += 2;
                     continue;
                 }
             }
             else {
-                if (comment == ESCS_LINE) {
+                if (comment == ESCT_LINE) {
                     if ((*p) == '\n' || ((*p) == '\r'))
-                        comment = ESCS_NONE;
+                        comment = ESCT_NONE;
                     ++p;
                     continue;
                 }
 
-                assert(comment == ESCS_BLOCK);
+                assert(comment == ESCT_BLOCK);
                 if ((*p) == '*' && (*(p+1)) == '/') {
-                    comment = ESCS_NONE;
+                    comment = ESCT_NONE;
                     p += 2;
                     continue;
                 }
@@ -423,21 +417,30 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
     qore_size_t count = args ? args->size() : 0;
     for (unsigned int i = 0; i < count; i++) {
         const AbstractQoreNode* arg = args->retrieve_entry(i);
+        SQLRETURN ret;
 
         if (!arg || is_null(arg) || is_nothing(arg)) { // Bind NULL argument.
-            // TODO
+            SQLLEN* len = tmp.addL(SQL_NULL_DATA);
+            ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 0, 0, NULL, 0, len);
+            if (!SQL_SUCCEEDED(ret)) { // error
+                std::stringstream s("failed binding NULL parameter with index %d (column %d)");
+                ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+                xsink->raiseException("DBI:ODBC:BIND-ERROR", s.str().c_str(), i, i+1);
+                return -1;
+            }
+            continue;
         }
 
-        SQLRETURN ret;
         qore_type_t ntype = arg ? arg->getType() : 0;
         switch (ntype) {
             case NT_STRING: {
                 const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(arg);
                 TempEncodingHelper tstr(str, QEM.findCreate("UTF-16"), xsink);
                 qore_size_t len = tstr->size();
+                SQLLEN* indPtr = tmp.addL(len);
                 char* cstr = tmp.addC(tstr.giveBuffer());
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR,
-                    len, 0, reinterpret_cast<SQLWCHAR*>(cstr), len, 0);
+                    len, 0, reinterpret_cast<SQLWCHAR*>(cstr), len, indPtr);
                 break;
             }
             case NT_NUMBER: {
@@ -505,8 +508,9 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
             case NT_BINARY: {
                 const BinaryNode* b = reinterpret_cast<const BinaryNode*>(arg);
                 qore_size_t len = b->size();
+                SQLLEN* indPtr = tmp.addL(len);
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_BINARY,
-                    SQL_BINARY, len, 0, const_cast<void*>(b->getPtr()), len, 0);
+                    SQL_BINARY, len, 0, const_cast<void*>(b->getPtr()), len, indPtr);
                 break;
             }
             default: {

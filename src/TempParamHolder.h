@@ -43,10 +43,8 @@ struct BoolWrapper {
 class TempParamHolder {
 private:
    std::vector<char*> strings;
-   std::vector<wchar_t*> wstrings;
    std::vector<BoolWrapper> bools;
-   std::vector<int64> ints;
-   std::vector<double> floats;
+   std::vector<SQLLEN> lengths;
    std::vector<TIMESTAMP_STRUCT> dates;
    std::vector<SQL_INTERVAL_STRUCT> times;
 
@@ -54,20 +52,16 @@ public:
 
    TempParamHolder() {
       strings.reserve(16);
-      wstrings.reserve(16);
       bools.reserve(8);
-      ints.reserve(32);
-      floats.reserve(32);
+      lengths.reserve(32);
       dates.reserve(8);
       times.reserve(8);
    }
    ~TempParamHolder() { clear(); }
 
    char* addC(char* s) { strings.push_back(s); return s; }
-   wchar_t* addW(wchar_t* s) { wstrings.push_back(s); return s; }
    bool* addB(bool b) { bools.push_back(b); return &(bools[bools.size()-1].val); }
-   int64* addI(int64 i) { ints.push_back(i); return &(ints[ints.size()-1]); }
-   double* addF(double f) { floats.push_back(f); return &(floats[floats.size()-1]); }
+   SQLLEN* addL(SQLLEN l) { lengths.push_back(l); return &(lengths[lengths.size()-1]); }
    TIMESTAMP_STRUCT* addD(TIMESTAMP_STRUCT d) { dates.push_back(d); return &(dates[dates.size()-1]); }
    SQL_INTERVAL_STRUCT* addT(SQL_INTERVAL_STRUCT t) { times.push_back(t); return &(times[times.size()-1]); }
 
@@ -76,15 +70,9 @@ public:
       for (unsigned int i = 0; i < count; i++)
          delete [] (strings[i]);
 
-      count = wstrings.size();
-      for (unsigned int i = 0; i < count; i++)
-         delete [] (wstrings[i]);
-
       strings.clear();
-      wstrings.clear();
       bools.clear();
-      ints.clear();
-      floats.clear();
+      lengths.clear();
       dates.clear();
       times.clear();
    }

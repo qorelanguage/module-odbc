@@ -63,6 +63,18 @@ class ODBCConnection;
 //! A class representing one ODBC SQL statement.
 class ODBCStatement {
 private:
+    enum SQLCommentType {
+        ESCT_NONE = 0,
+        ESCT_LINE,
+        ESCT_BLOCK
+    };
+
+    enum GetRowInternStatus {
+        EGRIS_OK = 0,
+        EGRIS_END,
+        EGRIS_ERROR
+    };
+
     //! ODBC connection wrapper.
     ODBCConnection* conn;
 
@@ -98,7 +110,7 @@ private:
 
         @return one result-set row
      */
-    QoreHashNode* getRowIntern(int row, int& status, ExceptionSink* xsink);
+    QoreHashNode* getRowIntern(int row, GetRowInternStatus& status, ExceptionSink* xsink);
 
     //! Get a column's value and return a Qore node made from it.
     /** @param row row number from 0, used for error descriptions only
@@ -140,12 +152,6 @@ private:
 
     //! Disabled assignment operator.
     DLLLOCAL ODBCStatement& operator=(const ODBCStatement& s) { return *this; }
-
-    enum E_SQL_COMMENT_TYPE {
-        ESCS_NONE = 0,
-        ESCS_LINE,
-        ESCS_BLOCK
-    };
 
 public:
     //! Constructor.
