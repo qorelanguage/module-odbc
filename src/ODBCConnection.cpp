@@ -60,7 +60,8 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) : ds(d), cli
 
     // Create ODBC connection string.
     QoreString connStr(QEM.findCreate("ASCII"));
-    prepareConnectionString(connStr);
+    if(prepareConnectionString(connStr, xsink))
+        return;
     SQLCHAR* odbcDS = reinterpret_cast<SQLCHAR*>(const_cast<char*>(connStr.getBuffer()));
 
     // Connect.
@@ -178,7 +179,7 @@ void ODBCConnection::handleDbcError(const char* err, const char* desc, Exception
     xsink->raiseException(err, s.str().c_str());
 }
 
-void ODBCConnection::prepareConnectionString(QoreString& str) {
+int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsink) {
     if (ds->getDBName())
         str.sprintf("DSN=%s;", ds->getDBName());
 
@@ -186,7 +187,44 @@ void ODBCConnection::prepareConnectionString(QoreString& str) {
         str.sprintf("UID=%s;", ds->getUsername());
 
     if (ds->getPassword())
-        str.sprintf("PWD=%s", ds->getPassword());
+        str.sprintf("PWD=%s;", ds->getPassword());
+
+    ConstHashIterator hi(ds->getConnectOptions());
+    while (hi.next()) {
+        const AbstractQoreNode* val = hi.getValue();
+        if (!val)
+            continue;
+
+        qore_type_t ntype = val->getType();
+        switch (ntype) {
+            case NT_STRING: {
+                const QoreStringNode* strNode = reinterpret_cast<const QoreStringNode*>(val);
+                TempEncodingHelper tstr(strNode, QEM.findCreate("ASCII"), xsink);
+                if (*xsink)
+                    return -1;
+                str.sprintf("%s=%s;", hi.getKey(), tstr->getBuffer());
+                break;
+            }
+            case NT_INT:
+            case NT_FLOAT:
+            case NT_NUMBER: {
+                QoreStringValueHelper vh(val);
+                str.sprintf("%s=%s;", hi.getKey(), vh->getBuffer());
+                break;
+            }
+            case NT_BOOLEAN: {
+                bool b = reinterpret_cast<const QoreBoolNode*>(val)->getValue();
+                str.sprintf("%s=%s;", hi.getKey(), b ? "1" : "0");
+                break;
+            }
+            default: {
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "option values of type '%s' are not supported by the ODBC driver", val->getTypeName());
+                return -1;
+            }
+        } //  switch
+    } // while
+
+    return 0;
 }
 
 // Version string is in the form "xx.xx.xxxx".

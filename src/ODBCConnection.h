@@ -71,8 +71,11 @@ private:
 
     //! Prepare ODBC connection string and save it to the passed string.
     /** @param str connection string
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
      */
-    void prepareConnectionString(QoreString& str);
+    int prepareConnectionString(QoreString& str, ExceptionSink* xsink);
 
     //! Parse ODBC version string.
     /** @param str version string
