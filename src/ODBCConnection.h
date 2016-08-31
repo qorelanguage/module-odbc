@@ -44,7 +44,6 @@
 #include "qore/QoreBigIntNode.h"
 #include "qore/QoreListNode.h"
 
-
 //! A class representing an ODBC connection.
 class ODBCConnection {
 private:
