@@ -35,7 +35,7 @@
 #include "ODBCStatement.h"
 
 
-ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xsink) : ds(d), clientVer(0), serverVer(0) {
+ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) : ds(d), clientVer(0), serverVer(0) {
     SQLRETURN ret;
     // Allocate an environment handle.
     ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
@@ -58,10 +58,12 @@ ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xs
     SQLSetConnectAttr(dbConn, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, SQL_IS_UINTEGER);
     SQLSetConnectAttr(dbConn, SQL_ATTR_QUIET_MODE, NULL, SQL_IS_POINTER);
 
-    SQLCHAR* odbcDS = reinterpret_cast<SQLCHAR*>(const_cast<char*>(str));
+    // Create ODBC connection string.
+    QoreString connStr(QEM.findCreate("ASCII"));
+    prepareConnectionString(connStr);
+    SQLCHAR* odbcDS = reinterpret_cast<SQLCHAR*>(const_cast<char*>(connStr.getBuffer()));
 
     // Connect.
-    //ret = SQLDriverConnectA(dbConn, NULL, "DSN=web;", SQL_NTS, NULL, 0, NULL, SQL_DRIVER_NOPROMPT);
     ret = SQLDriverConnectA(dbConn, NULL, odbcDS, SQL_NTS, NULL, 0, NULL, SQL_DRIVER_NOPROMPT);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleDbcError("could not connect to the driver", "DBI:ODBC:CONNECTION-ERROR", xsink);
@@ -82,32 +84,10 @@ ODBCConnection::ODBCConnection(Datasource* d, const char* str, ExceptionSink* xs
         clientVer = parseOdbcVersion(verStr);
     }
 
-    // timezones
+    // timezones, encoding
+    //  ???
 
-    // encoding
-
-    /*const char *pstr;
-    // get server version to encode/decode binary values properly
-#if POSTGRES_VERSION_MAJOR >= 8
-    int server_version = PQserverVersion(pc);
-    //printd(5, "version: %d\n", server_version);
-    interval_has_day = server_version >= 80100 ? true : false;
-#else
-    pstr = PQparameterStatus(pc, "server_version");
-    interval_has_day = strcmp(pstr, "8.1") >= 0 ? true : false;
-#endif
-    pstr = PQparameterStatus(pc, "integer_datetimes");
-
-    if (!pstr || !pstr[0]) {
-        // encoding does not matter here; we are only getting an integer
-        QorePgsqlStatement res(this, QCS_DEFAULT);
-        integer_datetimes = res.checkIntegerDateTimes(xsink);
-    }
-    else
-        integer_datetimes = strcmp(pstr, "off");
-
-    if (PQsetClientEncoding(pc, ds->getDBEncoding()))
-        xsink->raiseException("DBI:PGSQL:ENCODING-ERROR", "invalid PostgreSQL encoding '%s'", ds->getDBEncoding());*/
+    ds->setDBEncoding("UTF-16");
 }
 
 ODBCConnection::~ODBCConnection() {
@@ -196,6 +176,17 @@ void ODBCConnection::handleDbcError(const char* err, const char* desc, Exception
     std::stringstream s(desc);
     ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
     xsink->raiseException(err, s.str().c_str());
+}
+
+void ODBCConnection::prepareConnectionString(QoreString& str) {
+    if (ds->getDBName())
+        str.sprintf("DSN=%s;", ds->getDBName());
+
+    if (ds->getUsername())
+        str.sprintf("UID=%s;", ds->getUsername());
+
+    if (ds->getPassword())
+        str.sprintf("PWD=%s", ds->getPassword());
 }
 
 // Version string is in the form "xx.xx.xxxx".

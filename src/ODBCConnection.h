@@ -70,6 +70,11 @@ private:
      */
     void handleDbcError(const char* err, const char* desc, ExceptionSink *xsink);
 
+    //! Prepare ODBC connection string and save it to the passed string.
+    /** @param str connection string
+     */
+    void prepareConnectionString(QoreString& str);
+
     //! Parse ODBC version string.
     /** @param str version string
 
@@ -80,10 +85,9 @@ private:
 public:
     //! Constructor.
     /** @param d Qore datasource
-        @param str connection string
         @param xsink exception sink
      */
-    DLLLOCAL ODBCConnection(Datasource* d, const char* str, ExceptionSink* xsink);
+    DLLLOCAL ODBCConnection(Datasource* d, ExceptionSink* xsink);
 
     //! Destructor.
     DLLLOCAL ~ODBCConnection();

@@ -86,8 +86,7 @@ int DBI_ODBC_CAPS =
 
 
 static int odbc_open(Datasource* ds, ExceptionSink* xsink) {
-    //ODBCConnection* conn = new ODBCConnection(ds, lstr.getBuffer(), xsink);
-    ODBCConnection* conn = new ODBCConnection(ds, "", xsink);
+    ODBCConnection* conn = new ODBCConnection(ds, xsink);
 
     if (*xsink) {
         delete conn;

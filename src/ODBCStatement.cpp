@@ -118,7 +118,6 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink) {
 
     int row = 0;
     while (true) {
-        // TODO - fetch row
         SQLRETURN ret = SQLFetch(stmt);
         if (ret == SQL_NO_DATA) { // Reached the end of the result-set.
             break;
@@ -446,8 +445,9 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
             case NT_NUMBER: {
                 QoreStringValueHelper vh(arg);
                 qore_size_t len = vh->strlen();
+                SQLLEN* indPtr = tmp.addL(len);
                 char* cstr = tmp.addC(vh.giveBuffer());
-                ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, cstr, len, 0);
+                ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, cstr, len, indPtr);
                 break;
             }
             case NT_DATE: {
