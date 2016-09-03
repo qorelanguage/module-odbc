@@ -57,6 +57,7 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) : ds(d), cli
     // Set connection attributes.
     SQLSetConnectAttr(dbConn, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, SQL_IS_UINTEGER);
     SQLSetConnectAttr(dbConn, SQL_ATTR_QUIET_MODE, NULL, SQL_IS_POINTER);
+    SQLSetConnectAttr(dbConn, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
 
     // Create ODBC connection string.
     QoreString connStr(QEM.findCreate("ASCII"));
@@ -180,7 +181,7 @@ void ODBCConnection::handleDbcError(const char* err, const char* desc, Exception
 }
 
 int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsink) {
-    if (ds->getDBName())
+    if (ds->getDBName() && strlen(ds->getDBName()) > 0)
         str.sprintf("DSN=%s;", ds->getDBName());
 
     if (ds->getUsername())
@@ -202,7 +203,14 @@ int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsin
                 TempEncodingHelper tstr(strNode, QEM.findCreate("ASCII"), xsink);
                 if (*xsink)
                     return -1;
-                str.sprintf("%s=%s;", hi.getKey(), tstr->getBuffer());
+                std::unique_ptr<QoreString> key(hi.getKeyString());
+                key->tolwr();
+                if (key->equal("driver")) {
+                    str.sprintf("%s={%s};", hi.getKey(), tstr->getBuffer());
+                }
+                else {
+                    str.sprintf("%s=%s;", hi.getKey(), tstr->getBuffer());
+                }
                 break;
             }
             case NT_INT:
