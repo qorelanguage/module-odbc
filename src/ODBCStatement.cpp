@@ -216,7 +216,8 @@ int ODBCStatement::exec(const char* cmd, ExceptionSink* xsink) {
 ///////////////////////////
 
 void ODBCStatement::handleStmtError(const char* err, const char* desc, ExceptionSink* xsink) {
-    std::stringstream s(desc);
+    std::stringstream s;
+    s << desc;
     ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
     xsink->raiseException(err, s.str().c_str());
 }

@@ -68,7 +68,7 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) : ds(d), cli
     // Connect.
     ret = SQLDriverConnectA(dbConn, NULL, odbcDS, SQL_NTS, NULL, 0, NULL, SQL_DRIVER_NOPROMPT);
     if (!SQL_SUCCEEDED(ret)) { // error
-        handleDbcError("could not connect to the driver", "DBI:ODBC:CONNECTION-ERROR", xsink);
+        handleDbcError("DBI:ODBC:CONNECTION-ERROR", "could not connect to the driver", xsink);
         return;
     }
 
@@ -175,7 +175,8 @@ void ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) 
 }
 
 void ODBCConnection::handleDbcError(const char* err, const char* desc, ExceptionSink* xsink) {
-    std::stringstream s(desc);
+    std::stringstream s;
+    s << desc;
     ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
     xsink->raiseException(err, s.str().c_str());
 }
