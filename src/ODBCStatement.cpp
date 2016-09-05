@@ -43,8 +43,6 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) : conn(c),
     conn->allocStatementHandle(stmt, xsink);
     if (*xsink)
         return;
-
-    // TODO
 }
 
 ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
@@ -54,8 +52,6 @@ ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     conn->allocStatementHandle(stmt, xsink);
     if (*xsink)
         return;
-
-    // TODO
 }
 
 ODBCStatement::~ODBCStatement() {
