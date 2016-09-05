@@ -56,6 +56,9 @@ private:
     //! ODBC connection handle.
     SQLHDBC dbConn;
 
+    //! Whether an ODBC connection has been opened.
+    bool connected;
+
     //! Version of the used ODBC DB driver.
     int clientVer;
 

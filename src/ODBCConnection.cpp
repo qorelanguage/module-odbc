@@ -35,7 +35,12 @@
 #include "ODBCStatement.h"
 
 
-ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) : ds(d), clientVer(0), serverVer(0) {
+ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
+    ds(d),
+    connected(false),
+    clientVer(0),
+    serverVer(0)
+{
     SQLRETURN ret;
     // Allocate an environment handle.
     ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
@@ -71,6 +76,7 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) : ds(d), cli
         handleDbcError("DBI:ODBC:CONNECTION-ERROR", "could not connect to the driver", xsink);
         return;
     }
+    connected = true;
 
     // Get DBMS (server) version.
     char verStr[128]; // Will contain ver in the form "01.02.0034"
@@ -93,7 +99,7 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) : ds(d), cli
 }
 
 ODBCConnection::~ODBCConnection() {
-    while (true) {
+    while (connected) {
         SQLRETURN ret = SQLDisconnect(dbConn);
         if (SQL_SUCCEEDED(ret))
             break;
@@ -101,8 +107,10 @@ ODBCConnection::~ODBCConnection() {
     }
 
     // Free up allocated handles.
-    SQLFreeHandle(SQL_HANDLE_DBC, dbConn);
-    SQLFreeHandle(SQL_HANDLE_ENV, env);
+    if (dbConn != SQL_NULL_HDBC)
+        SQLFreeHandle(SQL_HANDLE_DBC, dbConn);
+    if (env != SQL_NULL_HENV)
+        SQLFreeHandle(SQL_HANDLE_ENV, env);
 }
 
 int ODBCConnection::commit(ExceptionSink* xsink) {
