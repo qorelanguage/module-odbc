@@ -61,7 +61,7 @@ public:
             ret = SQLGetDiagRecA(handleType, handle, i++, state, &native, text, sizeof(text), &len);
             if (!SQL_SUCCEEDED(ret))
                 break;
-            s << "; " << state << " - " << native << ": " << text;
+            s << "; [" << state << "] (native " << native << "): " << text;
         }
     }
 
