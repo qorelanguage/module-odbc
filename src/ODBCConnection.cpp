@@ -69,12 +69,15 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     QoreString connStr(QEM.findCreate("ASCII"));
     if(prepareConnectionString(connStr, xsink))
         return;
+
     SQLCHAR* odbcDS = reinterpret_cast<SQLCHAR*>(const_cast<char*>(connStr.getBuffer()));
 
     // Connect.
     ret = SQLDriverConnectA(dbConn, NULL, odbcDS, SQL_NTS, NULL, 0, NULL, SQL_DRIVER_NOPROMPT);
     if (!SQL_SUCCEEDED(ret)) { // error
-        handleDbcError("DBI:ODBC:CONNECTION-ERROR", "could not connect to the driver", xsink);
+        std::string s("could not connect to the datasource; connection string: '%s'");
+        ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
+        xsink->raiseException("DBI:ODBC:CONNECTION-ERROR", s.c_str(), connStr.getBuffer());
         return;
     }
     connected = true;
