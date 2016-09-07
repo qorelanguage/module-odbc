@@ -28,6 +28,8 @@
 #ifndef _QORE_ODBCRESULTCOLUMN_H
 #define _QORE_ODBCRESULTCOLUMN_H
 
+#include <string>
+
 #include <sql.h>
 #include <sqlext.h>
 
@@ -37,7 +39,7 @@ public:
     SQLSMALLINT number;
 
     //! Column name.
-    char* name;
+    std::string name;
 
     //! Column datatype;
     SQLSMALLINT dataType;
@@ -50,12 +52,6 @@ public:
 
     //! Whether the column allows NULL values.
     SQLSMALLINT nullable;
-
-    ODBCResultColumn() : name(0) {}
-    ~ODBCResultColumn() {
-        if (name)
-            delete [] name;
-    }
 };
 
 #endif // _QORE_ODBCRESULTCOLUMN_H

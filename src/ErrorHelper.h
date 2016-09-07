@@ -28,15 +28,10 @@
 #ifndef _QORE_ERRORHELPER_H
 #define _QORE_ERRORHELPER_H
 
-#include <sstream>
 #include <string>
 
 #include <sql.h>
 #include <sqlext.h>
-
-#include "qore/ExceptionSink.h"
-#include "qore/QoreStringNode.h"
-#include "qore/ReferenceHolder.h"
 
 //! Error helper
 class ErrorHelper {
@@ -47,9 +42,9 @@ public:
     //! Extract ODBC diagnostic records and output them to a stringstream.
     /** @param handleType type of the ODBC handle
         @param handle ODBC handle
-        @param s stringstream where the output will be written to
+        @param s string where the output will be written to
      */
-    static void extractDiag(SQLSMALLINT handleType, SQLHANDLE& handle, std::stringstream& s) {
+    static void extractDiag(SQLSMALLINT handleType, SQLHANDLE& handle, std::string& s) {
         SQLINTEGER i = 1;
         SQLINTEGER native;
         SQLCHAR state[7];
@@ -61,7 +56,12 @@ public:
             ret = SQLGetDiagRecA(handleType, handle, i++, state, &native, text, sizeof(text), &len);
             if (!SQL_SUCCEEDED(ret))
                 break;
-            s << "; [" << state << "] (native " << native << "): " << text;
+            s += "; [";
+            s += reinterpret_cast<char*>(state);
+            s += "] (native ";
+            s += std::to_string(native);
+            s += "): ";
+            s += reinterpret_cast<char*>(text);
         }
     }
 

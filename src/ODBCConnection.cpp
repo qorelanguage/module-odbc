@@ -63,6 +63,7 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     SQLSetConnectAttr(dbConn, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, SQL_IS_UINTEGER);
     SQLSetConnectAttr(dbConn, SQL_ATTR_QUIET_MODE, NULL, SQL_IS_POINTER);
     SQLSetConnectAttr(dbConn, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
+    SQLSetConnectAttr(dbConn, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
 
     // Create ODBC connection string.
     QoreString connStr(QEM.findCreate("ASCII"));
@@ -183,10 +184,9 @@ void ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) 
 }
 
 void ODBCConnection::handleDbcError(const char* err, const char* desc, ExceptionSink* xsink) {
-    std::stringstream s;
-    s << desc;
+    std::string s(desc);
     ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
-    xsink->raiseException(err, s.str().c_str());
+    xsink->raiseException(err, s.c_str());
 }
 
 int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsink) {

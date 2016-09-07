@@ -119,15 +119,15 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink) {
             break;
         }
         if (!SQL_SUCCEEDED(ret)) { // error
-            std::stringstream s("error occured when fetching row #%d");
+            std::string s("error occured when fetching row #%d");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.str().c_str(), row);
+            xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), row);
             return 0;
         }
 
         for (int j = 0; j < columnCount; j++) {
             ODBCResultColumn& rcol = resColumns[j];
-            ReferenceHolder<AbstractQoreNode> n(getColumnValue(row, j, rcol, xsink), xsink);
+            ReferenceHolder<AbstractQoreNode> n(getColumnValue(row, j+1, rcol, xsink), xsink);
             if (!n || *xsink)
                 return 0;
 
@@ -212,40 +212,34 @@ int ODBCStatement::exec(const char* cmd, ExceptionSink* xsink) {
 ///////////////////////////
 
 void ODBCStatement::handleStmtError(const char* err, const char* desc, ExceptionSink* xsink) {
-    std::stringstream s;
-    s << desc;
+    std::string s(desc);
     ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-    xsink->raiseException(err, s.str().c_str());
+    xsink->raiseException(err, s.c_str());
 }
 
 int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
     SQLSMALLINT columns;
-    SQLNumResultCols(stmt, &columns);
+    SQLRETURN ret = SQLNumResultCols(stmt, &columns);
+    if (!SQL_SUCCEEDED(ret)) { // error
+        handleStmtError("DBI:ODBC:COLUMN-METADATA-ERROR", "error occured when fetching result column count", xsink);
+        return -1;
+    }
 
+    char name[512];
+    name[511] = '\0';
     resColumns.resize(columns);
-
     for (int i = 0; i < columns; i++) {
         ODBCResultColumn& col = resColumns[i];
         SQLSMALLINT nameLength;
-        SQLRETURN ret = SQLDescribeCol(stmt, i+1, NULL, 0, &nameLength, &col.dataType,
+        ret = SQLDescribeColA(stmt, i+1, reinterpret_cast<SQLCHAR*>(name), 512, &nameLength, &col.dataType,
             &col.colSize, &col.decimalDigits, &col.nullable);
         if (!SQL_SUCCEEDED(ret)) { // error
-            std::stringstream s("error occured when fetching result column metadata of column #%d");
+            std::string s("error occured when fetching result column metadata of column #%d");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.str().c_str(), i+1);
+            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i+1);
             return -1;
         }
-
-        nameLength += 8;
-        col.name = new char[nameLength];
-
-        ret = SQLColAttribute(stmt, i+1, SQL_DESC_NAME, &col.name, nameLength, NULL, NULL);
-        if (!SQL_SUCCEEDED(ret)) { // error
-            std::stringstream s("error occured when fetching name of result column #%d");
-            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.str().c_str(), i+1);
-            return -1;
-        }
+        col.name = name;
     }
     return 0;
 }
@@ -257,9 +251,9 @@ QoreHashNode* ODBCStatement::getRowIntern(int row, GetRowInternStatus& status, E
         return 0;
     }
     if (!SQL_SUCCEEDED(ret)) { // error
-        std::stringstream s("error occured when fetching row #%d");
+        std::string s("error occured when fetching row #%d");
         ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-        xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.str().c_str(), row);
+        xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), row);
         status = EGRIS_ERROR;
         return 0;
     }
@@ -419,9 +413,9 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
             SQLLEN* len = tmp.addL(SQL_NULL_DATA);
             ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 0, 0, NULL, 0, len);
             if (!SQL_SUCCEEDED(ret)) { // error
-                std::stringstream s("failed binding NULL parameter with index %d (column %d)");
+                std::string s("failed binding NULL parameter with index %d (column %d)");
                 ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-                xsink->raiseException("DBI:ODBC:BIND-ERROR", s.str().c_str(), i, i+1);
+                xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), i, i+1);
                 return -1;
             }
             continue;
@@ -511,17 +505,17 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
                 break;
             }
             default: {
-                std::stringstream s("do not know how to bind values of type '%s'");
+                std::string s("do not know how to bind values of type '%s'");
                 ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-                xsink->raiseException("DBI:ODBC:BIND-ERROR", s.str().c_str(), arg->getTypeName());
+                xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), arg->getTypeName());
                 return -1;
             }
         } //  switch
 
         if (!SQL_SUCCEEDED(ret)) { // error
-            std::stringstream s("failed binding parameter with index %d of type '%s'");
+            std::string s("failed binding parameter with index %d of type '%s'");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:BIND-ERROR", s.str().c_str(), i, arg->getTypeName());
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), i, arg->getTypeName());
             return -1;
         }
     }

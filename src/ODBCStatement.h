@@ -30,7 +30,6 @@
 
 #include <cstring>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -582,9 +581,9 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
             break;
         }*/
         default: {
-            std::stringstream s("do not know how to handle result value of type '%d'");
+            std::string s("do not know how to handle result value of type '%d'");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.str().c_str(), rcol.dataType);
+            xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.c_str(), rcol.dataType);
             return 0;
         }
     }
@@ -595,9 +594,9 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
     }
 
     if (!SQL_SUCCEEDED(ret)) { // error
-        std::stringstream s("error occured when getting value of row #%d, column #%d");
+        std::string s("error occured when getting value of row #%d, column #%d");
         ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-        xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.str().c_str(), row, column);
+        xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.c_str(), row, column);
     }
 
     return 0;
