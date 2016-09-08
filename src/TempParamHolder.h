@@ -49,7 +49,6 @@ private:
     std::vector<SQL_INTERVAL_STRUCT> times;
 
 public:
-
     TempParamHolder() {
         strings.reserve(16);
         bools.reserve(8);
