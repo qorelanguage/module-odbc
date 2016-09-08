@@ -28,6 +28,8 @@
 #ifndef _QORE_TEMPPARAMHOLDER_H
 #define _QORE_TEMPPARAMHOLDER_H
 
+#include <vector>
+
 #include <sql.h>
 #include <sqlext.h>
 
