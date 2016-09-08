@@ -400,6 +400,7 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
 
         p++;
     }
+
     return 0;
 }
 
@@ -425,7 +426,11 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
         switch (ntype) {
             case NT_STRING: {
                 const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(arg);
-                TempEncodingHelper tstr(str, QEM.findCreate("UTF-16"), xsink);
+#ifdef WORDS_BIGENDIAN
+                TempEncodingHelper tstr(str, QEM.findCreate("UTF-16BE"), xsink);
+#else
+                TempEncodingHelper tstr(str, QEM.findCreate("UTF-16LE"), xsink);
+#endif
                 qore_size_t len = tstr->size();
                 SQLLEN* indPtr = tmp.addL(len);
                 char* cstr = tmp.addC(tstr.giveBuffer());

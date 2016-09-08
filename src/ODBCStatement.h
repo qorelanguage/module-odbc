@@ -303,7 +303,11 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
                 }
                 ret = SQLGetData(stmt, column, SQL_C_WCHAR, reinterpret_cast<SQLWCHAR*>(buf.get()), buflen, &indicator);
                 if (SQL_SUCCEEDED(ret)) {
-                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QEM.findCreate("UTF-16")));
+#ifdef WORDS_BIGENDIAN
+                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QEM.findCreate("UTF-16BE")));
+#else
+                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QEM.findCreate("UTF-16LE")));
+#endif
                     return str.release();
                 }
             }
