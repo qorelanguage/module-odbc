@@ -271,41 +271,20 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
             if (ret == SQL_NO_DATA) // No data, therefore returning empty string.
                 return new QoreStringNode;
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                std::unique_ptr<char> buf(new char[indicator]);
+                SQLLEN buflen = indicator + 1; // Ending \0 char.
+                std::unique_ptr<char> buf(new char[buflen]);
                 if (buf.get() == NULL) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
                         "could not allocate buffer for result character data of row #%d, column #%d", row, column);
                     return 0;
                 }
-                ret = SQLGetData(stmt, column, SQL_C_CHAR, buf.get(), indicator, &indicator);
+                ret = SQLGetData(stmt, column, SQL_C_CHAR, buf.get(), buflen, &indicator);
                 if (SQL_SUCCEEDED(ret)) {
-                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator-1, indicator, QEM.findCreate("ASCII")));
+                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QEM.findCreate("ASCII")));
                     return str.release();
                 }
             }
             break;
-
-            /*SimpleRefHolder<QoreStringNode> val(new QoreStringNode);
-            while (true) {
-                ret = SQLGetData(stmt, column, SQL_C_CHAR, buf, COLUMN_VALUE_BUF_SIZE, &indicator);
-                if (!SQL_SUCCEEDED(ret) || (indicator == SQL_NULL_DATA))
-                    break;
-                val->concat(buf);
-                if (ret == SQL_SUCCESS_WITH_INFO) {
-                    char state[7];
-                    ErrorHelper::extractState(SQL_HANDLE_STMT, stmt, state);
-                    if (strcmp(state, "01004") == 0 || indicator > 0) {
-                        continue;
-                    }
-                    else {
-                        assert(false);
-                    }
-                }
-                else {
-                    return val->release();
-                }
-            }
-            break;*/
         }
         case SQL_WCHAR:
         case SQL_WVARCHAR:
@@ -315,15 +294,16 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
             if (ret == SQL_NO_DATA) // No data, therefore returning empty string.
                 return new QoreStringNode;
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                std::unique_ptr<char> buf(new char[indicator]);
+                SQLLEN buflen = indicator + 2; // Ending \0 char.
+                std::unique_ptr<char> buf(new char[buflen]);
                 if (buf.get() == NULL) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
                         "could not allocate buffer for result character data of row #%d, column #%d", row, column);
                     return 0;
                 }
-                ret = SQLGetData(stmt, column, SQL_C_WCHAR, reinterpret_cast<SQLWCHAR*>(buf.get()), indicator, &indicator);
+                ret = SQLGetData(stmt, column, SQL_C_WCHAR, reinterpret_cast<SQLWCHAR*>(buf.get()), buflen, &indicator);
                 if (SQL_SUCCEEDED(ret)) {
-                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator-1, indicator, QEM.findCreate("UTF-16")));
+                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QEM.findCreate("UTF-16")));
                     return str.release();
                 }
             }
