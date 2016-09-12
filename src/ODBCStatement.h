@@ -57,7 +57,7 @@
 #include "ErrorHelper.h"
 #include "ODBCResultColumn.h"
 #include "ParamArrayHolder.h"
-#include "TempParamHolder.h"
+#include "ParamHolder.h"
 
 class ODBCConnection;
 
@@ -85,7 +85,7 @@ private:
     SQLHSTMT stmt;
 
     //! Temporary holder for params.
-    TempParamHolder tmp;
+    ParamHolder paramHolder;
 
     //! Temporary holder for parameter arrays.
     ParamArrayHolder arrayHolder;

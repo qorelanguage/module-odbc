@@ -1,6 +1,6 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  TempParamHolder.h
+  ParamArrayHolder.h
 
   Qore ODBC module
 

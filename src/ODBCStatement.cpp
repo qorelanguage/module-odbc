@@ -430,7 +430,7 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
         SQLRETURN ret;
 
         if (!arg || is_null(arg) || is_nothing(arg)) { // Bind NULL argument.
-            SQLLEN* len = tmp.addL(SQL_NULL_DATA);
+            SQLLEN* len = paramHolder.addL(SQL_NULL_DATA);
             ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 0, 0, NULL, 0, len);
             if (!SQL_SUCCEEDED(ret)) { // error
                 std::string s("failed binding NULL parameter with index %d (column %d)");
@@ -446,10 +446,10 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
             case NT_STRING: {
                 const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(arg);
                 qore_size_t len;
-                char* cstr = tmp.addC(getCharsFromString(str, len, xsink));
+                char* cstr = paramHolder.addC(getCharsFromString(str, len, xsink));
                 if (*xsink)
                     return -1;
-                SQLLEN* indPtr = tmp.addL(len);
+                SQLLEN* indPtr = paramHolder.addL(len);
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR,
                     len, 0, reinterpret_cast<SQLWCHAR*>(cstr), len, indPtr);
                 break;
@@ -459,20 +459,20 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
                 if (*xsink)
                     return -1;
                 qore_size_t len = vh->strlen();
-                SQLLEN* indPtr = tmp.addL(len);
-                char* cstr = tmp.addC(vh.giveBuffer());
+                SQLLEN* indPtr = paramHolder.addL(len);
+                char* cstr = paramHolder.addC(vh.giveBuffer());
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, cstr, len, indPtr);
                 break;
             }
             case NT_DATE: {
                 const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
                 if (date->isAbsolute()) {
-                    TIMESTAMP_STRUCT* tval = tmp.addD(getTimestampFromDate(date));
+                    TIMESTAMP_STRUCT* tval = paramHolder.addD(getTimestampFromDate(date));
                     ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
                         SQL_TYPE_TIMESTAMP, 29, 9, tval, sizeof(TIMESTAMP_STRUCT), 0);
                 }
                 else {
-                    SQL_INTERVAL_STRUCT* tval = tmp.addT(getIntervalFromDate(date));
+                    SQL_INTERVAL_STRUCT* tval = paramHolder.addT(getIntervalFromDate(date));
                     ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
                         SQL_INTERVAL_DAY_TO_SECOND, 29, 9, tval, sizeof(SQL_INTERVAL_STRUCT), 0);
                 }
@@ -492,7 +492,7 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
             }
             case NT_BOOLEAN: {
                 bool b = reinterpret_cast<const QoreBoolNode*>(arg)->getValue();
-                bool* bval = tmp.addB(b);
+                bool* bval = paramHolder.addB(b);
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_BIT,
                     SQL_CHAR, 1, 0, bval, sizeof(bool), 0);
                 break;
@@ -500,7 +500,7 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
             case NT_BINARY: {
                 const BinaryNode* b = reinterpret_cast<const BinaryNode*>(arg);
                 qore_size_t len = b->size();
-                SQLLEN* indPtr = tmp.addL(len);
+                SQLLEN* indPtr = paramHolder.addL(len);
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_BINARY,
                     SQL_BINARY, len, 0, const_cast<void*>(b->getPtr()), len, indPtr);
                 break;
@@ -983,7 +983,7 @@ int ODBCStatement::createArrayFromFloatList(const QoreListNode* arg, double*& ar
 }
 
 char** ODBCStatement::createArrayFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink) {
-    char* val = tmp.addC(getCharsFromString(arg, len, xsink));
+    char* val = paramHolder.addC(getCharsFromString(arg, len, xsink));
     char** array = arrayHolder.addSingleValCharArray(xsink);
     if (!array)
         return 0;
@@ -998,7 +998,7 @@ char** ODBCStatement::createArrayFromNumber(const QoreNumberNode* arg, qore_size
     if (*xsink)
         return 0;
     len = vh->strlen();
-    char* val = tmp.addC(vh.giveBuffer());
+    char* val = paramHolder.addC(vh.giveBuffer());
     char** array = arrayHolder.addSingleValCharArray(xsink);
     if (!array)
         return 0;

@@ -1,6 +1,6 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  TempParamHolder.h
+  ParamHolder.h
 
   Qore ODBC module
 
@@ -25,8 +25,8 @@
   DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _QORE_TEMPPARAMHOLDER_H
-#define _QORE_TEMPPARAMHOLDER_H
+#ifndef _QORE_PARAMHOLDER_H
+#define _QORE_PARAMHOLDER_H
 
 #include <vector>
 
@@ -42,7 +42,7 @@ struct BoolWrapper {
 };
 
 //! Class used by @ref ODBCStatement for temporary storage of SQL parameters.
-class TempParamHolder {
+class ParamHolder {
 private:
     std::vector<char*> strings;
     std::vector<BoolWrapper> bools;
@@ -51,14 +51,14 @@ private:
     std::vector<SQL_INTERVAL_STRUCT> times;
 
 public:
-    TempParamHolder() {
+    ParamHolder() {
         strings.reserve(16);
         bools.reserve(8);
         lengths.reserve(32);
         dates.reserve(8);
         times.reserve(8);
     }
-    ~TempParamHolder() { clear(); }
+    ~ParamHolder() { clear(); }
 
     char* addC(char* s) { strings.push_back(s); return s; }
     bool* addB(bool b) { bools.push_back(b); return &(bools[bools.size()-1].val); }
@@ -79,5 +79,5 @@ public:
     }
 };
 
-#endif // _QORE_TEMPPARAMHOLDER_H
+#endif // _QORE_PARAMHOLDER_H
 
