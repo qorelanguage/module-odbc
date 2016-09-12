@@ -50,11 +50,13 @@
 #include "qore/QoreBoolNode.h"
 #include "qore/QoreBigIntNode.h"
 #include "qore/QoreFloatNode.h"
+#include "qore/QoreNumberNode.h"
 #include "qore/QoreListNode.h"
 #include "qore/QoreNullNode.h"
 
 #include "ErrorHelper.h"
 #include "ODBCResultColumn.h"
+#include "ParamArrayHolder.h"
 #include "TempParamHolder.h"
 
 class ODBCConnection;
@@ -84,6 +86,9 @@ private:
 
     //! Temporary holder for params.
     TempParamHolder tmp;
+
+    //! Temporary holder for parameter arrays.
+    ParamArrayHolder arrayHolder;
 
     //! Parameters which will be used in the statement.
     ReferenceHolder<QoreListNode> params;
@@ -141,6 +146,16 @@ private:
      */
     int parse(QoreString* str, const QoreListNode* args, ExceptionSink* xsink);
 
+    //! Return whether the passed arguments have arrays.
+    bool hasArrays(const QoreListNode* args) const;
+
+    //! Return size of arrays in the passed arguments.
+    /** @param args SQL parameters
+
+        @return parameter array size
+     */
+    qore_size_t findArraySizeOfArgs(const QoreListNode* args) const;
+
     //! Bind a simple list of SQL parameters.
     /** @param args SQL parameters
         @param xsink exception sink
@@ -148,6 +163,56 @@ private:
         @return 0 for OK, -1 for error
      */
     int bind(const QoreListNode* args, ExceptionSink* xsink);
+
+    //! Bind a list of arrays of SQL parameters.
+    /** @param args SQL parameters
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    int bindArray(const QoreListNode* args, ExceptionSink* xsink);
+
+    //! Bind a list of values as an array.
+    /** @param column ODBC column number, starting from 1
+        @param lst parameter list
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    int handleParamArrayList(int column, const QoreListNode* lst, ExceptionSink* xsink);
+
+    //! Bind a single value argument as an array.
+    /** @param column ODBC column number, starting from 1
+        @param arg single value parameter
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    int handleParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink);
+
+    int createArrayFromStringList(const QoreListNode* arg, char**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    int createArrayFromNumberList(const QoreListNode* arg, char**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    int createArrayFromBinaryList(const QoreListNode* arg, void**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    int createArrayFromAbsoluteDateList(const QoreListNode* arg, TIMESTAMP_STRUCT*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+    int createArrayFromRelativeDateList(const QoreListNode* arg, SQL_INTERVAL_STRUCT*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+    int createArrayFromBoolList(const QoreListNode* arg, bool*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+    int createArrayFromIntList(const QoreListNode* arg, int64*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+    int createArrayFromFloatList(const QoreListNode* arg, double*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+
+    char** createArrayFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    char** createArrayFromNumber(const QoreNumberNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    void** createArrayFromBinary(const BinaryNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    TIMESTAMP_STRUCT* createArrayFromAbsoluteDate(const DateTimeNode* arg, ExceptionSink* xsink);
+    SQL_INTERVAL_STRUCT* createArrayFromRelativeDate(const DateTimeNode* arg, ExceptionSink* xsink);
+    bool* createArrayFromBool(const QoreBoolNode* arg, ExceptionSink* xsink);
+    int64* createArrayFromInt(const QoreBigIntNode* arg, ExceptionSink* xsink);
+    double* createArrayFromFloat(const QoreFloatNode* arg, ExceptionSink* xsink);
+
+    SQLLEN* createIndArray(SQLLEN ind, ExceptionSink* xsink);
+
+    inline char* getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    inline TIMESTAMP_STRUCT getTimestampFromDate(const DateTimeNode* arg);
+    inline SQL_INTERVAL_STRUCT getIntervalFromDate(const DateTimeNode* arg);
 
     //! Disabled copy constructor.
     DLLLOCAL ODBCStatement(const ODBCStatement& s) : params(0, 0) {}
@@ -280,7 +345,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
                 }
                 ret = SQLGetData(stmt, column, SQL_C_CHAR, buf.get(), buflen, &indicator);
                 if (SQL_SUCCEEDED(ret)) {
-                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QEM.findCreate("ASCII")));
+                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QCS_USASCII));
                     return str.release();
                 }
             }
@@ -304,9 +369,9 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
                 ret = SQLGetData(stmt, column, SQL_C_WCHAR, reinterpret_cast<SQLWCHAR*>(buf.get()), buflen, &indicator);
                 if (SQL_SUCCEEDED(ret)) {
 #ifdef WORDS_BIGENDIAN
-                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QEM.findCreate("UTF-16BE")));
+                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QCS_UTF16BE));
 #else
-                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QEM.findCreate("UTF-16LE")));
+                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QCS_UTF16LE));
 #endif
                     return str.release();
                 }
@@ -584,6 +649,46 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
     }
 
     return 0;
+}
+
+char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink) {
+#ifdef WORDS_BIGENDIAN
+    TempEncodingHelper tstr(arg, QCS_UTF16BE, xsink);
+#else
+    TempEncodingHelper tstr(arg, QCS_UTF16LE, xsink);
+#endif
+    len = tstr->size();
+    return tstr.giveBuffer();
+}
+
+TIMESTAMP_STRUCT ODBCStatement::getTimestampFromDate(const DateTimeNode* arg) {
+    TIMESTAMP_STRUCT t;
+    t.year = arg->getYear();
+    t.month = arg->getMonth();
+    t.day = arg->getDay();
+    t.hour = arg->getHour();
+    t.minute = arg->getMinute();
+    t.second = arg->getSecond();
+    t.fraction = arg->getMicrosecond() * 1000;
+    return t;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getIntervalFromDate(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT t;
+    int64 secs = arg->getRelativeSeconds();
+    int64 sign = secs >= 0 ? 1 : -1;
+    secs *= sign;
+    t.interval_type = SQL_IS_DAY_TO_SECOND;
+    t.interval_sign = sign >= 0 ? SQL_FALSE : SQL_TRUE;
+    t.intval.day_second.day = secs / 86400;
+    secs -= t.intval.day_second.day * 86400;
+    t.intval.day_second.hour = secs / 3600;
+    secs -= t.intval.day_second.hour * 3600;
+    t.intval.day_second.minute = secs / 60;
+    secs -= t.intval.day_second.minute * 60;
+    t.intval.day_second.second = secs;
+    t.intval.day_second.fraction = 0;
+    return t;
 }
 
 #endif // _QORE_ODBCSTATEMENT_H

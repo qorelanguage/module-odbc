@@ -66,7 +66,7 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     SQLSetConnectAttr(dbConn, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
 
     // Create ODBC connection string.
-    QoreString connStr(QEM.findCreate("ASCII"));
+    QoreString connStr(QCS_USASCII);
     if(prepareConnectionString(connStr, xsink))
         return;
 
@@ -166,7 +166,7 @@ AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink*
     ODBCStatement res(this, xsink);
 
     // Convert string to required character encoding or copy.
-    std::unique_ptr<QoreString> str(qstr->convertEncoding(QEM.findCreate("ASCII"), xsink));
+    std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_USASCII, xsink));
     if (!str.get())
         return NULL;
 
@@ -212,7 +212,7 @@ int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsin
         switch (ntype) {
             case NT_STRING: {
                 const QoreStringNode* strNode = reinterpret_cast<const QoreStringNode*>(val);
-                TempEncodingHelper tstr(strNode, QEM.findCreate("ASCII"), xsink);
+                TempEncodingHelper tstr(strNode, QCS_USASCII, xsink);
                 if (*xsink)
                     return -1;
                 std::unique_ptr<QoreString> key(hi.getKeyString());
