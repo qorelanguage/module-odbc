@@ -37,7 +37,11 @@
 //     Public methods     //
 ///////////////////////////
 
-ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) : conn(c), params(new QoreListNode, xsink) {
+ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
+    conn(c),
+    affectedRowCount(0),
+    params(new QoreListNode, xsink)
+{
     conn->allocStatementHandle(stmt, xsink);
     if (*xsink)
         return;
@@ -45,6 +49,7 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) : conn(c),
 
 ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     conn(static_cast<ODBCConnection*>(ds->getPrivateData())),
+    affectedRowCount(0),
     params(new QoreListNode, xsink)
 {
     conn->allocStatementHandle(stmt, xsink);
@@ -57,12 +62,7 @@ ODBCStatement::~ODBCStatement() {
 }
 
 int ODBCStatement::rowsAffected() {
-    SQLLEN len = -1;
-    SQLRETURN ret = SQLRowCount(stmt, &len);
-    if (!SQL_SUCCEEDED(ret) || len == -1) { // error
-        return -1;
-    }
-    return len;
+    return affectedRowCount;
 }
 
 bool ODBCStatement::hasResultData() {
@@ -303,8 +303,19 @@ int ODBCStatement::execIntern(const char* str, ExceptionSink* xsink) {
     SQLRETURN ret = SQLExecDirectA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(str)), SQL_NTS);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleStmtError("DBI:ODBC:EXEC-ERROR", "error during statement execution", xsink);
+        affectedRowCount = -1;
         return -1;
     }
+
+    // Get count of affected rows.
+    SQLLEN len = -1;
+    ret = SQLRowCount(stmt, &len);
+    if (!SQL_SUCCEEDED(ret) || len == -1) { // error
+        affectedRowCount = -1;
+        return -1;
+    }
+    affectedRowCount = len;
+
     return 0;
 }
 

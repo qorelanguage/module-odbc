@@ -84,6 +84,9 @@ private:
     //! ODBC statement handle.
     SQLHSTMT stmt;
 
+    //! Count of rows affected by the executed UPDATE, INSERT or DELETE statements.
+    SQLLEN affectedRowCount;
+
     //! Temporary holder for params.
     ParamHolder paramHolder;
 
