@@ -179,7 +179,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int handleParamArrayList(int column, const QoreListNode* lst, ExceptionSink* xsink);
+    int bindParamArrayList(int column, const QoreListNode* lst, ExceptionSink* xsink);
 
     //! Bind a single value argument as an array.
     /** @param column ODBC column number, starting from 1
@@ -188,7 +188,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int handleParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink);
+    int bindParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink);
 
     //! Create a new C-style string array filled with string values from the passed Qore list.
     /** @param arg list of Qore strings used to fill the array

@@ -533,24 +533,27 @@ int ODBCStatement::bindArray(const QoreListNode* args, ExceptionSink* xsink) {
     SQLSetStmtAttr(stmt, SQL_ATTR_PARAMSET_SIZE, reinterpret_cast<SQLPOINTER>(arraySize), 0);
 
     // Specify an array in which to return the status of each set of parameters.
-    //SQLSetStmtAttr(stmt, SQL_ATTR_PARAM_STATUS_PTR, ParamStatusArray, 0); TODO
+    // Since this is unnecessarily precise status reporting, we set it to NULL,
+    // so that these states are not generated.
+    SQLSetStmtAttr(stmt, SQL_ATTR_PARAM_STATUS_PTR, NULL, 0);
 
     // Specify an SQLUINTEGER value in which to return the number of sets of parameters processed.
-    //SQLSetStmtAttr(stmt, SQL_ATTR_PARAMS_PROCESSED_PTR, &ParamsProcessed, 0);
+    // Also unnecessary information, therefore set to NULL.
+    SQLSetStmtAttr(stmt, SQL_ATTR_PARAMS_PROCESSED_PTR, NULL, 0);
 
     qore_size_t count = args ? args->size() : 0;
     for (unsigned int i = 0; i < count; i++) {
         const AbstractQoreNode* arg = args->retrieve_entry(i);
 
         if (!arg || is_null(arg) || is_nothing(arg)) { // Handle NULL argument.
-            handleParamArraySingleValue(i+1, arg, xsink);
+            bindParamArraySingleValue(i+1, arg, xsink);
             continue;
         }
 
         qore_type_t ntype = arg ? arg->getType() : 0;
         switch (ntype) {
             case NT_LIST:
-                if (handleParamArrayList(i+1, reinterpret_cast<const QoreListNode*>(arg), xsink))
+                if (bindParamArrayList(i+1, reinterpret_cast<const QoreListNode*>(arg), xsink))
                     return -1;
                 break;
             case NT_STRING:
@@ -560,7 +563,7 @@ int ODBCStatement::bindArray(const QoreListNode* args, ExceptionSink* xsink) {
             case NT_FLOAT:
             case NT_BOOLEAN:
             case NT_BINARY:
-                if (handleParamArraySingleValue(i+1, arg, xsink))
+                if (bindParamArraySingleValue(i+1, arg, xsink))
                     return -1;
                 break;
             default:
@@ -572,7 +575,7 @@ int ODBCStatement::bindArray(const QoreListNode* args, ExceptionSink* xsink) {
     return 0;
 }
 
-int ODBCStatement::handleParamArrayList(int column, const QoreListNode* lst, ExceptionSink* xsink) {
+int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, ExceptionSink* xsink) {
     qore_size_t count = lst->size();
     bool absoluteDate;
     SQLLEN* indArray;
@@ -679,7 +682,7 @@ int ODBCStatement::handleParamArrayList(int column, const QoreListNode* lst, Exc
     return 0;
 }
 
-int ODBCStatement::handleParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink) {
+int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink) {
     qore_size_t arraySize = arrayHolder.getArraySize();
     SQLRETURN ret;
 
