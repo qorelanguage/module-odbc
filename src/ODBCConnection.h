@@ -25,8 +25,8 @@
   DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _QORE_ODBCCONNECTION_H
-#define _QORE_ODBCCONNECTION_H
+#ifndef _QORE_MODULE_ODBC_ODBCCONNECTION_H
+#define _QORE_MODULE_ODBC_ODBCCONNECTION_H
 
 #include <sql.h>
 #include <sqlext.h>
@@ -172,5 +172,5 @@ public:
     }
 };
 
-#endif // _QORE_ODBCCONNECTION_H
+#endif // _QORE_MODULE_ODBC_ODBCCONNECTION_H
 

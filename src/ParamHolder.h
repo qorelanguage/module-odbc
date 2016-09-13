@@ -25,8 +25,8 @@
   DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _QORE_PARAMHOLDER_H
-#define _QORE_PARAMHOLDER_H
+#ifndef _QORE_MODULE_ODBC_PARAMHOLDER_H
+#define _QORE_MODULE_ODBC_PARAMHOLDER_H
 
 #include <vector>
 
@@ -79,5 +79,5 @@ public:
     }
 };
 
-#endif // _QORE_PARAMHOLDER_H
+#endif // _QORE_MODULE_ODBC_PARAMHOLDER_H
 

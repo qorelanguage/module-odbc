@@ -25,8 +25,8 @@
   DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _QORE_ERRORHELPER_H
-#define _QORE_ERRORHELPER_H
+#ifndef _QORE_MODULE_ODBC_ERRORHELPER_H
+#define _QORE_MODULE_ODBC_ERRORHELPER_H
 
 #include <string>
 
@@ -77,5 +77,5 @@ public:
     }
 };
 
-#endif // _QORE_ERRORHELPER_H
+#endif // _QORE_MODULE_ODBC_ERRORHELPER_H
 

@@ -25,8 +25,8 @@
   DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _QORE_ODBCSTATEMENT_H
-#define _QORE_ODBCSTATEMENT_H
+#ifndef _QORE_MODULE_ODBC_ODBCSTATEMENT_H
+#define _QORE_MODULE_ODBC_ODBCSTATEMENT_H
 
 #include <cstring>
 #include <memory>
@@ -691,5 +691,5 @@ SQL_INTERVAL_STRUCT ODBCStatement::getIntervalFromDate(const DateTimeNode* arg) 
     return t;
 }
 
-#endif // _QORE_ODBCSTATEMENT_H
+#endif // _QORE_MODULE_ODBC_ODBCSTATEMENT_H
 
