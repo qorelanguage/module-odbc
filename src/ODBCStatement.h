@@ -190,28 +190,185 @@ private:
      */
     int handleParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink);
 
+    //! Create a new C-style string array filled with string values from the passed Qore list.
+    /** @param arg list of Qore strings used to fill the array
+        @param array pointer to the created array will be written here
+        @param indArray pointer to an accompanying indicator array will be written here
+        @param maxlen maximum length in bytes of the strings will be written here
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
     int createArrayFromStringList(const QoreListNode* arg, char**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+
+    //! Create a new C-style string array filled with stringified number values from the passed Qore list.
+    /** @param arg list of Qore numbers used to fill the array
+        @param array pointer to the created array will be written here
+        @param indArray pointer to an accompanying indicator array will be written here
+        @param maxlen maximum length in bytes of the strings will be written here
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
     int createArrayFromNumberList(const QoreListNode* arg, char**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+
+    //! Create a new void* array filled with values of binaries from the passed Qore list.
+    /** @param arg list of Qore binaries used to fill the array
+        @param array pointer to the created array will be written here
+        @param indArray pointer to an accompanying indicator array will be written here
+        @param maxlen maximum length in bytes of the binary values will be written here
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
     int createArrayFromBinaryList(const QoreListNode* arg, void**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+
+    //! Create an ODBC timestamp array filled in using Qore dates from the passed Qore list.
+    /** @param arg list of Qore dates used to fill the array
+        @param array pointer to the created array will be written here
+        @param indArray pointer to an accompanying indicator array will be written here
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
     int createArrayFromAbsoluteDateList(const QoreListNode* arg, TIMESTAMP_STRUCT*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+
+    //! Create an ODBC interval structure array filled in using Qore dates from the passed Qore list.
+    /** @param arg list of Qore dates used to fill the array
+        @param array pointer to the created array will be written here
+        @param indArray pointer to an accompanying indicator array will be written here
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
     int createArrayFromRelativeDateList(const QoreListNode* arg, SQL_INTERVAL_STRUCT*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+
+    //! Create a bool array filled with Qore bools from the passed Qore list.
+    /** @param arg list of Qore bools used to fill the array
+        @param array pointer to the created array will be written here
+        @param indArray pointer to an accompanying indicator array will be written here
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
     int createArrayFromBoolList(const QoreListNode* arg, bool*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+
+    //! Create an int64 array filled with Qore ints from the passed Qore list.
+    /** @param arg list of Qore ints used to fill the array
+        @param array pointer to the created array will be written here
+        @param indArray pointer to an accompanying indicator array will be written here
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
     int createArrayFromIntList(const QoreListNode* arg, int64*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+
+    //! Create a double array filled with Qore floats from the passed Qore list.
+    /** @param arg list of Qore floats used to fill the array
+        @param array pointer to the created array will be written here
+        @param indArray pointer to an accompanying indicator array will be written here
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
     int createArrayFromFloatList(const QoreListNode* arg, double*& array, SQLLEN*& indArray, ExceptionSink* xsink);
 
+    //! Create a new C-style string array and fill it with passed string value.
+    /** @param arg string used to fill the array
+        @param len size in bytes of the string will be written here
+        @param xsink exception sink
+
+        @return pointer to the created array
+     */
     char** createArrayFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
+
+    //! Create a new C-style string array and fill it with passed stringified number.
+    /** @param arg number used to fill the array
+        @param len size in bytes of the string will be written here
+        @param xsink exception sink
+
+        @return pointer to the created array
+     */
     char** createArrayFromNumber(const QoreNumberNode* arg, qore_size_t& len, ExceptionSink* xsink);
+
+    //! Create a new void* array and fill it with passed binary's value.
+    /** @param arg binary whose value will be used to fill the array
+        @param len size in bytes of the binary value
+        @param xsink exception sink
+
+        @return pointer to the created array
+     */
     void** createArrayFromBinary(const BinaryNode* arg, qore_size_t& len, ExceptionSink* xsink);
+
+    //! Create an array of ODBC timestamps initialized with the passed Qore date.
+    /** @param arg date used for initializing the timestamps
+        @param xsink exception sink
+
+        @return pointer to the created array
+     */
     TIMESTAMP_STRUCT* createArrayFromAbsoluteDate(const DateTimeNode* arg, ExceptionSink* xsink);
+
+    //! Create an array of ODBC interval structures initialized with the passed Qore date.
+    /** @param arg date used for initializing the interval structures
+        @param xsink exception sink
+
+        @return pointer to the created array
+     */
     SQL_INTERVAL_STRUCT* createArrayFromRelativeDate(const DateTimeNode* arg, ExceptionSink* xsink);
+
+    //! Create a bool array filled with the passed Qore bool value.
+    /** @param arg Qore bool used for initializing the array values
+        @param xsink exception sink
+
+        @return pointer to the created array
+     */
     bool* createArrayFromBool(const QoreBoolNode* arg, ExceptionSink* xsink);
+
+    //! Create an int64 array filled with the passed Qore int value.
+    /** @param arg Qore int used for initializing the array values
+        @param xsink exception sink
+
+        @return pointer to the created array
+     */
     int64* createArrayFromInt(const QoreBigIntNode* arg, ExceptionSink* xsink);
+
+    //! Create a double array filled with the passed Qore float value.
+    /** @param arg Qore float used for initializing the array values
+        @param xsink exception sink
+
+        @return pointer to the created array
+     */
     double* createArrayFromFloat(const QoreFloatNode* arg, ExceptionSink* xsink);
 
+    //! Create a new indicator array filled with the passed indicator value.
+    /** @param ind value used to fill the array
+        @param xsink exception sink
+
+        @return pointer to the created array
+     */
     SQLLEN* createIndArray(SQLLEN ind, ExceptionSink* xsink);
 
+    //! Get a new C-style string in UTF-16 encoding from the passed Qore string.
+    /** @param arg source Qore string
+        @param len size in bytes of the string will be written here
+        @param xsink exception sink
+
+        @return pointer to the new string
+     */
     inline char* getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
+
+    //! Get an ODBC timestamp from Qore date value.
+    /** @param arg source Qore date
+
+        @return ODBC timestamp structure
+     */
     inline TIMESTAMP_STRUCT getTimestampFromDate(const DateTimeNode* arg);
+
+    //! Get an ODBC interval structure from Qore date value.
+    /** @param arg source Qore date
+
+        @return ODBC interval structure
+     */
     inline SQL_INTERVAL_STRUCT getIntervalFromDate(const DateTimeNode* arg);
 
     //! Disabled copy constructor.
