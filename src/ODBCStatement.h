@@ -104,14 +104,14 @@ private:
         @param desc error description
         @param xsink exception sink
      */
-    void handleStmtError(const char* err, const char* desc, ExceptionSink *xsink);
+    DLLLOCAL void handleStmtError(const char* err, const char* desc, ExceptionSink *xsink);
 
     //! Fetch metadata about result columns.
     /** @param xsink exception sink
 
         @return 0 for OK, -1 for error
      */
-    int fetchResultColumnMetadata(ExceptionSink* xsink);
+    DLLLOCAL int fetchResultColumnMetadata(ExceptionSink* xsink);
 
     //! Get one row of the result set.
     /** @param row row number from 0, used for error descriptions only
@@ -120,7 +120,7 @@ private:
 
         @return one result-set row
      */
-    QoreHashNode* getRowIntern(int row, GetRowInternStatus& status, ExceptionSink* xsink);
+    DLLLOCAL QoreHashNode* getRowIntern(int row, GetRowInternStatus& status, ExceptionSink* xsink);
 
     //! Get a column's value and return a Qore node made from it.
     /** @param row row number from 0, used for error descriptions only
@@ -130,7 +130,7 @@ private:
 
         @return result value wrapped in a Qore node
      */
-    inline AbstractQoreNode* getColumnValue(int row, int column, ODBCResultColumn& rcol, ExceptionSink* xsink);
+    DLLLOCAL inline AbstractQoreNode* getColumnValue(int row, int column, ODBCResultColumn& rcol, ExceptionSink* xsink);
 
     //! Execute a parsed statement with bound paramaters.
     /** @param str SQL statement
@@ -138,7 +138,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int execIntern(const char* str, ExceptionSink* xsink);
+    DLLLOCAL int execIntern(const char* str, ExceptionSink* xsink);
 
     //! Parse a Qore-style SQL statement.
     /** @param str Qore-style SQL statement
@@ -147,17 +147,17 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int parse(QoreString* str, const QoreListNode* args, ExceptionSink* xsink);
+    DLLLOCAL int parse(QoreString* str, const QoreListNode* args, ExceptionSink* xsink);
 
     //! Return whether the passed arguments have arrays.
-    bool hasArrays(const QoreListNode* args) const;
+    DLLLOCAL bool hasArrays(const QoreListNode* args) const;
 
     //! Return size of arrays in the passed arguments.
     /** @param args SQL parameters
 
         @return parameter array size
      */
-    qore_size_t findArraySizeOfArgs(const QoreListNode* args) const;
+    DLLLOCAL qore_size_t findArraySizeOfArgs(const QoreListNode* args) const;
 
     //! Bind a simple list of SQL parameters.
     /** @param args SQL parameters
@@ -165,7 +165,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int bind(const QoreListNode* args, ExceptionSink* xsink);
+    DLLLOCAL int bind(const QoreListNode* args, ExceptionSink* xsink);
 
     //! Bind a list of arrays of SQL parameters.
     /** @param args SQL parameters
@@ -173,7 +173,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int bindArray(const QoreListNode* args, ExceptionSink* xsink);
+    DLLLOCAL int bindArray(const QoreListNode* args, ExceptionSink* xsink);
 
     //! Bind a list of values as an array.
     /** @param column ODBC column number, starting from 1
@@ -182,7 +182,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int bindParamArrayList(int column, const QoreListNode* lst, ExceptionSink* xsink);
+    DLLLOCAL int bindParamArrayList(int column, const QoreListNode* lst, ExceptionSink* xsink);
 
     //! Bind a single value argument as an array.
     /** @param column ODBC column number, starting from 1
@@ -191,7 +191,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int bindParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink);
+    DLLLOCAL int bindParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink);
 
     //! Create a new C-style string array filled with string values from the passed Qore list.
     /** @param arg list of Qore strings used to fill the array
@@ -202,7 +202,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int createArrayFromStringList(const QoreListNode* arg, char**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromStringList(const QoreListNode* arg, char**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
 
     //! Create a new C-style string array filled with stringified number values from the passed Qore list.
     /** @param arg list of Qore numbers used to fill the array
@@ -213,7 +213,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int createArrayFromNumberList(const QoreListNode* arg, char**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromNumberList(const QoreListNode* arg, char**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
 
     //! Create a new void* array filled with values of binaries from the passed Qore list.
     /** @param arg list of Qore binaries used to fill the array
@@ -224,7 +224,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int createArrayFromBinaryList(const QoreListNode* arg, void**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromBinaryList(const QoreListNode* arg, void**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
 
     //! Create an ODBC timestamp array filled in using Qore dates from the passed Qore list.
     /** @param arg list of Qore dates used to fill the array
@@ -234,7 +234,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int createArrayFromAbsoluteDateList(const QoreListNode* arg, TIMESTAMP_STRUCT*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromAbsoluteDateList(const QoreListNode* arg, TIMESTAMP_STRUCT*& array, SQLLEN*& indArray, ExceptionSink* xsink);
 
     //! Create an ODBC interval structure array filled in using Qore dates from the passed Qore list.
     /** @param arg list of Qore dates used to fill the array
@@ -244,7 +244,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int createArrayFromRelativeDateList(const QoreListNode* arg, SQL_INTERVAL_STRUCT*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromRelativeDateList(const QoreListNode* arg, SQL_INTERVAL_STRUCT*& array, SQLLEN*& indArray, ExceptionSink* xsink);
 
     //! Create a bool array filled with Qore bools from the passed Qore list.
     /** @param arg list of Qore bools used to fill the array
@@ -254,7 +254,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int createArrayFromBoolList(const QoreListNode* arg, bool*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromBoolList(const QoreListNode* arg, bool*& array, SQLLEN*& indArray, ExceptionSink* xsink);
 
     //! Create an int64 array filled with Qore ints from the passed Qore list.
     /** @param arg list of Qore ints used to fill the array
@@ -264,7 +264,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int createArrayFromIntList(const QoreListNode* arg, int64*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromIntList(const QoreListNode* arg, int64*& array, SQLLEN*& indArray, ExceptionSink* xsink);
 
     //! Create a double array filled with Qore floats from the passed Qore list.
     /** @param arg list of Qore floats used to fill the array
@@ -274,7 +274,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int createArrayFromFloatList(const QoreListNode* arg, double*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromFloatList(const QoreListNode* arg, double*& array, SQLLEN*& indArray, ExceptionSink* xsink);
 
     //! Create a new C-style string array and fill it with passed string value.
     /** @param arg string used to fill the array
@@ -283,7 +283,7 @@ private:
 
         @return pointer to the created array
      */
-    char** createArrayFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL char** createArrayFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
 
     //! Create a new C-style string array and fill it with passed stringified number.
     /** @param arg number used to fill the array
@@ -292,7 +292,7 @@ private:
 
         @return pointer to the created array
      */
-    char** createArrayFromNumber(const QoreNumberNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL char** createArrayFromNumber(const QoreNumberNode* arg, qore_size_t& len, ExceptionSink* xsink);
 
     //! Create a new void* array and fill it with passed binary's value.
     /** @param arg binary whose value will be used to fill the array
@@ -301,7 +301,7 @@ private:
 
         @return pointer to the created array
      */
-    void** createArrayFromBinary(const BinaryNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL void** createArrayFromBinary(const BinaryNode* arg, qore_size_t& len, ExceptionSink* xsink);
 
     //! Create an array of ODBC timestamps initialized with the passed Qore date.
     /** @param arg date used for initializing the timestamps
@@ -309,7 +309,7 @@ private:
 
         @return pointer to the created array
      */
-    TIMESTAMP_STRUCT* createArrayFromAbsoluteDate(const DateTimeNode* arg, ExceptionSink* xsink);
+    DLLLOCAL TIMESTAMP_STRUCT* createArrayFromAbsoluteDate(const DateTimeNode* arg, ExceptionSink* xsink);
 
     //! Create an array of ODBC interval structures initialized with the passed Qore date.
     /** @param arg date used for initializing the interval structures
@@ -317,7 +317,7 @@ private:
 
         @return pointer to the created array
      */
-    SQL_INTERVAL_STRUCT* createArrayFromRelativeDate(const DateTimeNode* arg, ExceptionSink* xsink);
+    DLLLOCAL SQL_INTERVAL_STRUCT* createArrayFromRelativeDate(const DateTimeNode* arg, ExceptionSink* xsink);
 
     //! Create a bool array filled with the passed Qore bool value.
     /** @param arg Qore bool used for initializing the array values
@@ -325,7 +325,7 @@ private:
 
         @return pointer to the created array
      */
-    bool* createArrayFromBool(const QoreBoolNode* arg, ExceptionSink* xsink);
+    DLLLOCAL bool* createArrayFromBool(const QoreBoolNode* arg, ExceptionSink* xsink);
 
     //! Create an int64 array filled with the passed Qore int value.
     /** @param arg Qore int used for initializing the array values
@@ -333,7 +333,7 @@ private:
 
         @return pointer to the created array
      */
-    int64* createArrayFromInt(const QoreBigIntNode* arg, ExceptionSink* xsink);
+    DLLLOCAL int64* createArrayFromInt(const QoreBigIntNode* arg, ExceptionSink* xsink);
 
     //! Create a double array filled with the passed Qore float value.
     /** @param arg Qore float used for initializing the array values
@@ -341,7 +341,7 @@ private:
 
         @return pointer to the created array
      */
-    double* createArrayFromFloat(const QoreFloatNode* arg, ExceptionSink* xsink);
+    DLLLOCAL double* createArrayFromFloat(const QoreFloatNode* arg, ExceptionSink* xsink);
 
     //! Create a new indicator array filled with the passed indicator value.
     /** @param ind value used to fill the array
@@ -349,7 +349,7 @@ private:
 
         @return pointer to the created array
      */
-    SQLLEN* createIndArray(SQLLEN ind, ExceptionSink* xsink);
+    DLLLOCAL SQLLEN* createIndArray(SQLLEN ind, ExceptionSink* xsink);
 
     //! Get a new C-style string in UTF-16 encoding from the passed Qore string.
     /** @param arg source Qore string
@@ -358,21 +358,21 @@ private:
 
         @return pointer to the new string
      */
-    inline char* getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL inline char* getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
 
     //! Get an ODBC timestamp from Qore date value.
     /** @param arg source Qore date
 
         @return ODBC timestamp structure
      */
-    inline TIMESTAMP_STRUCT getTimestampFromDate(const DateTimeNode* arg);
+    DLLLOCAL inline TIMESTAMP_STRUCT getTimestampFromDate(const DateTimeNode* arg);
 
     //! Get an ODBC interval structure from Qore date value.
     /** @param arg source Qore date
 
         @return ODBC interval structure
      */
-    inline SQL_INTERVAL_STRUCT getIntervalFromDate(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getIntervalFromDate(const DateTimeNode* arg);
 
     //! Disabled copy constructor.
     DLLLOCAL ODBCStatement(const ODBCStatement& s) : params(0, 0) {}

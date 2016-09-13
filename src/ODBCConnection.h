@@ -70,7 +70,7 @@ private:
         @param desc error description
         @param xsink exception sink
      */
-    void handleDbcError(const char* err, const char* desc, ExceptionSink *xsink);
+    DLLLOCAL void handleDbcError(const char* err, const char* desc, ExceptionSink *xsink);
 
     //! Prepare ODBC connection string and save it to the passed string.
     /** @param str connection string
@@ -78,14 +78,14 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    int prepareConnectionString(QoreString& str, ExceptionSink* xsink);
+    DLLLOCAL int prepareConnectionString(QoreString& str, ExceptionSink* xsink);
 
     //! Parse ODBC version string.
     /** @param str version string
 
         @return version in the form: major*1000000 + minor*10000 + sub
      */
-    int parseOdbcVersion(const char* str);
+    DLLLOCAL int parseOdbcVersion(const char* str);
 
 public:
     //! Constructor.

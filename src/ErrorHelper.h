@@ -33,6 +33,8 @@
 #include <sql.h>
 #include <sqlext.h>
 
+#include "qore/common.h"
+
 //! Error helper
 class ErrorHelper {
 private:
@@ -44,7 +46,7 @@ public:
         @param handle ODBC handle
         @param s string where the output will be written to
      */
-    static void extractDiag(SQLSMALLINT handleType, SQLHANDLE& handle, std::string& s) {
+    DLLLOCAL static void extractDiag(SQLSMALLINT handleType, SQLHANDLE& handle, std::string& s) {
         SQLINTEGER i = 1;
         SQLINTEGER native;
         SQLCHAR state[7];
@@ -70,7 +72,7 @@ public:
         @param handle ODBC handle
         @param buf buffer where the ODBC state will be written to
      */
-    static void extractState(SQLSMALLINT handleType, SQLHANDLE& handle, char* buf) {
+    DLLLOCAL static void extractState(SQLSMALLINT handleType, SQLHANDLE& handle, char* buf) {
         SQLINTEGER native;
         SQLSMALLINT textLen;
         SQLGetDiagRecA(handleType, handle, 1, reinterpret_cast<SQLCHAR*>(buf), &native, NULL, 0, &textLen);

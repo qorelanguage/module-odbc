@@ -55,7 +55,7 @@ private:
     qore_size_t arraySize;
 
 public:
-    ParamArrayHolder() : nullArray(0), nullIndArray(0), arraySize(0) {
+    DLLLOCAL ParamArrayHolder() : nullArray(0), nullIndArray(0), arraySize(0) {
         chars.reserve(16);
         singleValChars.reserve(8);
         voids.reserve(8);
@@ -66,12 +66,12 @@ public:
         intervals.reserve(8);
         indicators.reserve(32);
     }
-    ~ParamArrayHolder() { clear(); }
+    DLLLOCAL ~ParamArrayHolder() { clear(); }
 
-    void setArraySize(qore_size_t s) { arraySize = s; }
-    qore_size_t getArraySize() const { return arraySize; }
+    DLLLOCAL void setArraySize(qore_size_t s) { arraySize = s; }
+    DLLLOCAL qore_size_t getArraySize() const { return arraySize; }
 
-    char** addCharArray(ExceptionSink* xsink) {
+    DLLLOCAL char** addCharArray(ExceptionSink* xsink) {
         chars.push_back(new char*[arraySize]);
         char** array = chars[chars.size()-1];
         if (!array) {
@@ -83,7 +83,7 @@ public:
         return array;
     }
 
-    char** addSingleValCharArray(ExceptionSink* xsink) {
+    DLLLOCAL char** addSingleValCharArray(ExceptionSink* xsink) {
         singleValChars.push_back(new char*[arraySize]);
         char** array = singleValChars[singleValChars.size()-1];
         if (!array) {
@@ -95,7 +95,7 @@ public:
         return array;
     }
 
-    void** addVoidArray(ExceptionSink* xsink) {
+    DLLLOCAL void** addVoidArray(ExceptionSink* xsink) {
         voids.push_back(new void*[arraySize]);
         void** array = voids[voids.size()-1];
         if (!array) {
@@ -107,7 +107,7 @@ public:
         return array;
     }
 
-    bool* addBoolArray(ExceptionSink* xsink) {
+    DLLLOCAL bool* addBoolArray(ExceptionSink* xsink) {
         bools.push_back(new bool[arraySize]);
         bool* array = bools[bools.size()-1];
         if (!array)
@@ -115,7 +115,7 @@ public:
         return array;
     }
 
-    int64* addIntArray(ExceptionSink* xsink) {
+    DLLLOCAL int64* addIntArray(ExceptionSink* xsink) {
         ints.push_back(new int64[arraySize]);
         int64* array = ints[ints.size()-1];
         if (!array)
@@ -123,7 +123,7 @@ public:
         return array;
     }
 
-    double* addFloatArray(ExceptionSink* xsink) {
+    DLLLOCAL double* addFloatArray(ExceptionSink* xsink) {
         floats.push_back(new double[arraySize]);
         double* array = floats[floats.size()-1];
         if (!array)
@@ -131,7 +131,7 @@ public:
         return array;
     }
 
-    TIMESTAMP_STRUCT* addTimestampArray(ExceptionSink* xsink) {
+    DLLLOCAL TIMESTAMP_STRUCT* addTimestampArray(ExceptionSink* xsink) {
         timestamps.push_back(new TIMESTAMP_STRUCT[arraySize]);
         TIMESTAMP_STRUCT* array = timestamps[timestamps.size()-1];
         if (!array)
@@ -139,7 +139,7 @@ public:
         return array;
     }
 
-    SQL_INTERVAL_STRUCT* addIntervalArray(ExceptionSink* xsink) {
+    DLLLOCAL SQL_INTERVAL_STRUCT* addIntervalArray(ExceptionSink* xsink) {
         intervals.push_back(new SQL_INTERVAL_STRUCT[arraySize]);
         SQL_INTERVAL_STRUCT* array = intervals[intervals.size()-1];
         if (!array)
@@ -147,7 +147,7 @@ public:
         return array;
     }
 
-    SQLLEN* addIndArray(ExceptionSink* xsink) {
+    DLLLOCAL SQLLEN* addIndArray(ExceptionSink* xsink) {
         indicators.push_back(new SQLLEN[arraySize]);
         SQLLEN* array = indicators[indicators.size()-1];
         if (!array)
@@ -155,7 +155,7 @@ public:
         return array;
     }
 
-    void** getNullArray(ExceptionSink* xsink) {
+    DLLLOCAL void** getNullArray(ExceptionSink* xsink) {
         if (nullArray)
             return nullArray;
         nullArray = new void*[arraySize];
@@ -168,7 +168,7 @@ public:
         return nullArray;
     }
 
-    SQLLEN* getNullIndArray(ExceptionSink* xsink) {
+    DLLLOCAL SQLLEN* getNullIndArray(ExceptionSink* xsink) {
         if (nullIndArray)
             return nullIndArray;
         nullIndArray = new SQLLEN[arraySize];
@@ -181,7 +181,7 @@ public:
         return nullIndArray;
     }
 
-    void clear() {
+    DLLLOCAL void clear() {
         unsigned int count = chars.size();
         for (unsigned int i = 0; i < count; i++) {
             for (unsigned int j = 0; j < arraySize; j++)
