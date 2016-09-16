@@ -37,9 +37,6 @@
 
 //! Error helper
 class ErrorHelper {
-private:
-    DLLLOCAL ErrorHelper();
-    DLLLOCAL ~ErrorHelper();
 public:
     //! Extract ODBC diagnostic records and output them to a stringstream.
     /** @param handleType type of the ODBC handle
@@ -77,6 +74,10 @@ public:
         SQLSMALLINT textLen;
         SQLGetDiagRecA(handleType, handle, 1, reinterpret_cast<SQLCHAR*>(buf), &native, NULL, 0, &textLen);
     }
+
+private:
+    DLLLOCAL ErrorHelper();
+    DLLLOCAL ~ErrorHelper();
 };
 
 #endif // _QORE_MODULE_ODBC_ERRORHELPER_H

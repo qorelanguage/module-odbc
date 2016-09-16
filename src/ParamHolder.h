@@ -43,13 +43,6 @@ struct BoolWrapper {
 
 //! Class used by @ref ODBCStatement for temporary storage of SQL parameters.
 class ParamHolder {
-private:
-    std::vector<char*> strings;
-    std::vector<BoolWrapper> bools;
-    std::vector<SQLLEN> lengths;
-    std::vector<TIMESTAMP_STRUCT> dates;
-    std::vector<SQL_INTERVAL_STRUCT> times;
-
 public:
     DLLLOCAL ParamHolder() {
         strings.reserve(16);
@@ -77,6 +70,13 @@ public:
         dates.clear();
         times.clear();
     }
+
+private:
+    std::vector<char*> strings;
+    std::vector<BoolWrapper> bools;
+    std::vector<SQLLEN> lengths;
+    std::vector<TIMESTAMP_STRUCT> dates;
+    std::vector<SQL_INTERVAL_STRUCT> times;
 };
 
 #endif // _QORE_MODULE_ODBC_PARAMHOLDER_H

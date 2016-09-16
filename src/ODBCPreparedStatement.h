@@ -85,6 +85,13 @@ public:
      */
     DLLLOCAL int prepare(const QoreString& qstr, ExceptionSink* xsink);
 
+    //! Execute the prepared statement.
+    /** @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int exec(ExceptionSink* xsink);
+
     //! Bind the passed arguments to the statement.
     /** @param args SQL parameters
         @param xsink exception sink
@@ -115,13 +122,6 @@ public:
         @return hash of result column lists
      */
     DLLLOCAL QoreHashNode* fetchColumns(int maxRows, ExceptionSink* xsink);
-
-    //! Execute the prepared statement.
-    /** @param xsink exception sink
-
-        @return 0 for OK, -1 for error
-     */
-    DLLLOCAL int exec(ExceptionSink* xsink);
 
     //! Retrieve the next result-set row.
     /** @param xsink exception sink

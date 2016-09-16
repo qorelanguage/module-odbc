@@ -46,47 +46,6 @@
 
 //! A class representing an ODBC connection.
 class ODBCConnection {
-private:
-    //! Qore datasource.
-    Datasource* ds;
-
-    //! ODBC environment handle.
-    SQLHENV env;
-
-    //! ODBC connection handle.
-    SQLHDBC dbConn;
-
-    //! Whether an ODBC connection has been opened.
-    bool connected;
-
-    //! Version of the used ODBC DB driver.
-    int clientVer;
-
-    //! Version of the connected DBMS.
-    int serverVer;
-
-    //! Extract ODBC diagnostic and raise a Qore exception.
-    /** @param err error "code"
-        @param desc error description
-        @param xsink exception sink
-     */
-    DLLLOCAL void handleDbcError(const char* err, const char* desc, ExceptionSink *xsink);
-
-    //! Prepare ODBC connection string and save it to the passed string.
-    /** @param str connection string
-        @param xsink exception sink
-
-        @return 0 for OK, -1 for error
-     */
-    DLLLOCAL int prepareConnectionString(QoreString& str, ExceptionSink* xsink);
-
-    //! Parse ODBC version string.
-    /** @param str version string
-
-        @return version in the form: major*1000000 + minor*10000 + sub
-     */
-    DLLLOCAL int parseOdbcVersion(const char* str);
-
 public:
     //! Constructor.
     /** @param d Qore datasource
@@ -176,6 +135,47 @@ public:
     DLLLOCAL Datasource* getDatasource() const {
         return ds;
     }
+
+private:
+    //! Qore datasource.
+    Datasource* ds;
+
+    //! ODBC environment handle.
+    SQLHENV env;
+
+    //! ODBC connection handle.
+    SQLHDBC dbConn;
+
+    //! Whether an ODBC connection has been opened.
+    bool connected;
+
+    //! Version of the used ODBC DB driver.
+    int clientVer;
+
+    //! Version of the connected DBMS.
+    int serverVer;
+
+    //! Extract ODBC diagnostic and raise a Qore exception.
+    /** @param err error "code"
+        @param desc error description
+        @param xsink exception sink
+     */
+    DLLLOCAL void handleDbcError(const char* err, const char* desc, ExceptionSink *xsink);
+
+    //! Prepare ODBC connection string and save it to the passed string.
+    /** @param str connection string
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int prepareConnectionString(QoreString& str, ExceptionSink* xsink);
+
+    //! Parse ODBC version string.
+    /** @param str version string
+
+        @return version in the form: major*1000000 + minor*10000 + sub
+     */
+    DLLLOCAL int parseOdbcVersion(const char* str);
 };
 
 #endif // _QORE_MODULE_ODBC_ODBCCONNECTION_H

@@ -78,6 +78,19 @@ int ODBCPreparedStatement::prepare(const QoreString& qstr, ExceptionSink* xsink)
     return 0;
 }
 
+int ODBCPreparedStatement::exec(ExceptionSink* xsink) {
+    if (hasArrays(*bindArgs)) {
+        if (bindInternArray(*bindArgs, xsink))
+            return -1;
+    }
+    else {
+        if (bindIntern(*bindArgs, xsink))
+            return -1;
+    }
+
+    return execIntern(0, xsink);
+}
+
 int ODBCPreparedStatement::bind(const QoreListNode& args, ExceptionSink* xsink) {
     bindArgs = args.listRefSelf();
     return 0;
@@ -99,19 +112,6 @@ QoreListNode* ODBCPreparedStatement::fetchRows(int maxRows, ExceptionSink* xsink
 
 QoreHashNode* ODBCPreparedStatement::fetchColumns(int maxRows, ExceptionSink* xsink) {
     return getOutputHash(xsink, true, maxRows);
-}
-
-int ODBCPreparedStatement::exec(ExceptionSink* xsink) {
-    if (hasArrays(*bindArgs)) {
-        if (bindInternArray(*bindArgs, xsink))
-            return -1;
-    }
-    else {
-        if (bindIntern(*bindArgs, xsink))
-            return -1;
-    }
-
-    return execIntern(0, xsink);
 }
 
 bool ODBCPreparedStatement::next(ExceptionSink* xsink) {

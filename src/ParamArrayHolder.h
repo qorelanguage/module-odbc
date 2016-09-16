@@ -38,22 +38,6 @@
 
 //! Class used by @ref ODBCStatement for temporary storage of SQL parameter arrays.
 class ParamArrayHolder {
-private:
-    std::vector<char**> chars;
-    std::vector<char**> singleValChars;
-    std::vector<void**> voids;
-    std::vector<bool*> bools;
-    std::vector<int64*> ints;
-    std::vector<double*> floats;
-    std::vector<TIMESTAMP_STRUCT*> timestamps;
-    std::vector<SQL_INTERVAL_STRUCT*> intervals;
-    std::vector<SQLLEN*> indicators;
-
-    void** nullArray;
-    SQLLEN* nullIndArray;
-
-    qore_size_t arraySize;
-
 public:
     DLLLOCAL ParamArrayHolder() : nullArray(0), nullIndArray(0), arraySize(0) {
         chars.reserve(16);
@@ -240,6 +224,22 @@ public:
             nullIndArray = 0;
         }
     }
+
+private:
+    std::vector<char**> chars;
+    std::vector<char**> singleValChars;
+    std::vector<void**> voids;
+    std::vector<bool*> bools;
+    std::vector<int64*> ints;
+    std::vector<double*> floats;
+    std::vector<TIMESTAMP_STRUCT*> timestamps;
+    std::vector<SQL_INTERVAL_STRUCT*> intervals;
+    std::vector<SQLLEN*> indicators;
+
+    void** nullArray;
+    SQLLEN* nullIndArray;
+
+    qore_size_t arraySize;
 };
 
 #endif // _QORE_MODULE_ODBC_PARAMARRAYHOLDER_H

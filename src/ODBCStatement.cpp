@@ -64,136 +64,10 @@ ODBCStatement::~ODBCStatement() {
     SQLFreeHandle(SQL_HANDLE_STMT, stmt);
 }
 
-int ODBCStatement::rowsAffected() {
-    return affectedRowCount;
-}
-
 bool ODBCStatement::hasResultData() {
     SQLSMALLINT columns;
     SQLNumResultCols(stmt, &columns);
     return columns != 0;
-}
-
-QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashIfNothing, int maxRows) {
-    if (fetchResultColumnMetadata(xsink))
-        return 0;
-
-    ReferenceHolder<QoreHashNode> h(new QoreHashNode, xsink);
-    if (*xsink)
-        return 0;
-
-    int columnCount = resColumns.size();
-    std::vector<QoreListNode*> columns;
-    columns.resize(columnCount);
-
-    // Assign unique column names.
-    std::vector<std::string> cvec;
-    cvec.reserve(columnCount);
-    for (int i = 0; i < columnCount; i++) {
-        ODBCResultColumn& col = resColumns[i];
-
-        HashAssignmentHelper hah(**h, col.name);
-        if (*hah) { // Find a unique column name.
-            unsigned num = 1;
-            while (true) {
-                QoreStringMaker tmp("%s_%d", col.name, num);
-                hah.reassign(tmp.c_str());
-                if (*hah) {
-                    ++num;
-                    continue;
-                }
-                cvec.push_back(tmp.c_str());
-                break;
-            }
-        }
-        else {
-            cvec.push_back(col.name);
-        }
-        columns[i] = new QoreListNode;
-        hah.assign(columns[i], xsink);
-    }
-
-    int rowCount = 0;
-    while (true) {
-        SQLRETURN ret = SQLFetch(stmt);
-        if (ret == SQL_NO_DATA) { // Reached the end of the result-set.
-            if (rowCount == 0 && emptyHashIfNothing)
-                h->clear(xsink);
-            break;
-        }
-        if (!SQL_SUCCEEDED(ret)) { // error
-            std::string s("error occured when fetching row #%d");
-            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), readRows);
-            return 0;
-        }
-
-        for (int j = 0; j < columnCount; j++) {
-            ODBCResultColumn& rcol = resColumns[j];
-            ReferenceHolder<AbstractQoreNode> n(getColumnValue(j+1, rcol, xsink), xsink);
-            if (!n || *xsink)
-                return 0;
-
-            (columns[j])->push(n.release());
-        }
-        readRows++;
-        rowCount++;
-        if (rowCount == maxRows && maxRows > 0)
-            break;
-    }
-
-    return h.release();
-}
-
-QoreListNode* ODBCStatement::getOutputList(ExceptionSink* xsink, int maxRows) {
-    if (fetchResultColumnMetadata(xsink))
-        return 0;
-
-    ReferenceHolder<QoreListNode> l(new QoreListNode(), xsink);
-    if (*xsink)
-        return 0;
-
-    int rowCount = 0;
-    GetRowInternStatus status;
-    while (true) {
-        ReferenceHolder<QoreHashNode> h(getRowIntern(status, xsink), xsink);
-        if (status == EGRIS_OK) { // Ok.
-            l->push(h.release());
-            rowCount++;
-            if (rowCount == maxRows && maxRows > 0)
-                break;
-        }
-        else if (status == EGRIS_END) { // End of result-set.
-            break;
-        }
-        else { // status == EGRIS_ERROR
-            return 0;
-        }
-    }
-
-    return l.release();
-}
-
-QoreHashNode* ODBCStatement::getSingleRow(ExceptionSink* xsink) {
-    if (fetchResultColumnMetadata(xsink))
-        return 0;
-
-    GetRowInternStatus status;
-    ReferenceHolder<QoreHashNode> h(getRowIntern(status, xsink), xsink);
-    if (status == EGRIS_OK) { // Ok. Now have to check that there is only one row of data.
-        ReferenceHolder<QoreHashNode> h2(getRowIntern(status, xsink), xsink);
-        if (status == EGRIS_OK) {
-            xsink->raiseException("DBI:ODBC:SELECT-ROW-ERROR", "SQL passed to selectRow() returned more than 1 row");
-            return 0;
-        }
-        if (status == EGRIS_ERROR)
-            return 0;
-    }
-    else if (status == EGRIS_END || status == EGRIS_ERROR) { // No data or error.
-        return 0;
-    }
-
-    return h.release();
 }
 
 QoreHashNode* ODBCStatement::describe(ExceptionSink* xsink) {
@@ -406,6 +280,128 @@ QoreHashNode* ODBCStatement::describe(ExceptionSink* xsink) {
     return h.release();
 }
 
+QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashIfNothing, int maxRows) {
+    if (fetchResultColumnMetadata(xsink))
+        return 0;
+
+    ReferenceHolder<QoreHashNode> h(new QoreHashNode, xsink);
+    if (*xsink)
+        return 0;
+
+    int columnCount = resColumns.size();
+    std::vector<QoreListNode*> columns;
+    columns.resize(columnCount);
+
+    // Assign unique column names.
+    std::vector<std::string> cvec;
+    cvec.reserve(columnCount);
+    for (int i = 0; i < columnCount; i++) {
+        ODBCResultColumn& col = resColumns[i];
+
+        HashAssignmentHelper hah(**h, col.name);
+        if (*hah) { // Find a unique column name.
+            unsigned num = 1;
+            while (true) {
+                QoreStringMaker tmp("%s_%d", col.name, num);
+                hah.reassign(tmp.c_str());
+                if (*hah) {
+                    ++num;
+                    continue;
+                }
+                cvec.push_back(tmp.c_str());
+                break;
+            }
+        }
+        else {
+            cvec.push_back(col.name);
+        }
+        columns[i] = new QoreListNode;
+        hah.assign(columns[i], xsink);
+    }
+
+    int rowCount = 0;
+    while (true) {
+        SQLRETURN ret = SQLFetch(stmt);
+        if (ret == SQL_NO_DATA) { // Reached the end of the result-set.
+            if (rowCount == 0 && emptyHashIfNothing)
+                h->clear(xsink);
+            break;
+        }
+        if (!SQL_SUCCEEDED(ret)) { // error
+            std::string s("error occured when fetching row #%d");
+            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), readRows);
+            return 0;
+        }
+
+        for (int j = 0; j < columnCount; j++) {
+            ODBCResultColumn& rcol = resColumns[j];
+            ReferenceHolder<AbstractQoreNode> n(getColumnValue(j+1, rcol, xsink), xsink);
+            if (!n || *xsink)
+                return 0;
+
+            (columns[j])->push(n.release());
+        }
+        readRows++;
+        rowCount++;
+        if (rowCount == maxRows && maxRows > 0)
+            break;
+    }
+
+    return h.release();
+}
+
+QoreListNode* ODBCStatement::getOutputList(ExceptionSink* xsink, int maxRows) {
+    if (fetchResultColumnMetadata(xsink))
+        return 0;
+
+    ReferenceHolder<QoreListNode> l(new QoreListNode(), xsink);
+    if (*xsink)
+        return 0;
+
+    int rowCount = 0;
+    GetRowInternStatus status;
+    while (true) {
+        ReferenceHolder<QoreHashNode> h(getRowIntern(status, xsink), xsink);
+        if (status == EGRIS_OK) { // Ok.
+            l->push(h.release());
+            rowCount++;
+            if (rowCount == maxRows && maxRows > 0)
+                break;
+        }
+        else if (status == EGRIS_END) { // End of result-set.
+            break;
+        }
+        else { // status == EGRIS_ERROR
+            return 0;
+        }
+    }
+
+    return l.release();
+}
+
+QoreHashNode* ODBCStatement::getSingleRow(ExceptionSink* xsink) {
+    if (fetchResultColumnMetadata(xsink))
+        return 0;
+
+    GetRowInternStatus status;
+    ReferenceHolder<QoreHashNode> h(getRowIntern(status, xsink), xsink);
+    if (status == EGRIS_OK) { // Ok. Now have to check that there is only one row of data.
+        ReferenceHolder<QoreHashNode> h2(getRowIntern(status, xsink), xsink);
+        if (status == EGRIS_OK) {
+            xsink->raiseException("DBI:ODBC:SELECT-ROW-ERROR", "SQL passed to selectRow() returned more than 1 row");
+            return 0;
+        }
+        if (status == EGRIS_ERROR)
+            return 0;
+    }
+    else if (status == EGRIS_END || status == EGRIS_ERROR) { // No data or error.
+        return 0;
+    }
+
+    return h.release();
+}
+
 int ODBCStatement::exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     // Convert string to required character encoding or copy.
     std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_USASCII, xsink));
@@ -433,100 +429,14 @@ int ODBCStatement::exec(const char* cmd, ExceptionSink* xsink) {
 
 
 /////////////////////////////
-//    Private methods     //
+//   Protected methods    //
 ///////////////////////////
+
 
 void ODBCStatement::handleStmtError(const char* err, const char* desc, ExceptionSink* xsink) {
     std::string s(desc);
     ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
     xsink->raiseException(err, s.c_str());
-}
-
-int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
-    SQLSMALLINT columns;
-    SQLRETURN ret = SQLNumResultCols(stmt, &columns);
-    if (!SQL_SUCCEEDED(ret)) { // error
-        handleStmtError("DBI:ODBC:COLUMN-METADATA-ERROR", "error occured when fetching result column count", xsink);
-        return -1;
-    }
-
-    char name[512];
-    name[511] = '\0';
-    resColumns.resize(columns);
-    for (int i = 0; i < columns; i++) {
-        ODBCResultColumn& col = resColumns[i];
-        SQLSMALLINT nameLength;
-        ret = SQLDescribeColA(stmt, i+1, reinterpret_cast<SQLCHAR*>(name), 512, &nameLength, &col.dataType,
-            &col.colSize, &col.decimalDigits, &col.nullable);
-        if (!SQL_SUCCEEDED(ret)) { // error
-            std::string s("error occured when fetching result column metadata of column #%d");
-            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i+1);
-            return -1;
-        }
-
-        ret = SQLColAttributeA(stmt, i+1, SQL_DESC_OCTET_LENGTH, 0, 0, 0, &col.byteSize);
-        if (!SQL_SUCCEEDED(ret)) { // error
-            std::string s("error occured when fetching result column metadata of column #%d");
-            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i+1);
-            return -1;
-        }
-        col.name = name;
-    }
-    return 0;
-}
-
-QoreHashNode* ODBCStatement::getRowIntern(GetRowInternStatus& status, ExceptionSink* xsink) {
-    SQLRETURN ret = SQLFetch(stmt);
-    if (ret == SQL_NO_DATA) { // Reached the end of the result-set.
-        status = EGRIS_END;
-        return 0;
-    }
-    if (!SQL_SUCCEEDED(ret)) { // error
-        std::string s("error occured when fetching row #%d");
-        ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-        xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), readRows);
-        status = EGRIS_ERROR;
-        return 0;
-    }
-
-    ReferenceHolder<QoreHashNode> h(new QoreHashNode, xsink); // Row hash.
-    if (*xsink) {
-        status = EGRIS_ERROR;
-        return 0;
-    }
-
-    int columns = resColumns.size();
-    for (int i = 0; i < columns; i++) {
-        ODBCResultColumn& col = resColumns[i];
-        ReferenceHolder<AbstractQoreNode> n(xsink);
-        n = getColumnValue(i+1, col, xsink);
-        if (*xsink) {
-            status = EGRIS_ERROR;
-            return 0;
-        }
-
-        HashAssignmentHelper hah(**h, col.name);
-        if (*hah) { // Find a unique column name.
-            unsigned num = 1;
-            while (true) {
-                QoreStringMaker tmp("%s_%d", col.name, num);
-                hah.reassign(tmp.c_str());
-                if (*hah) {
-                    ++num;
-                    continue;
-                }
-                break;
-            }
-        }
-
-        hah.assign(n.release(), xsink);
-    }
-    readRows++;
-
-    status = EGRIS_OK;
-    return h.release();
 }
 
 int ODBCStatement::execIntern(const char* str, ExceptionSink* xsink) {
@@ -651,6 +561,58 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
     }
 
     return 0;
+}
+
+QoreHashNode* ODBCStatement::getRowIntern(GetRowInternStatus& status, ExceptionSink* xsink) {
+    SQLRETURN ret = SQLFetch(stmt);
+    if (ret == SQL_NO_DATA) { // Reached the end of the result-set.
+        status = EGRIS_END;
+        return 0;
+    }
+    if (!SQL_SUCCEEDED(ret)) { // error
+        std::string s("error occured when fetching row #%d");
+        ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), readRows);
+        status = EGRIS_ERROR;
+        return 0;
+    }
+
+    ReferenceHolder<QoreHashNode> h(new QoreHashNode, xsink); // Row hash.
+    if (*xsink) {
+        status = EGRIS_ERROR;
+        return 0;
+    }
+
+    int columns = resColumns.size();
+    for (int i = 0; i < columns; i++) {
+        ODBCResultColumn& col = resColumns[i];
+        ReferenceHolder<AbstractQoreNode> n(xsink);
+        n = getColumnValue(i+1, col, xsink);
+        if (*xsink) {
+            status = EGRIS_ERROR;
+            return 0;
+        }
+
+        HashAssignmentHelper hah(**h, col.name);
+        if (*hah) { // Find a unique column name.
+            unsigned num = 1;
+            while (true) {
+                QoreStringMaker tmp("%s_%d", col.name, num);
+                hah.reassign(tmp.c_str());
+                if (*hah) {
+                    ++num;
+                    continue;
+                }
+                break;
+            }
+        }
+
+        hah.assign(n.release(), xsink);
+    }
+    readRows++;
+
+    status = EGRIS_OK;
+    return h.release();
 }
 
 bool ODBCStatement::hasArrays(const QoreListNode* args) const {
@@ -817,6 +779,46 @@ int ODBCStatement::bindInternArray(const QoreListNode* args, ExceptionSink* xsin
         } // switch
     } // for
 
+    return 0;
+}
+
+
+/////////////////////////////
+//    Private methods     //
+///////////////////////////
+
+int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
+    SQLSMALLINT columns;
+    SQLRETURN ret = SQLNumResultCols(stmt, &columns);
+    if (!SQL_SUCCEEDED(ret)) { // error
+        handleStmtError("DBI:ODBC:COLUMN-METADATA-ERROR", "error occured when fetching result column count", xsink);
+        return -1;
+    }
+
+    char name[512];
+    name[511] = '\0';
+    resColumns.resize(columns);
+    for (int i = 0; i < columns; i++) {
+        ODBCResultColumn& col = resColumns[i];
+        SQLSMALLINT nameLength;
+        ret = SQLDescribeColA(stmt, i+1, reinterpret_cast<SQLCHAR*>(name), 512, &nameLength, &col.dataType,
+            &col.colSize, &col.decimalDigits, &col.nullable);
+        if (!SQL_SUCCEEDED(ret)) { // error
+            std::string s("error occured when fetching result column metadata of column #%d");
+            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i+1);
+            return -1;
+        }
+
+        ret = SQLColAttributeA(stmt, i+1, SQL_DESC_OCTET_LENGTH, 0, 0, 0, &col.byteSize);
+        if (!SQL_SUCCEEDED(ret)) { // error
+            std::string s("error occured when fetching result column metadata of column #%d");
+            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i+1);
+            return -1;
+        }
+        col.name = name;
+    }
     return 0;
 }
 
