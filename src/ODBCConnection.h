@@ -97,6 +97,12 @@ public:
     //! Destructor.
     DLLLOCAL ~ODBCConnection();
 
+    //! Disabled copy constructor.
+    DLLLOCAL ODBCConnection(const ODBCConnection& c) = delete;
+
+    //! Disabled assignment operator.
+    DLLLOCAL ODBCConnection& operator=(const ODBCConnection& c) = delete;
+
     //! Commit an ODBC transaction.
     /** @param xsink exception sink
 
