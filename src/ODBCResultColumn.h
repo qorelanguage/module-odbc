@@ -47,6 +47,11 @@ public:
     //! Column size.
     SQLULEN colSize;
 
+    /** Column's size in bytes.
+        Maximum size for variable-length types and actual size for fixed-length types.
+     */
+    SQLLEN byteSize;
+
     //! Number of decimal digits of the column.
     SQLSMALLINT decimalDigits;
 

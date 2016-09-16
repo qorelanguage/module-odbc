@@ -34,6 +34,7 @@
 #endif
 
 #include "ODBCConnection.h"
+#include "ODBCPreparedStatement.h"
 
 QoreStringNode *odbc_module_init();
 void odbc_module_ns_init(QoreNamespace *rns, QoreNamespace *qns);
@@ -87,7 +88,6 @@ int DBI_ODBC_CAPS =
 
 static int odbc_open(Datasource* ds, ExceptionSink* xsink) {
     ODBCConnection* conn = new ODBCConnection(ds, xsink);
-
     if (*xsink) {
         delete conn;
         return -1;
@@ -157,11 +157,131 @@ static AbstractQoreNode* odbc_get_server_version(Datasource* ds, ExceptionSink* 
     return new QoreBigIntNode(conn->getServerVersion());
 }
 
+static int odbc_stmt_prepare(SQLStatement* stmt, const QoreString& str, const QoreListNode* args, ExceptionSink* xsink) {
+    assert(!stmt->getPrivateData());
+
+    ODBCPreparedStatement* ps = new ODBCPreparedStatement(stmt->getDatasource(), xsink);
+    if (*xsink) {
+        delete ps;
+        return -1;
+    }
+    stmt->setPrivateData(ps);
+
+    return ps->prepare(str, args, xsink);
+}
+
+static int odbc_stmt_prepare_raw(SQLStatement* stmt, const QoreString& str, ExceptionSink* xsink) {
+    assert(!stmt->getPrivateData());
+
+    ODBCPreparedStatement* ps = new ODBCPreparedStatement(stmt->getDatasource(), xsink);
+    if (*xsink) {
+        delete ps;
+        return -1;
+    }
+    stmt->setPrivateData(ps);
+
+    return ps->prepare(str, xsink);
+}
+
+static int odbc_stmt_bind(SQLStatement* stmt, const QoreListNode& args, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    return ps->bind(args, xsink);
+}
+
+static int odbc_stmt_bind_placeholders(SQLStatement* stmt, const QoreListNode& args, ExceptionSink* xsink) {
+    xsink->raiseException("DBI:ODBC:BIND-PLACEHHODERS-ERROR", "binding placeholders is not necessary or supported with the odbc driver");
+    return -1;
+}
+
+static int odbc_stmt_bind_values(SQLStatement* stmt, const QoreListNode& args, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    return ps->bind(args, xsink);
+}
+
+static int odbc_stmt_exec(SQLStatement* stmt, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    return ps->exec(xsink);
+}
+
+static int odbc_stmt_define(SQLStatement* stmt, ExceptionSink* xsink) {
+    // define is a noop in the odbc driver
+    return 0;
+}
+
+static int odbc_stmt_affected_rows(SQLStatement* stmt, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    return ps->rowsAffected();
+}
+
+static QoreHashNode* odbc_stmt_get_output(SQLStatement* stmt, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    return ps->getOutputHash(xsink, false);
+}
+
+static QoreHashNode* odbc_stmt_get_output_rows(SQLStatement* stmt, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    return ps->getOutputHash(xsink, false);
+}
+
+static QoreHashNode* odbc_stmt_fetch_row(SQLStatement* stmt, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    return ps->fetchRow(xsink);
+}
+
+static QoreListNode* odbc_stmt_fetch_rows(SQLStatement* stmt, int maxRows, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    return ps->fetchRows(maxRows, xsink);
+}
+
+static QoreHashNode* odbc_stmt_fetch_columns(SQLStatement* stmt, int maxRows, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    return ps->fetchColumns(maxRows, xsink);
+}
+
+static QoreHashNode* odbc_stmt_describe(SQLStatement* stmt, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    return ps->describe(xsink);
+}
+
+static bool odbc_stmt_next(SQLStatement* stmt, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    return ps->next(xsink);
+}
+
+static int odbc_stmt_close(SQLStatement* stmt, ExceptionSink* xsink) {
+    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    assert(ps);
+
+    delete ps;
+    stmt->setPrivateData(0);
+    return *xsink ? -1 : 0;
+}
 
 QoreNamespace OdbcNS("odbc");
 
 QoreStringNode *odbc_module_init() {
-
     qore_dbi_method_list methods;
     methods.add(QDBI_METHOD_OPEN, odbc_open);
     methods.add(QDBI_METHOD_CLOSE, odbc_close);
@@ -181,7 +301,24 @@ QoreStringNode *odbc_module_init() {
     methods.add(QDBI_METHOD_GET_CLIENT_VERSION, odbc_get_client_version);
     methods.add(QDBI_METHOD_GET_SERVER_VERSION, odbc_get_server_version);
 
-    // prepared statement stuff
+    methods.add(QDBI_METHOD_STMT_PREPARE, odbc_stmt_prepare);
+    methods.add(QDBI_METHOD_STMT_PREPARE_RAW, odbc_stmt_prepare_raw);
+    methods.add(QDBI_METHOD_STMT_BIND, odbc_stmt_bind);
+    methods.add(QDBI_METHOD_STMT_BIND_PLACEHOLDERS, odbc_stmt_bind_placeholders);
+    methods.add(QDBI_METHOD_STMT_BIND_VALUES, odbc_stmt_bind_values);
+    methods.add(QDBI_METHOD_STMT_EXEC, odbc_stmt_exec);
+    methods.add(QDBI_METHOD_STMT_DEFINE, odbc_stmt_define);
+    methods.add(QDBI_METHOD_STMT_FETCH_ROW, odbc_stmt_fetch_row);
+    methods.add(QDBI_METHOD_STMT_FETCH_ROWS, odbc_stmt_fetch_rows);
+    methods.add(QDBI_METHOD_STMT_FETCH_COLUMNS, odbc_stmt_fetch_columns);
+    methods.add(QDBI_METHOD_STMT_DESCRIBE, odbc_stmt_describe);
+    methods.add(QDBI_METHOD_STMT_NEXT, odbc_stmt_next);
+    methods.add(QDBI_METHOD_STMT_CLOSE, odbc_stmt_close);
+    methods.add(QDBI_METHOD_STMT_AFFECTED_ROWS, odbc_stmt_affected_rows);
+    methods.add(QDBI_METHOD_STMT_GET_OUTPUT, odbc_stmt_get_output);
+    methods.add(QDBI_METHOD_STMT_GET_OUTPUT_ROWS, odbc_stmt_get_output_rows);
+
+    // options
 
     DBID_ODBC = DBI.registerDriver("odbc", methods, DBI_ODBC_CAPS);
 

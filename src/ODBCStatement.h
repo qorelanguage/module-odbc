@@ -71,21 +71,13 @@ private:
         ESCT_BLOCK
     };
 
-    //! Possible states when running getRowIntern() method.
-    enum GetRowInternStatus {
-        EGRIS_OK = 0,
-        EGRIS_END,
-        EGRIS_ERROR
-    };
-
     //! ODBC connection wrapper.
     ODBCConnection* conn;
 
-    //! ODBC statement handle.
-    SQLHSTMT stmt;
-
     //! Count of rows affected by the executed UPDATE, INSERT or DELETE statements.
     SQLLEN affectedRowCount;
+
+    unsigned int readRows;
 
     //! Temporary holder for params.
     ParamHolder paramHolder;
@@ -99,13 +91,6 @@ private:
     //! Result columns metadata.
     std::vector<ODBCResultColumn> resColumns;
 
-    //! Extract ODBC diagnostic and raise a Qore exception.
-    /** @param err error "code"
-        @param desc error description
-        @param xsink exception sink
-     */
-    DLLLOCAL void handleStmtError(const char* err, const char* desc, ExceptionSink *xsink);
-
     //! Fetch metadata about result columns.
     /** @param xsink exception sink
 
@@ -113,67 +98,14 @@ private:
      */
     DLLLOCAL int fetchResultColumnMetadata(ExceptionSink* xsink);
 
-    //! Get one row of the result set.
-    /** @param row row number from 0, used for error descriptions only
-        @param status status of the function, 0 for OK, -1 for error, 1 after reaching the end of the result-set
-        @param xsink exception sink
-
-        @return one result-set row
-     */
-    DLLLOCAL QoreHashNode* getRowIntern(int row, GetRowInternStatus& status, ExceptionSink* xsink);
-
     //! Get a column's value and return a Qore node made from it.
-    /** @param row row number from 0, used for error descriptions only
-        @param column column number
+    /** @param column column number
         @param rcol result column metadata
         @param xsink exception sink
 
         @return result value wrapped in a Qore node
      */
-    DLLLOCAL inline AbstractQoreNode* getColumnValue(int row, int column, ODBCResultColumn& rcol, ExceptionSink* xsink);
-
-    //! Execute a parsed statement with bound paramaters.
-    /** @param str SQL statement
-        @param xsink exception sink
-
-        @return 0 for OK, -1 for error
-     */
-    DLLLOCAL int execIntern(const char* str, ExceptionSink* xsink);
-
-    //! Parse a Qore-style SQL statement.
-    /** @param str Qore-style SQL statement
-        @param args SQL parameters
-        @param xsink exception sink
-
-        @return 0 for OK, -1 for error
-     */
-    DLLLOCAL int parse(QoreString* str, const QoreListNode* args, ExceptionSink* xsink);
-
-    //! Return whether the passed arguments have arrays.
-    DLLLOCAL bool hasArrays(const QoreListNode* args) const;
-
-    //! Return size of arrays in the passed arguments.
-    /** @param args SQL parameters
-
-        @return parameter array size
-     */
-    DLLLOCAL qore_size_t findArraySizeOfArgs(const QoreListNode* args) const;
-
-    //! Bind a simple list of SQL parameters.
-    /** @param args SQL parameters
-        @param xsink exception sink
-
-        @return 0 for OK, -1 for error
-     */
-    DLLLOCAL int bind(const QoreListNode* args, ExceptionSink* xsink);
-
-    //! Bind a list of arrays of SQL parameters.
-    /** @param args SQL parameters
-        @param xsink exception sink
-
-        @return 0 for OK, -1 for error
-     */
-    DLLLOCAL int bindArray(const QoreListNode* args, ExceptionSink* xsink);
+    DLLLOCAL inline AbstractQoreNode* getColumnValue(int column, ODBCResultColumn& rcol, ExceptionSink* xsink);
 
     //! Bind a list of values as an array.
     /** @param column ODBC column number, starting from 1
@@ -374,11 +306,74 @@ private:
      */
     DLLLOCAL inline SQL_INTERVAL_STRUCT getIntervalFromDate(const DateTimeNode* arg);
 
-    //! Disabled copy constructor.
-    DLLLOCAL ODBCStatement(const ODBCStatement& s) : params(0, 0) {}
+protected:
+    //! ODBC statement handle.
+    SQLHSTMT stmt;
 
-    //! Disabled assignment operator.
-    DLLLOCAL ODBCStatement& operator=(const ODBCStatement& s) { return *this; }
+    //! Possible states when running getRowIntern() method.
+    enum GetRowInternStatus {
+        EGRIS_OK = 0,
+        EGRIS_END,
+        EGRIS_ERROR
+    };
+
+    //! Extract ODBC diagnostic and raise a Qore exception.
+    /** @param err error "code"
+        @param desc error description
+        @param xsink exception sink
+     */
+    DLLLOCAL void handleStmtError(const char* err, const char* desc, ExceptionSink *xsink);
+
+    //! Execute a parsed statement with bound paramaters.
+    /** @param str SQL statement
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int execIntern(const char* str, ExceptionSink* xsink);
+
+    //! Parse a Qore-style SQL statement.
+    /** @param str Qore-style SQL statement
+        @param args SQL parameters
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int parse(QoreString* str, const QoreListNode* args, ExceptionSink* xsink);
+
+    //! Get one row of the result set.
+    /** @param status status of the function, 0 for OK, -1 for error, 1 after reaching the end of the result-set
+        @param xsink exception sink
+
+        @return one result-set row
+     */
+    DLLLOCAL QoreHashNode* getRowIntern(GetRowInternStatus& status, ExceptionSink* xsink);
+
+    //! Return whether the passed arguments have arrays.
+    DLLLOCAL bool hasArrays(const QoreListNode* args) const;
+
+    //! Return size of arrays in the passed arguments.
+    /** @param args SQL parameters
+
+        @return parameter array size
+     */
+    DLLLOCAL qore_size_t findArraySizeOfArgs(const QoreListNode* args) const;
+
+    //! Bind a simple list of SQL parameters.
+    /** @param args SQL parameters
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindIntern(const QoreListNode* args, ExceptionSink* xsink);
+
+    //! Bind a list of arrays of SQL parameters.
+    /** @param args SQL parameters
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindInternArray(const QoreListNode* args, ExceptionSink* xsink);
 
 public:
     //! Constructor.
@@ -390,6 +385,12 @@ public:
     //! Destructor.
     DLLLOCAL ~ODBCStatement();
 
+    //! Disabled copy constructor.
+    DLLLOCAL ODBCStatement(const ODBCStatement& s) = delete;
+
+    //! Disabled assignment operator.
+    DLLLOCAL ODBCStatement& operator=(const ODBCStatement& s) = delete;
+
     //! Return how many rows were affected by the executed statement.
     DLLLOCAL int rowsAffected();
 
@@ -397,13 +398,35 @@ public:
     DLLLOCAL bool hasResultData();
 
     //! Get result hash.
-    DLLLOCAL QoreHashNode* getOutputHash(ExceptionSink* xsink);
+    /** @param xsink exception sink
+        @oaram emptyHashIfNothing whether to return empty hash or empty hash with column names when no rows available
+        @param maxRows maximum count of rows to return; if <= 0 the count of returned rows is not limited
+
+        @return hash of result column lists
+     */
+    DLLLOCAL QoreHashNode* getOutputHash(ExceptionSink* xsink, bool emptyHashIfNothing, int maxRows = -1);
 
     //! Get result list.
-    DLLLOCAL QoreListNode* getOutputList(ExceptionSink* xsink);
+    /** @param xsink exception sink
+        @param maxRows maximum count of rows to return; if <= 0 the count of returned rows is not limited
+
+        @return list of row hashes
+     */
+    DLLLOCAL QoreListNode* getOutputList(ExceptionSink* xsink, int maxRows = -1);
 
     //! Get one result row in the form of a hash.
+    /** @param xsink exception sink
+
+        @return one result-set row
+     */
     DLLLOCAL QoreHashNode* getSingleRow(ExceptionSink* xsink);
+
+    //! Return a hash describing result columns.
+    /** @param xsink exception sink
+
+        @return hash describing result columns
+     */
+    DLLLOCAL QoreHashNode* describe(ExceptionSink* xsink);
 
     //! Execute a Qore-style SQL statement with arguments.
     /** @param qstr Qore-style SQL statement
@@ -423,7 +446,7 @@ public:
     DLLLOCAL int exec(const char* cmd, ExceptionSink* xsink);
 };
 
-inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBCResultColumn& rcol, ExceptionSink* xsink) {
+inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, ExceptionSink* xsink) {
     SQLLEN indicator;
     SQLRETURN ret;
     switch(rcol.dataType) {
@@ -500,7 +523,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
                 std::unique_ptr<char> buf(new char[buflen]);
                 if (buf.get() == NULL) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
-                        "could not allocate buffer for result character data of row #%d, column #%d", row, column);
+                        "could not allocate buffer for result character data of row #%d, column #%d", readRows, column);
                     return 0;
                 }
                 ret = SQLGetData(stmt, column, SQL_C_CHAR, buf.get(), buflen, &indicator);
@@ -523,7 +546,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
                 std::unique_ptr<char> buf(new char[buflen]);
                 if (buf.get() == NULL) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
-                        "could not allocate buffer for result character data of row #%d, column #%d", row, column);
+                        "could not allocate buffer for result character data of row #%d, column #%d", readRows, column);
                     return 0;
                 }
                 ret = SQLGetData(stmt, column, SQL_C_WCHAR, reinterpret_cast<SQLWCHAR*>(buf.get()), buflen, &indicator);
@@ -552,7 +575,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
                 std::unique_ptr<char> buf(new char[size]);
                 if (buf.get() == NULL) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
-                        "could not allocate buffer for result binary data of row #%d, column #%d", row, column);
+                        "could not allocate buffer for result binary data of row #%d, column #%d", readRows, column);
                     return 0;
                 }
                 ret = SQLGetData(stmt, column, SQL_C_BINARY, reinterpret_cast<void*>(buf.get()), size, &indicator);
@@ -805,7 +828,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int row, int column, ODBC
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("error occured when getting value of row #%d, column #%d");
         ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-        xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.c_str(), row, column);
+        xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.c_str(), readRows, column);
     }
 
     return 0;

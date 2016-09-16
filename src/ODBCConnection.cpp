@@ -157,7 +157,7 @@ AbstractQoreNode* ODBCConnection::exec(const QoreString* qstr, const QoreListNod
         return NULL;
 
     if (res.hasResultData())
-        return res.getOutputHash(xsink);
+        return res.getOutputHash(xsink, false);
 
     return new QoreBigIntNode(res.rowsAffected());
 }
@@ -174,7 +174,7 @@ AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink*
         return NULL;
 
     if (res.hasResultData())
-        return res.getOutputHash(xsink);
+        return res.getOutputHash(xsink, false);
 
     return new QoreBigIntNode(res.rowsAffected());
 }

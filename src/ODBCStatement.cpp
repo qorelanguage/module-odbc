@@ -40,6 +40,7 @@
 ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
     conn(c),
     affectedRowCount(0),
+    readRows(0),
     params(new QoreListNode, xsink)
 {
     conn->allocStatementHandle(stmt, xsink);
@@ -50,6 +51,7 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
 ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     conn(static_cast<ODBCConnection*>(ds->getPrivateData())),
     affectedRowCount(0),
+    readRows(0),
     params(new QoreListNode, xsink)
 {
     conn->allocStatementHandle(stmt, xsink);
@@ -58,6 +60,7 @@ ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
 }
 
 ODBCStatement::~ODBCStatement() {
+    SQLCloseCursor(stmt);
     SQLFreeHandle(SQL_HANDLE_STMT, stmt);
 }
 
@@ -71,7 +74,7 @@ bool ODBCStatement::hasResultData() {
     return columns != 0;
 }
 
-QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink) {
+QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashIfNothing, int maxRows) {
     if (fetchResultColumnMetadata(xsink))
         return 0;
 
@@ -110,33 +113,39 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink) {
         hah.assign(columns[i], xsink);
     }
 
-    int row = 0;
+    int rowCount = 0;
     while (true) {
         SQLRETURN ret = SQLFetch(stmt);
         if (ret == SQL_NO_DATA) { // Reached the end of the result-set.
+            if (rowCount == 0 && emptyHashIfNothing)
+                h->clear(xsink);
             break;
         }
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("error occured when fetching row #%d");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), row);
+            xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), readRows);
             return 0;
         }
 
         for (int j = 0; j < columnCount; j++) {
             ODBCResultColumn& rcol = resColumns[j];
-            ReferenceHolder<AbstractQoreNode> n(getColumnValue(row, j+1, rcol, xsink), xsink);
+            ReferenceHolder<AbstractQoreNode> n(getColumnValue(j+1, rcol, xsink), xsink);
             if (!n || *xsink)
                 return 0;
 
             (columns[j])->push(n.release());
         }
+        readRows++;
+        rowCount++;
+        if (rowCount == maxRows && maxRows > 0)
+            break;
     }
 
     return h.release();
 }
 
-QoreListNode* ODBCStatement::getOutputList(ExceptionSink* xsink) {
+QoreListNode* ODBCStatement::getOutputList(ExceptionSink* xsink, int maxRows) {
     if (fetchResultColumnMetadata(xsink))
         return 0;
 
@@ -144,12 +153,15 @@ QoreListNode* ODBCStatement::getOutputList(ExceptionSink* xsink) {
     if (*xsink)
         return 0;
 
-    int row = 1;
+    int rowCount = 0;
     GetRowInternStatus status;
     while (true) {
-        ReferenceHolder<QoreHashNode> h(getRowIntern(row++, status, xsink), xsink);
+        ReferenceHolder<QoreHashNode> h(getRowIntern(status, xsink), xsink);
         if (status == EGRIS_OK) { // Ok.
             l->push(h.release());
+            rowCount++;
+            if (rowCount == maxRows && maxRows > 0)
+                break;
         }
         else if (status == EGRIS_END) { // End of result-set.
             break;
@@ -166,11 +178,10 @@ QoreHashNode* ODBCStatement::getSingleRow(ExceptionSink* xsink) {
     if (fetchResultColumnMetadata(xsink))
         return 0;
 
-    int row = 1;
     GetRowInternStatus status;
-    ReferenceHolder<QoreHashNode> h(getRowIntern(row++, status, xsink), xsink);
+    ReferenceHolder<QoreHashNode> h(getRowIntern(status, xsink), xsink);
     if (status == EGRIS_OK) { // Ok. Now have to check that there is only one row of data.
-        ReferenceHolder<QoreHashNode> h2(getRowIntern(row, status, xsink), xsink);
+        ReferenceHolder<QoreHashNode> h2(getRowIntern(status, xsink), xsink);
         if (status == EGRIS_OK) {
             xsink->raiseException("DBI:ODBC:SELECT-ROW-ERROR", "SQL passed to selectRow() returned more than 1 row");
             return 0;
@@ -180,6 +191,216 @@ QoreHashNode* ODBCStatement::getSingleRow(ExceptionSink* xsink) {
     }
     else if (status == EGRIS_END || status == EGRIS_ERROR) { // No data or error.
         return 0;
+    }
+
+    return h.release();
+}
+
+QoreHashNode* ODBCStatement::describe(ExceptionSink* xsink) {
+    if (fetchResultColumnMetadata(xsink))
+        return 0;
+
+    ReferenceHolder<QoreHashNode> h(new QoreHashNode, xsink);
+    if (*xsink)
+        return 0;
+
+    QoreString namestr("name");
+    QoreString maxsizestr("maxsize");
+    QoreString typestr("type");
+    QoreString dbtypestr("native_type");
+    QoreString internalstr("internal_id");
+    int columnCount = resColumns.size();
+
+    // Assign unique column names.
+    std::vector<std::string> cvec;
+    cvec.reserve(columnCount);
+    for (int i = 0; i < columnCount; i++) {
+        ODBCResultColumn& col = resColumns[i];
+
+        HashAssignmentHelper hah(**h, col.name);
+        if (*hah) { // Find a unique column name.
+            unsigned num = 1;
+            while (true) {
+                QoreStringMaker tmp("%s_%d", col.name, num);
+                hah.reassign(tmp.c_str());
+                if (*hah) {
+                    ++num;
+                    continue;
+                }
+                cvec.push_back(tmp.c_str());
+                break;
+            }
+        }
+        else {
+            cvec.push_back(col.name);
+        }
+
+        ReferenceHolder<QoreHashNode> desc(new QoreHashNode, xsink);
+        desc->setKeyValue(namestr, new QoreStringNode(col.name), xsink);
+        desc->setKeyValue(internalstr, new QoreBigIntNode(col.dataType), xsink);
+        desc->setKeyValue(maxsizestr, new QoreBigIntNode(col.byteSize), xsink);
+
+        switch (col.dataType) {
+            // Integer types.
+            case SQL_INTEGER:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_INT), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTEGER"), xsink);
+                break;
+            case SQL_BIGINT:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_INT), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_BIGINT"), xsink);
+                break;
+            case SQL_SMALLINT:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_INT), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_SMALLINT"), xsink);
+                break;
+            case SQL_TINYINT:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_INT), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_TINYINT"), xsink);
+                break;
+
+            // Float types.
+            case SQL_FLOAT:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_FLOAT), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_FLOAT"), xsink);
+                break;
+            case SQL_DOUBLE:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_FLOAT), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_DOUBLE"), xsink);
+                break;
+            case SQL_REAL:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_FLOAT), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_REAL"), xsink);
+                break;
+
+            // Character types.
+            case SQL_CHAR:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_STRING), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_CHAR"), xsink);
+                break;
+            case SQL_VARCHAR:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_STRING), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_VARCHAR"), xsink);
+                break;
+            case SQL_LONGVARCHAR:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_STRING), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_LONGVARCHAR"), xsink);
+                break;
+            case SQL_WCHAR:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_STRING), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_WCHAR"), xsink);
+                break;
+            case SQL_WVARCHAR:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_STRING), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_WVARCHAR"), xsink);
+                break;
+            case SQL_WLONGVARCHAR:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_STRING), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_WLONGVARCHAR"), xsink);
+                break;
+
+            // Binary types.
+            case SQL_BINARY:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_BINARY), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_BINARY"), xsink);
+                break;
+            case SQL_VARBINARY:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_BINARY), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_VARBINARY"), xsink);
+                break;
+            case SQL_LONGVARBINARY:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_BINARY), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_LONGVARBINARY"), xsink);
+                break;
+
+            // Various.
+            case SQL_BIT:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_BOOLEAN), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_BIT"), xsink);
+                break;
+            case SQL_NUMERIC:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_NUMBER), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_NUMERIC"), xsink);
+                break;
+            case SQL_DECIMAL:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_NUMBER), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_DECIMAL"), xsink);
+                break;
+
+            // Time types.
+            case SQL_TYPE_TIMESTAMP:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_TYPE_TIMESTAMP"), xsink);
+                break;
+            case SQL_TYPE_TIME:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_TYPE_TIME"), xsink);
+                break;
+            case SQL_TYPE_DATE:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_TYPE_DATE"), xsink);
+                break;
+
+            // Interval types.
+            case SQL_INTERVAL_MONTH:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_MONTH"), xsink);
+                break;
+            case SQL_INTERVAL_YEAR:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_YEAR"), xsink);
+                break;
+            case SQL_INTERVAL_YEAR_TO_MONTH:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_YEAR_TO_MONTH"), xsink);
+                break;
+            case SQL_INTERVAL_DAY:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_DAY"), xsink);
+                break;
+            case SQL_INTERVAL_HOUR:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_HOUR"), xsink);
+                break;
+            case SQL_INTERVAL_MINUTE:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_MINUTE"), xsink);
+                break;
+            case SQL_INTERVAL_SECOND:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_SECOND"), xsink);
+                break;
+            case SQL_INTERVAL_DAY_TO_HOUR:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_DAY_TO_HOUR"), xsink);
+                break;
+            case SQL_INTERVAL_DAY_TO_MINUTE:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_DAY_TO_MINUTE"), xsink);
+                break;
+            case SQL_INTERVAL_DAY_TO_SECOND:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_DAY_TO_SECOND"), xsink);
+                break;
+            case SQL_INTERVAL_HOUR_TO_MINUTE:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_HOUR_TO_MINUTE"), xsink);
+                break;
+            case SQL_INTERVAL_HOUR_TO_SECOND:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_HOUR_TO_SECOND"), xsink);
+                break;
+            case SQL_INTERVAL_MINUTE_TO_SECOND:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_DATE), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_INTERVAL_MINUTE_TO_SECOND"), xsink);
+                break;
+            case SQL_GUID:
+                desc->setKeyValue(typestr, new QoreBigIntNode(NT_STRING), xsink);
+                desc->setKeyValue(dbtypestr, new QoreStringNode("SQL_GUID"), xsink);
+                break;
+        } // switch
+
+        hah.assign(desc.release(), xsink);
     }
 
     return h.release();
@@ -195,11 +416,11 @@ int ODBCStatement::exec(const QoreString* qstr, const QoreListNode* args, Except
         return -1;
 
     if (hasArrays(args)) {
-        if (bindArray(*params, xsink))
+        if (bindInternArray(*params, xsink))
             return -1;
     }
     else {
-        if (bind(*params, xsink))
+        if (bindIntern(*params, xsink))
             return -1;
     }
 
@@ -243,12 +464,20 @@ int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
             xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i+1);
             return -1;
         }
+
+        ret = SQLColAttributeA(stmt, i+1, SQL_DESC_OCTET_LENGTH, 0, 0, 0, &col.byteSize);
+        if (!SQL_SUCCEEDED(ret)) { // error
+            std::string s("error occured when fetching result column metadata of column #%d");
+            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i+1);
+            return -1;
+        }
         col.name = name;
     }
     return 0;
 }
 
-QoreHashNode* ODBCStatement::getRowIntern(int row, GetRowInternStatus& status, ExceptionSink* xsink) {
+QoreHashNode* ODBCStatement::getRowIntern(GetRowInternStatus& status, ExceptionSink* xsink) {
     SQLRETURN ret = SQLFetch(stmt);
     if (ret == SQL_NO_DATA) { // Reached the end of the result-set.
         status = EGRIS_END;
@@ -257,7 +486,7 @@ QoreHashNode* ODBCStatement::getRowIntern(int row, GetRowInternStatus& status, E
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("error occured when fetching row #%d");
         ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-        xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), row);
+        xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), readRows);
         status = EGRIS_ERROR;
         return 0;
     }
@@ -272,7 +501,7 @@ QoreHashNode* ODBCStatement::getRowIntern(int row, GetRowInternStatus& status, E
     for (int i = 0; i < columns; i++) {
         ODBCResultColumn& col = resColumns[i];
         ReferenceHolder<AbstractQoreNode> n(xsink);
-        n = getColumnValue(row, i+1, col, xsink);
+        n = getColumnValue(i+1, col, xsink);
         if (*xsink) {
             status = EGRIS_ERROR;
             return 0;
@@ -294,13 +523,18 @@ QoreHashNode* ODBCStatement::getRowIntern(int row, GetRowInternStatus& status, E
 
         hah.assign(n.release(), xsink);
     }
+    readRows++;
 
     status = EGRIS_OK;
     return h.release();
 }
 
 int ODBCStatement::execIntern(const char* str, ExceptionSink* xsink) {
-    SQLRETURN ret = SQLExecDirectA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(str)), SQL_NTS);
+    SQLRETURN ret;
+    if (str)
+        ret = SQLExecDirectA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(str)), SQL_NTS);
+    else
+        ret = SQLExecute(stmt);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleStmtError("DBI:ODBC:EXEC-ERROR", "error during statement execution", xsink);
         affectedRowCount = -1;
@@ -434,7 +668,7 @@ qore_size_t ODBCStatement::findArraySizeOfArgs(const QoreListNode* args) const {
     return 0;
 }
 
-int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
+int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
     qore_size_t count = args ? args->size() : 0;
     for (unsigned int i = 0; i < count; i++) {
         const AbstractQoreNode* arg = args->retrieve_entry(i);
@@ -533,7 +767,7 @@ int ODBCStatement::bind(const QoreListNode* args, ExceptionSink* xsink) {
     return 0;
 }
 
-int ODBCStatement::bindArray(const QoreListNode* args, ExceptionSink* xsink) {
+int ODBCStatement::bindInternArray(const QoreListNode* args, ExceptionSink* xsink) {
     qore_size_t arraySize = findArraySizeOfArgs(args);
     arrayHolder.setArraySize(arraySize);
 

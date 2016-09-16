@@ -33,6 +33,7 @@ set(CPP_SRC
     src/odbc-module.cpp
     src/ODBCConnection.cpp
     src/ODBCStatement.cpp
+    src/ODBCPreparedStatement.cpp
 )
 
 set(module_name "odbc")
