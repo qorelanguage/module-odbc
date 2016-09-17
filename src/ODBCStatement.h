@@ -597,22 +597,41 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             }
             break;
         }
-        /*case SQL_NUMERIC: {
-            SQL_NUMERIC_STRUCT val;
-            ret = SQLGetData(stmt, column, SQL_C_NUMERIC, &val, sizeof(SQL_NUMERIC_STRUCT), &indicator);
+        case SQL_DECIMAL:
+        case SQL_NUMERIC: {
+            SQL_NUMERIC_STRUCT ns;
+            memset(ns.val, 0, 16);
+            ret = SQLGetData(stmt, column, SQL_C_NUMERIC, &ns, sizeof(SQL_NUMERIC_STRUCT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                // TODO
+                int64 value = 0;
+                int last = 1;
+                for(int i = 0; i <= 15; i++) {
+                    int current = (int) ns.val[i];
+                    int a = current % 16; // Obtain LSD.
+                    int b = current / 16; // Obtain MSD.
+
+                    value += last * a;
+                    last *= 16;
+                    value += last * b;
+                    last *= 16;
+                }
+
+                int64 divisor = 1;
+                if(ns.scale > 0) {
+                    for (int i = 0; i < ns.scale; i++)	
+                        divisor *= 10;
+                }
+                
+                SimpleRefHolder<QoreNumberNode> n(new QoreNumberNode(value));
+                if (*n) {
+                    return n->doDivideBy(divisor, xsink);
+                }
+                xsink->raiseException("DBI:ODBC:RESULT-ERROR",
+                    "error occured when getting value of row #%d, column #%d; could not allocate Qore number", readRows, column);
+                return 0;
             }
             break;
         }
-        case SQL_DECIMAL: {
-            // TODO
-            ret = SQLGetData(stmt, column, SQL_C_CHAR, buf, sizeof(buf), &indicator);
-            if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                // TODO
-            }
-            break;
-        }*/
 
         // Time types.
         case SQL_TYPE_TIMESTAMP: {
@@ -805,14 +824,20 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             }
             break;
         }
-        /*case SQL_GUID: {
-            // TODO
-            ret = SQLGetData(stmt, column, SQL_C_CHAR, buf, sizeof(buf), &indicator);
+        case SQL_GUID: {
+            SQLGUID val;
+            ret = SQLGetData(stmt, column, SQL_C_GUID, &val, sizeof(SQLGUID), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                // TODO
+                SimpleRefHolder<QoreStringNode> s(new QoreStringNode);
+                if (*s) {
+                    s->sprintf("%d-%d-%d-%d", val.Data1, val.Data2, val.Data3, val.Data4[0]);
+                    for (int i = 1; i < 8; i++)
+                        s->sprintf(".%d", val.Data4[i]);
+                }
+                return s.release();
             }
             break;
-        }*/
+        }
         default: {
             std::string s("do not know how to handle result value of type '%d'");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
