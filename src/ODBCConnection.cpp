@@ -67,18 +67,26 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     SQLSetConnectAttr(dbConn, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
 
     // Create ODBC connection string.
-    QoreString connStr(QCS_USASCII);
-    if(prepareConnectionString(connStr, xsink))
+    QoreString tempConnStr(QCS_UTF8);
+    if(prepareConnectionString(tempConnStr, xsink))
         return;
 
-    SQLCHAR* odbcDS = reinterpret_cast<SQLCHAR*>(const_cast<char*>(connStr.getBuffer()));
+#ifdef WORDS_BIGENDIAN
+    std::unique_ptr<QoreString> connStr(tempConnStr.convertEncoding(QCS_UTF16BE, xsink));
+#else
+    std::unique_ptr<QoreString> connStr(tempConnStr.convertEncoding(QCS_UTF16LE, xsink));
+#endif
+    if (*xsink || !connStr)
+        return;
+
+    SQLWCHAR* odbcDS = reinterpret_cast<SQLWCHAR*>(const_cast<char*>(connStr->getBuffer()));
 
     // Connect.
-    ret = SQLDriverConnectA(dbConn, NULL, odbcDS, SQL_NTS, NULL, 0, NULL, SQL_DRIVER_NOPROMPT);
+    ret = SQLDriverConnectW(dbConn, NULL, odbcDS, SQL_NTS, NULL, 0, NULL, SQL_DRIVER_NOPROMPT);
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("could not connect to the datasource; connection string: '%s'");
         ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
-        xsink->raiseException("DBI:ODBC:CONNECTION-ERROR", s.c_str(), connStr.getBuffer());
+        xsink->raiseException("DBI:ODBC:CONNECTION-ERROR", s.c_str(), tempConnStr.getBuffer());
         return;
     }
     connected = true;
@@ -97,10 +105,8 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
         clientVer = parseOdbcVersion(verStr);
     }
 
-    // timezones, encoding
+    // timezones
     //  ???
-
-    ds->setDBEncoding("UTF-16");
 }
 
 ODBCConnection::~ODBCConnection() {
@@ -213,7 +219,7 @@ int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsin
         switch (ntype) {
             case NT_STRING: {
                 const QoreStringNode* strNode = reinterpret_cast<const QoreStringNode*>(val);
-                TempEncodingHelper tstr(strNode, QCS_USASCII, xsink);
+                TempEncodingHelper tstr(strNode, QCS_UTF8, xsink);
                 if (*xsink)
                     return -1;
                 std::unique_ptr<QoreString> key(hi.getKeyString());
