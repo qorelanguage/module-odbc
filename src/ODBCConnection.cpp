@@ -27,6 +27,7 @@
 
 #include "ODBCConnection.h"
 
+#include <cstdio>
 #include <memory>
 
 #include "qore/QoreLib.h"
@@ -247,21 +248,14 @@ int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsin
     return 0;
 }
 
-// Version string is in the form "xx.xx.xxxx".
+// Version string is in the form "INT.INT.INT".
 int ODBCConnection::parseOdbcVersion(const char* str) {
-    int major, minor, sub;
-    major = minor = sub = 0;
-
-    major += (str[0] - 48) * 10;
-    major += str[1] - 48;
-
-    minor += (str[3] - 48) * 10;
-    minor += str[4] - 48;
-
-    sub += (str[6] - 48) * 1000;
-    sub += (str[7] - 48) * 100;
-    sub += (str[8] - 48) * 10;
-    sub += str[9] - 48;
+    int major = 0;
+    int minor = 0;
+    int sub = 0;
+    int ret = sscanf(str, "%d.%d.%d", &major, &minor, &sub);
+    if (ret == EOF || ret == 0)
+        return 0;
 
     return major*1000000 + minor*10000 + sub;
 }
