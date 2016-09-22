@@ -536,7 +536,8 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
 
                 str->replace(offset, 2, "?");
                 p = str->getBuffer() + offset + 1;
-                params->push(v->refSelf());
+                if (v)
+                    params->push(v->refSelf());
                 continue;
             }
 
