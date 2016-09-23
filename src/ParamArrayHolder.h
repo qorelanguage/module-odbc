@@ -41,8 +41,6 @@ class ParamArrayHolder {
 public:
     DLLLOCAL ParamArrayHolder() : nullArray(0), nullIndArray(0), arraySize(0) {
         chars.reserve(16);
-        singleValChars.reserve(8);
-        voids.reserve(8);
         bools.reserve(8);
         ints.reserve(8);
         floats.reserve(8);
@@ -60,30 +58,6 @@ public:
         char** array = chars[chars.size()-1];
         if (!array) {
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array");
-            return 0;
-        }
-        for (int i = 0; i < arraySize; i++)
-            array[i] = NULL;
-        return array;
-    }
-
-    DLLLOCAL char** addSingleValCharArray(ExceptionSink* xsink) {
-        singleValChars.push_back(new char*[arraySize]);
-        char** array = singleValChars[singleValChars.size()-1];
-        if (!array) {
-            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate single-val char array");
-            return 0;
-        }
-        for (int i = 0; i < arraySize; i++)
-            array[i] = NULL;
-        return array;
-    }
-
-    DLLLOCAL void** addVoidArray(ExceptionSink* xsink) {
-        voids.push_back(new void*[arraySize]);
-        void** array = voids[voids.size()-1];
-        if (!array) {
-            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate void ptr array");
             return 0;
         }
         for (int i = 0; i < arraySize; i++)
@@ -172,14 +146,6 @@ public:
                 delete [] (chars[i][j]);
             delete [] (chars[i]);
         }
-        
-        count = singleValChars.size();
-        for (unsigned int i = 0; i < count; i++)
-            delete [] (singleValChars[i]);
-
-        count = voids.size();
-        for (unsigned int i = 0; i < count; i++)
-            delete [] (voids[i]);
 
         count = bools.size();
         for (unsigned int i = 0; i < count; i++)
@@ -206,8 +172,6 @@ public:
             delete [] (indicators[i]);
 
         chars.clear();
-        singleValChars.clear();
-        voids.clear();
         bools.clear();
         ints.clear();
         floats.clear();
@@ -227,8 +191,6 @@ public:
 
 private:
     std::vector<char**> chars;
-    std::vector<char**> singleValChars;
-    std::vector<void**> voids;
     std::vector<bool*> bools;
     std::vector<int64*> ints;
     std::vector<double*> floats;

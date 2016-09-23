@@ -213,6 +213,9 @@ private:
     //! ODBC connection wrapper.
     ODBCConnection* conn;
 
+    //! Server encoding used for SQL_CHAR input and output parameters.
+    QoreEncoding* serverEnc;
+
     //! Count of rows affected by the executed UPDATE, INSERT or DELETE statements.
     SQLLEN affectedRowCount;
 
@@ -243,7 +246,7 @@ private:
         @param rcol result column metadata
         @param xsink exception sink
 
-        @return result value wrapped in a Qore node
+        @return result value wrapped in a Qore node, or 0 in case of error
      */
     DLLLOCAL inline AbstractQoreNode* getColumnValue(int column, ODBCResultColumn& rcol, ExceptionSink* xsink);
 
@@ -265,43 +268,43 @@ private:
      */
     DLLLOCAL int bindParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink);
 
-    //! Create a new C-style string array filled with string values from the passed Qore list.
+    //! Create a new char array filled with string values from the passed Qore list.
     /** @param arg list of Qore strings used to fill the array
-        @param array pointer to the created array will be written here
-        @param indArray pointer to an accompanying indicator array will be written here
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param maxlen maximum length in bytes of the strings will be written here
         @param xsink exception sink
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromStringList(const QoreListNode* arg, char**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromStringList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
 
-    //! Create a new C-style string array filled with stringified number values from the passed Qore list.
+    //! Create a new char array filled with stringified number values from the passed Qore list.
     /** @param arg list of Qore numbers used to fill the array
-        @param array pointer to the created array will be written here
-        @param indArray pointer to an accompanying indicator array will be written here
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param maxlen maximum length in bytes of the strings will be written here
         @param xsink exception sink
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromNumberList(const QoreListNode* arg, char**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromNumberList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
 
     //! Create a new void* array filled with values of binaries from the passed Qore list.
     /** @param arg list of Qore binaries used to fill the array
-        @param array pointer to the created array will be written here
-        @param indArray pointer to an accompanying indicator array will be written here
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param maxlen maximum length in bytes of the binary values will be written here
         @param xsink exception sink
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromBinaryList(const QoreListNode* arg, void**& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromBinaryList(const QoreListNode* arg, void*& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
 
     //! Create an ODBC timestamp array filled in using Qore dates from the passed Qore list.
     /** @param arg list of Qore dates used to fill the array
-        @param array pointer to the created array will be written here
-        @param indArray pointer to an accompanying indicator array will be written here
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param xsink exception sink
 
         @return 0 for OK, -1 for error
@@ -310,8 +313,8 @@ private:
 
     //! Create an ODBC interval structure array filled in using Qore dates from the passed Qore list.
     /** @param arg list of Qore dates used to fill the array
-        @param array pointer to the created array will be written here
-        @param indArray pointer to an accompanying indicator array will be written here
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param xsink exception sink
 
         @return 0 for OK, -1 for error
@@ -320,8 +323,8 @@ private:
 
     //! Create a bool array filled with Qore bools from the passed Qore list.
     /** @param arg list of Qore bools used to fill the array
-        @param array pointer to the created array will be written here
-        @param indArray pointer to an accompanying indicator array will be written here
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param xsink exception sink
 
         @return 0 for OK, -1 for error
@@ -330,8 +333,8 @@ private:
 
     //! Create an int64 array filled with Qore ints from the passed Qore list.
     /** @param arg list of Qore ints used to fill the array
-        @param array pointer to the created array will be written here
-        @param indArray pointer to an accompanying indicator array will be written here
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param xsink exception sink
 
         @return 0 for OK, -1 for error
@@ -340,46 +343,46 @@ private:
 
     //! Create a double array filled with Qore floats from the passed Qore list.
     /** @param arg list of Qore floats used to fill the array
-        @param array pointer to the created array will be written here
-        @param indArray pointer to an accompanying indicator array will be written here
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param xsink exception sink
 
         @return 0 for OK, -1 for error
      */
     DLLLOCAL int createArrayFromFloatList(const QoreListNode* arg, double*& array, SQLLEN*& indArray, ExceptionSink* xsink);
 
-    //! Create a new C-style string array and fill it with passed string value.
+    //! Create a new char array filled with the passed string value.
     /** @param arg string used to fill the array
         @param len size in bytes of the string will be written here
         @param xsink exception sink
 
-        @return pointer to the created array
+        @return pointer to the created array (do not delete) or 0 in case of error
      */
-    DLLLOCAL char** createArrayFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL char* createArrayFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
 
-    //! Create a new C-style string array and fill it with passed stringified number.
+    //! Create a new char array filled with the passed stringified number.
     /** @param arg number used to fill the array
         @param len size in bytes of the string will be written here
         @param xsink exception sink
 
-        @return pointer to the created array
+        @return pointer to the created array (do not delete) or 0 in case of error
      */
-    DLLLOCAL char** createArrayFromNumber(const QoreNumberNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL char* createArrayFromNumber(const QoreNumberNode* arg, qore_size_t& len, ExceptionSink* xsink);
 
-    //! Create a new void* array and fill it with passed binary's value.
+    //! Create a new void array filled with the passed binary's value.
     /** @param arg binary whose value will be used to fill the array
         @param len size in bytes of the binary value
         @param xsink exception sink
 
-        @return pointer to the created array
+        @return pointer to the created array (do not delete) or 0 in case of error
      */
-    DLLLOCAL void** createArrayFromBinary(const BinaryNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL void* createArrayFromBinary(const BinaryNode* arg, qore_size_t& len, ExceptionSink* xsink);
 
     //! Create an array of ODBC timestamps initialized with the passed Qore date.
     /** @param arg date used for initializing the timestamps
         @param xsink exception sink
 
-        @return pointer to the created array
+        @return pointer to the created array (do not delete) or 0 in case of error
      */
     DLLLOCAL TIMESTAMP_STRUCT* createArrayFromAbsoluteDate(const DateTimeNode* arg, ExceptionSink* xsink);
 
@@ -387,7 +390,7 @@ private:
     /** @param arg date used for initializing the interval structures
         @param xsink exception sink
 
-        @return pointer to the created array
+        @return pointer to the created array (do not delete) or 0 in case of error
      */
     DLLLOCAL SQL_INTERVAL_STRUCT* createArrayFromRelativeDate(const DateTimeNode* arg, ExceptionSink* xsink);
 
@@ -395,7 +398,7 @@ private:
     /** @param arg Qore bool used for initializing the array values
         @param xsink exception sink
 
-        @return pointer to the created array
+        @return pointer to the created array (do not delete) or 0 in case of error
      */
     DLLLOCAL bool* createArrayFromBool(const QoreBoolNode* arg, ExceptionSink* xsink);
 
@@ -403,7 +406,7 @@ private:
     /** @param arg Qore int used for initializing the array values
         @param xsink exception sink
 
-        @return pointer to the created array
+        @return pointer to the created array (do not delete) or 0 in case of error
      */
     DLLLOCAL int64* createArrayFromInt(const QoreBigIntNode* arg, ExceptionSink* xsink);
 
@@ -411,24 +414,24 @@ private:
     /** @param arg Qore float used for initializing the array values
         @param xsink exception sink
 
-        @return pointer to the created array
+        @return pointer to the created array (do not delete) or 0 in case of error
      */
     DLLLOCAL double* createArrayFromFloat(const QoreFloatNode* arg, ExceptionSink* xsink);
 
     //! Create a new indicator array filled with the passed indicator value.
-    /** @param ind value used to fill the array
+    /** @param indicator value used to fill the array
         @param xsink exception sink
 
-        @return pointer to the created array
+        @return pointer to the created array (do not delete) or 0 in case of error
      */
-    DLLLOCAL SQLLEN* createIndArray(SQLLEN ind, ExceptionSink* xsink);
+    DLLLOCAL SQLLEN* createIndArray(SQLLEN indicator, ExceptionSink* xsink);
 
     //! Get a new C-style string in UTF-16 encoding from the passed Qore string.
     /** @param arg source Qore string
         @param len size in bytes of the string will be written here
         @param xsink exception sink
 
-        @return pointer to the new string
+        @return pointer to the new string (caller owns it) or 0 in case of error
      */
     DLLLOCAL inline char* getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
 
@@ -529,7 +532,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
                 }
                 ret = SQLGetData(stmt, column, SQL_C_CHAR, buf.get(), buflen, &indicator);
                 if (SQL_SUCCEEDED(ret)) {
-                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QCS_USASCII));
+                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, serverEnc));
                     return str.release();
                 }
             }
@@ -861,11 +864,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
 }
 
 char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink) {
-#ifdef WORDS_BIGENDIAN
-    TempEncodingHelper tstr(arg, QCS_UTF16BE, xsink);
-#else
-    TempEncodingHelper tstr(arg, QCS_UTF16LE, xsink);
-#endif
+    TempEncodingHelper tstr(arg, serverEnc, xsink);
     len = tstr->size();
     return tstr.giveBuffer();
 }
