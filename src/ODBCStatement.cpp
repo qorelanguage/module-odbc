@@ -516,7 +516,7 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
                 int offset = p - str->getBuffer();
 
                 p++;
-                const AbstractQoreNode* v = args ? args->retrieve_entry(index++) : NULL;
+                const AbstractQoreNode* v = args ? args->retrieve_entry(index++) : 0;
                 if ((*p) == 'd') {
                     DBI_concat_numeric(&tmp, v);
                     str->replace(offset, 2, &tmp);
@@ -647,7 +647,7 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
 
         if (!arg || is_null(arg) || is_nothing(arg)) { // Bind NULL argument.
             SQLLEN* len = paramHolder.addL(SQL_NULL_DATA);
-            ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 0, 0, NULL, 0, len);
+            ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 0, 0, 0, 0, len);
             if (!SQL_SUCCEEDED(ret)) { // error
                 std::string s("failed binding NULL parameter with index %d (column %d)");
                 ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
@@ -749,13 +749,13 @@ int ODBCStatement::bindInternArray(const QoreListNode* args, ExceptionSink* xsin
     SQLSetStmtAttr(stmt, SQL_ATTR_PARAMSET_SIZE, reinterpret_cast<SQLPOINTER>(arraySize), 0);
 
     // Specify an array in which to return the status of each set of parameters.
-    // Since this is unnecessarily precise status reporting, we set it to NULL,
+    // Since this is unnecessarily precise status reporting, we set it to 0,
     // so that these states are not generated.
-    SQLSetStmtAttr(stmt, SQL_ATTR_PARAM_STATUS_PTR, NULL, 0);
+    SQLSetStmtAttr(stmt, SQL_ATTR_PARAM_STATUS_PTR, 0, 0);
 
     // Specify an SQLUINTEGER value in which to return the number of sets of parameters processed.
-    // Also unnecessary information, therefore set to NULL.
-    SQLSetStmtAttr(stmt, SQL_ATTR_PARAMS_PROCESSED_PTR, NULL, 0);
+    // Also unnecessary information, therefore set to 0.
+    SQLSetStmtAttr(stmt, SQL_ATTR_PARAMS_PROCESSED_PTR, 0, 0);
 
     qore_size_t count = args ? args->size() : 0;
     for (unsigned int i = 0; i < count; i++) {
@@ -943,7 +943,7 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
     SQLRETURN ret;
 
     if (!arg || is_null(arg) || is_nothing(arg)) { // Bind NULL argument.
-        void** array = arrayHolder.getNullArray(xsink);
+        char* array = arrayHolder.getNullArray(xsink);
         if (!array)
             return -1;
         SQLLEN* indArray = arrayHolder.getNullIndArray(xsink);

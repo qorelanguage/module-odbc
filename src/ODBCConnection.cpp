@@ -62,7 +62,7 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
 
     // Set connection attributes.
     SQLSetConnectAttr(dbConn, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, SQL_IS_UINTEGER);
-    SQLSetConnectAttr(dbConn, SQL_ATTR_QUIET_MODE, NULL, SQL_IS_POINTER);
+    SQLSetConnectAttr(dbConn, SQL_ATTR_QUIET_MODE, 0, SQL_IS_POINTER);
     SQLSetConnectAttr(dbConn, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
     SQLSetConnectAttr(dbConn, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
 
@@ -82,7 +82,7 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     SQLWCHAR* odbcDS = reinterpret_cast<SQLWCHAR*>(const_cast<char*>(connStr->getBuffer()));
 
     // Connect.
-    ret = SQLDriverConnectW(dbConn, NULL, odbcDS, SQL_NTS, NULL, 0, NULL, SQL_DRIVER_NOPROMPT);
+    ret = SQLDriverConnectW(dbConn, 0, odbcDS, SQL_NTS, 0, 0, 0, SQL_DRIVER_NOPROMPT);
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("could not connect to the datasource; connection string: '%s'");
         ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
@@ -145,7 +145,7 @@ int ODBCConnection::rollback(ExceptionSink* xsink) {
 QoreListNode* ODBCConnection::selectRows(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCStatement res(this, xsink);
     if (res.exec(qstr, args, xsink))
-        return NULL;
+        return 0;
 
     return res.getOutputList(xsink);
 }
@@ -153,7 +153,7 @@ QoreListNode* ODBCConnection::selectRows(const QoreString* qstr, const QoreListN
 QoreHashNode* ODBCConnection::selectRow(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCStatement res(this, xsink);
     if (res.exec(qstr, args, xsink))
-        return NULL;
+        return 0;
 
     return res.getSingleRow(xsink);
 }
@@ -161,7 +161,7 @@ QoreHashNode* ODBCConnection::selectRow(const QoreString* qstr, const QoreListNo
 AbstractQoreNode* ODBCConnection::exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCStatement res(this, xsink);
     if (res.exec(qstr, args, xsink))
-        return NULL;
+        return 0;
 
     if (res.hasResultData())
         return res.getOutputHash(xsink, false);
@@ -175,10 +175,10 @@ AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink*
     // Convert string to required character encoding or copy.
     std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_USASCII, xsink));
     if (!str.get())
-        return NULL;
+        return 0;
 
     if (res.exec(str->getBuffer(), xsink))
-        return NULL;
+        return 0;
 
     if (res.hasResultData())
         return res.getOutputHash(xsink, false);

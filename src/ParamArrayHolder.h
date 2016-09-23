@@ -113,16 +113,15 @@ public:
         return array;
     }
 
-    DLLLOCAL void** getNullArray(ExceptionSink* xsink) {
+    DLLLOCAL char* getNullArray(ExceptionSink* xsink) {
         if (nullArray)
             return nullArray;
-        nullArray = new void*[arraySize];
+        nullArray = new char[arraySize];
         if (!nullArray) {
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate null array");
             return 0;
         }
-        for (int i = 0; i < arraySize; i++)
-            nullArray[i] = NULL;
+        memset(nullArray, 0, arraySize);
         return nullArray;
     }
 
@@ -198,7 +197,7 @@ private:
     std::vector<SQL_INTERVAL_STRUCT*> intervals;
     std::vector<SQLLEN*> indicators;
 
-    void** nullArray;
+    char* nullArray;
     SQLLEN* nullIndArray;
 
     qore_size_t arraySize;

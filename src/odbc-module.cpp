@@ -99,7 +99,7 @@ static int odbc_open(Datasource* ds, ExceptionSink* xsink) {
 
 static int odbc_close(Datasource* ds) {
     ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
-    ds->setPrivateData(NULL);
+    ds->setPrivateData(0);
     delete conn;
     return 0;
 }

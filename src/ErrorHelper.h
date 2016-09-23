@@ -72,7 +72,7 @@ public:
     DLLLOCAL static void extractState(SQLSMALLINT handleType, SQLHANDLE& handle, char* buf) {
         SQLINTEGER native;
         SQLSMALLINT textLen;
-        SQLGetDiagRecA(handleType, handle, 1, reinterpret_cast<SQLCHAR*>(buf), &native, NULL, 0, &textLen);
+        SQLGetDiagRecA(handleType, handle, 1, reinterpret_cast<SQLCHAR*>(buf), &native, 0, 0, &textLen);
     }
 
 private:
