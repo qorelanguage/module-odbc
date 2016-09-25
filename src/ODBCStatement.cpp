@@ -640,6 +640,10 @@ qore_size_t ODBCStatement::findArraySizeOfArgs(const QoreListNode* args) const {
 }
 
 int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
+    // Set parameter array size.
+    qore_size_t one = 1;
+    SQLSetStmtAttr(stmt, SQL_ATTR_PARAMSET_SIZE, reinterpret_cast<SQLPOINTER>(one), 0);
+
     qore_size_t count = args ? args->size() : 0;
     for (unsigned int i = 0; i < count; i++) {
         const AbstractQoreNode* arg = args->retrieve_entry(i);
