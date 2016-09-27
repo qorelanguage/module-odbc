@@ -855,10 +855,15 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
     for (qore_size_t i = 0; i < count; i++) {
         const AbstractQoreNode* arg = lst->retrieve_entry(i);
         if (arg && !is_null(arg) && !is_nothing(arg)) {
-            ntype = arg->getType();
-            if (ntype == NT_DATE)
-                absoluteDate = reinterpret_cast<const DateTimeNode*>(arg)->isAbsolute();
-            break;
+            if (ntype == NT_NULL) {
+                ntype = arg->getType();
+                if (ntype == NT_DATE)
+                    absoluteDate = reinterpret_cast<const DateTimeNode*>(arg)->isAbsolute();
+            }
+            else if (ntype != arg->getType()) { // Different types in the same array -> error.
+                xsink->raiseException("DBI:ODBC:BIND-ERROR", "different datatypes in the same parameter array for column #%d", column);
+                return -1;
+            }
         }
     }
 
