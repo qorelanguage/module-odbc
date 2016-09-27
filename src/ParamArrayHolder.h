@@ -60,7 +60,7 @@ public:
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array");
             return 0;
         }
-        for (int i = 0; i < arraySize; i++)
+        for (qore_size_t i = 0; i < arraySize; i++)
             array[i] = NULL;
         return array;
     }
@@ -133,7 +133,7 @@ public:
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate null indicator array");
             return 0;
         }
-        for (int i = 0; i < arraySize; i++)
+        for (qore_size_t i = 0; i < arraySize; i++)
             nullIndArray[i] = SQL_NULL_DATA;
         return nullIndArray;
     }
@@ -141,7 +141,7 @@ public:
     DLLLOCAL void clear() {
         unsigned int count = chars.size();
         for (unsigned int i = 0; i < count; i++) {
-            for (unsigned int j = 0; j < arraySize; j++)
+            for (qore_size_t j = 0; j < arraySize; j++)
                 delete [] (chars[i][j]);
             delete [] (chars[i]);
         }
