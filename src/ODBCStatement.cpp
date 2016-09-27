@@ -103,7 +103,7 @@ QoreHashNode* ODBCStatement::describe(ExceptionSink* xsink) {
         if (*hah) { // Find a unique column name.
             unsigned num = 1;
             while (true) {
-                QoreStringMaker tmp("%s_%d", col.name, num);
+                QoreStringMaker tmp("%s_%d", col.name.c_str(), num);
                 hah.reassign(tmp.c_str());
                 if (*hah) {
                     ++num;
@@ -310,7 +310,7 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashI
         if (*hah) { // Find a unique column name.
             unsigned num = 1;
             while (true) {
-                QoreStringMaker tmp("%s_%d", col.name, num);
+                QoreStringMaker tmp("%s_%d", col.name.c_str(), num);
                 hah.reassign(tmp.c_str());
                 if (*hah) {
                     ++num;
@@ -606,7 +606,7 @@ QoreHashNode* ODBCStatement::getRowIntern(GetRowInternStatus& status, ExceptionS
         if (*hah) { // Find a unique column name.
             unsigned num = 1;
             while (true) {
-                QoreStringMaker tmp("%s_%d", col.name, num);
+                QoreStringMaker tmp("%s_%d", col.name.c_str(), num);
                 hah.reassign(tmp.c_str());
                 if (*hah) {
                     ++num;
