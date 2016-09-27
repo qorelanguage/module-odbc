@@ -110,7 +110,7 @@ static AbstractQoreNode* odbc_select(Datasource* ds, const QoreString* qstr, con
 }
 
 #ifdef _QORE_HAS_DBI_SELECT_ROW
-static AbstractQoreNode* odbc_select_row(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
+static QoreHashNode* odbc_select_row(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
     return conn->selectRow(qstr, args, xsink);
 }
