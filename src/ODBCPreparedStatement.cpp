@@ -55,6 +55,10 @@ int ODBCPreparedStatement::prepare(const QoreString& qstr, const QoreListNode* a
     if (parse(str.get(), args, xsink))
         return -1;
 
+    // Bind the arguments.
+    if (args)
+        bindArgs = args->listRefSelf();
+
     SQLRETURN ret = SQLPrepareA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(str->getBuffer())), SQL_NTS);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleStmtError("DBI:ODBC:PREPARE-ERROR", "error occured when preparing the SQL statement", xsink);
