@@ -640,7 +640,11 @@ qore_size_t ODBCStatement::findArraySizeOfArgs(const QoreListNode* args) const {
 }
 
 int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
-    // Set parameter array size.
+    // Clear previous parameters.
+    arrayHolder.clear();
+    paramHolder.clear();
+
+    // Set parameter array size to 1.
     qore_size_t one = 1;
     SQLSetStmtAttr(stmt, SQL_ATTR_PARAMSET_SIZE, reinterpret_cast<SQLPOINTER>(one), 0);
 
@@ -743,6 +747,11 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
 }
 
 int ODBCStatement::bindInternArray(const QoreListNode* args, ExceptionSink* xsink) {
+    // Clear previous parameters.
+    arrayHolder.clear();
+    paramHolder.clear();
+
+    // Find parameter array size.
     qore_size_t arraySize = findArraySizeOfArgs(args);
     arrayHolder.setArraySize(arraySize);
 
@@ -943,7 +952,6 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
 }
 
 int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink) {
-    qore_size_t arraySize = arrayHolder.getArraySize();
     SQLRETURN ret;
 
     if (!arg || is_null(arg) || is_nothing(arg)) { // Bind NULL argument.
@@ -1157,7 +1165,7 @@ int ODBCStatement::createArrayFromBinaryList(const QoreListNode* arg, void*& arr
             continue;
         }
         indArray[i] = bin->size();
-        maxlen = (maxlen >= indArray[i]) ? maxlen : indArray[i];
+        maxlen = (maxlen >= static_cast<qore_size_t>(indArray[i])) ? maxlen : indArray[i];
     }
 
     // We have to create one big array and put all the binaries in it one after another (kind of very inefficient).
