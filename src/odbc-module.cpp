@@ -180,7 +180,7 @@ static int odbc_stmt_prepare_raw(SQLStatement* stmt, const QoreString& str, Exce
     }
     stmt->setPrivateData(ps);
 
-    return ps->prepare(str, xsink);
+    return ps->prepare(str, 0, xsink);
 }
 
 static int odbc_stmt_bind(SQLStatement* stmt, const QoreListNode& args, ExceptionSink* xsink) {

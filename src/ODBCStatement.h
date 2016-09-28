@@ -157,7 +157,7 @@ protected:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int execIntern(const char* str, ExceptionSink* xsink);
+    DLLLOCAL int execIntern(const char* str, SQLINTEGER textLen, ExceptionSink* xsink);
 
     //! Parse a Qore-style SQL statement.
     /** @param str Qore-style SQL statement
@@ -185,6 +185,17 @@ protected:
         @return parameter array size
      */
     DLLLOCAL qore_size_t findArraySizeOfArgs(const QoreListNode* args) const;
+
+    //! Return character count of the passed null-terminated UTF-8 string.
+    /** @param str null-terminated UTF-8 string
+
+        @return character count
+     */
+    SQLINTEGER getUTF8CharCount(char* str) {
+        SQLINTEGER len = 0;
+        for (; *str; ++str) if ((*str & 0xC0) != 0x80) ++len;
+        return len;
+    }
 
     //! Bind a simple list of SQL parameters.
     /** @param args SQL parameters

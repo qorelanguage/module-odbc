@@ -30,7 +30,6 @@
 #include <sql.h>
 #include <sqlext.h>
 
-
 ODBCPreparedStatement::ODBCPreparedStatement(ODBCConnection* c, ExceptionSink* xsink) :
     ODBCStatement(c, xsink),
     bindArgs(xsink),
@@ -49,7 +48,7 @@ ODBCPreparedStatement::~ODBCPreparedStatement() {
 }
 
 int ODBCPreparedStatement::prepare(const QoreString& qstr, const QoreListNode* args, ExceptionSink* xsink) {
-    std::unique_ptr<QoreString> str(qstr.convertEncoding(QCS_USASCII, xsink));
+    std::unique_ptr<QoreString> str(qstr.convertEncoding(QCS_UTF8, xsink));
     if (!str.get())
         return -1;
     if (parse(str.get(), args, xsink))
@@ -59,22 +58,16 @@ int ODBCPreparedStatement::prepare(const QoreString& qstr, const QoreListNode* a
     if (args)
         bindArgs = args->listRefSelf();
 
-    SQLRETURN ret = SQLPrepareA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(str->getBuffer())), SQL_NTS);
-    if (!SQL_SUCCEEDED(ret)) { // error
-        handleStmtError("DBI:ODBC:PREPARE-ERROR", "error occured when preparing the SQL statement", xsink);
-        return -1;
-    }
-    return 0;
-}
-
-int ODBCPreparedStatement::prepare(const QoreString& qstr, ExceptionSink* xsink) {
-    std::unique_ptr<QoreString> str(qstr.convertEncoding(QCS_USASCII, xsink));
-    if (!str.get())
-        return -1;
-    if (parse(str.get(), 0, xsink))
+#ifdef WORDS_BIGENDIAN
+    TempEncodingHelper tstr(str.get(), QCS_UTF16BE, xsink);
+#else
+    TempEncodingHelper tstr(str.get(), QCS_UTF16LE, xsink);
+#endif
+    if (*xsink)
         return -1;
 
-    SQLRETURN ret = SQLPrepareA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(str->getBuffer())), SQL_NTS);
+    SQLINTEGER textLen = getUTF8CharCount(const_cast<char*>(str->c_str()));
+    SQLRETURN ret = SQLPrepareW(stmt, reinterpret_cast<SQLWCHAR*>(const_cast<char*>(tstr->getBuffer())), textLen);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleStmtError("DBI:ODBC:PREPARE-ERROR", "error occured when preparing the SQL statement", xsink);
         return -1;
@@ -92,7 +85,7 @@ int ODBCPreparedStatement::exec(ExceptionSink* xsink) {
             return -1;
     }
 
-    return execIntern(0, xsink);
+    return execIntern(0, 0, xsink);
 }
 
 int ODBCPreparedStatement::bind(const QoreListNode& args, ExceptionSink* xsink) {

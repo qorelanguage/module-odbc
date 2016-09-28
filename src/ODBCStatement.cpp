@@ -412,7 +412,7 @@ QoreHashNode* ODBCStatement::getSingleRow(ExceptionSink* xsink) {
 
 int ODBCStatement::exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     // Convert string to required character encoding.
-    std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_USASCII, xsink));
+    std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_UTF8, xsink));
     if (!str.get())
         return -1;
 
@@ -428,16 +428,34 @@ int ODBCStatement::exec(const QoreString* qstr, const QoreListNode* args, Except
             return -1;
     }
 
-    return execIntern(str->getBuffer(), xsink);
+#ifdef WORDS_BIGENDIAN
+    TempEncodingHelper tstr(str.get(), QCS_UTF16BE, xsink);
+#else
+    TempEncodingHelper tstr(str.get(), QCS_UTF16LE, xsink);
+#endif
+    if (*xsink)
+        return -1;
+
+    SQLINTEGER textLen = getUTF8CharCount(const_cast<char*>(str->c_str()));
+    return execIntern(tstr->getBuffer(), textLen, xsink);
 }
 
 int ODBCStatement::exec(const QoreString* qstr, ExceptionSink* xsink) {
     // Convert string to required character encoding.
-    std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_USASCII, xsink));
+    std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_UTF8, xsink));
     if (!str.get())
         return -1;
 
-    return execIntern(str->getBuffer(), xsink);
+#ifdef WORDS_BIGENDIAN
+    TempEncodingHelper tstr(str.get(), QCS_UTF16BE, xsink);
+#else
+    TempEncodingHelper tstr(str.get(), QCS_UTF16LE, xsink);
+#endif
+    if (*xsink)
+        return -1;
+
+    SQLINTEGER textLen = getUTF8CharCount(const_cast<char*>(str->c_str()));
+    return execIntern(tstr->getBuffer(), textLen, xsink);
 }
 
 
@@ -452,10 +470,10 @@ void ODBCStatement::handleStmtError(const char* err, const char* desc, Exception
     xsink->raiseException(err, s.c_str());
 }
 
-int ODBCStatement::execIntern(const char* str, ExceptionSink* xsink) {
+int ODBCStatement::execIntern(const char* str, SQLINTEGER textLen, ExceptionSink* xsink) {
     SQLRETURN ret;
     if (str)
-        ret = SQLExecDirectA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(str)), SQL_NTS);
+        ret = SQLExecDirectW(stmt, reinterpret_cast<SQLWCHAR*>(const_cast<char*>(str)), textLen);
     else
         ret = SQLExecute(stmt);
     if (!SQL_SUCCEEDED(ret)) { // error

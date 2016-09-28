@@ -77,14 +77,6 @@ public:
      */
     DLLLOCAL int prepare(const QoreString& qstr, const QoreListNode* args, ExceptionSink* xsink);
 
-    //! Prepare an ODBC SQL statement.
-    /** @param qstr Qore-style SQL statement
-        @param xsink exception sink
-
-        @return 0 for OK, -1 for error
-     */
-    DLLLOCAL int prepare(const QoreString& qstr, ExceptionSink* xsink);
-
     //! Execute the prepared statement.
     /** @param xsink exception sink
 
