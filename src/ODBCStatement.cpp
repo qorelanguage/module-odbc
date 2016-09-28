@@ -411,7 +411,7 @@ QoreHashNode* ODBCStatement::getSingleRow(ExceptionSink* xsink) {
 }
 
 int ODBCStatement::exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
-    // Convert string to required character encoding or copy.
+    // Convert string to required character encoding.
     std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_USASCII, xsink));
     if (!str.get())
         return -1;
@@ -431,8 +431,13 @@ int ODBCStatement::exec(const QoreString* qstr, const QoreListNode* args, Except
     return execIntern(str->getBuffer(), xsink);
 }
 
-int ODBCStatement::exec(const char* cmd, ExceptionSink* xsink) {
-    return execIntern(cmd, xsink);
+int ODBCStatement::exec(const QoreString* qstr, ExceptionSink* xsink) {
+    // Convert string to required character encoding.
+    std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_USASCII, xsink));
+    if (!str.get())
+        return -1;
+
+    return execIntern(str->getBuffer(), xsink);
 }
 
 

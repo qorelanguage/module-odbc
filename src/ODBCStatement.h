@@ -126,12 +126,12 @@ public:
     DLLLOCAL int exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink);
 
     //! Execute an SQL statement.
-    /** @param cmd SQL statement
+    /** @param qstr raw SQL statement
         @param xsink exception sink
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int exec(const char* cmd, ExceptionSink* xsink);
+    DLLLOCAL int exec(const QoreString* qstr, ExceptionSink* xsink);
 
 protected:
     //! ODBC statement handle.

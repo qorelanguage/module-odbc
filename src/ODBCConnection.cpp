@@ -171,13 +171,7 @@ AbstractQoreNode* ODBCConnection::exec(const QoreString* qstr, const QoreListNod
 
 AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink* xsink) {
     ODBCStatement res(this, xsink);
-
-    // Convert string to required character encoding or copy.
-    std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_USASCII, xsink));
-    if (!str.get())
-        return 0;
-
-    if (res.exec(str->getBuffer(), xsink))
+    if (res.exec(qstr, xsink))
         return 0;
 
     if (res.hasResultData())
