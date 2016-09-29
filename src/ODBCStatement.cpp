@@ -42,6 +42,7 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
     serverEnc(0),
     affectedRowCount(0),
     readRows(0),
+    paramCountInSql(0),
     params(new QoreListNode, xsink)
 {
     const char* dbEnc = c->getDatasource()->getDBEncoding();
@@ -57,6 +58,7 @@ ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     serverEnc(0),
     affectedRowCount(0),
     readRows(0),
+    paramCountInSql(0),
     params(new QoreListNode, xsink)
 {
     const char* dbEnc = ds->getDBEncoding();
@@ -500,6 +502,8 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
     QoreString tmp;
     int index = 0;
     SQLCommentType comment = ESCT_NONE;
+    params = new QoreListNode;
+    paramCountInSql = 0;
 
     while (*p) {
         if (!quote) {
@@ -567,6 +571,7 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
 
                 str->replace(offset, 2, "?");
                 p = str->getBuffer() + offset + 1;
+                paramCountInSql++;
                 if (v)
                     params->push(v->refSelf());
                 continue;
@@ -666,6 +671,13 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
     // Clear previous parameters.
     arrayHolder.clear();
     paramHolder.clear();
+
+    // Check that enough parameters were passed for binding.
+    if (args && paramCountInSql > args->size()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "not enough parameters passed for binding; %u required but only %u passed",
+            paramCountInSql, args->size());
+        return -1;
+    }
 
     // Set parameter array size to 1.
     qore_size_t one = 1;
@@ -773,6 +785,13 @@ int ODBCStatement::bindInternArray(const QoreListNode* args, ExceptionSink* xsin
     // Clear previous parameters.
     arrayHolder.clear();
     paramHolder.clear();
+
+    // Check that enough parameters were passed for binding.
+    if (args && paramCountInSql > args->size()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "not enough parameters passed for binding; %u required but only %u passed",
+            paramCountInSql, args->size());
+        return -1;
+    }
 
     // Find parameter array size.
     qore_size_t arraySize = findArraySizeOfArgs(args);

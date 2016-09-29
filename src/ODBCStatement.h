@@ -233,6 +233,9 @@ private:
     //! Count of rows already read from the result-set.
     unsigned int readRows;
 
+    //! Count of required parameters for the SQL command.
+    qore_size_t paramCountInSql;
+
     //! Temporary holder for params.
     ParamHolder paramHolder;
 
