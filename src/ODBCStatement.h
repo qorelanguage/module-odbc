@@ -605,49 +605,23 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             break;
         }
 
+        // Numeric/decimal types.
+        case SQL_DECIMAL:
+        case SQL_NUMERIC: {
+            char val[128];
+            ret = SQLGetData(stmt, column, SQL_C_CHAR, val, 128, &indicator);
+            if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
+                return new QoreNumberNode(val);
+            }
+            break;
+        }
+
         // Various.
         case SQL_BIT: {
             SQLCHAR val;
             ret = SQLGetData(stmt, column, SQL_C_BIT, &val, sizeof(SQLCHAR), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 return get_bool_node(val);
-            }
-            break;
-        }
-        case SQL_DECIMAL:
-        case SQL_NUMERIC: {
-            SQL_NUMERIC_STRUCT ns;
-            memset(ns.val, 0, 16);
-            ret = SQLGetData(stmt, column, SQL_C_NUMERIC, &ns, sizeof(SQL_NUMERIC_STRUCT), &indicator);
-            if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                int64 value = 0;
-                int last = 1;
-                for(int i = 0; i <= 15; i++) {
-                    int current = (int) ns.val[i];
-                    int a = current % 16; // Obtain LSD.
-                    int b = current / 16; // Obtain MSD.
-
-                    value += last * a;
-                    last *= 16;
-                    value += last * b;
-                    last *= 16;
-                }
-                if (ns.sign == 0)
-                    value *= -1;
-
-                int64 divisor = 1;
-                if(ns.scale > 0) {
-                    for (int i = 0; i < ns.scale; i++)	
-                        divisor *= 10;
-                }
-                
-                SimpleRefHolder<QoreNumberNode> n(new QoreNumberNode(value));
-                if (*n) {
-                    return n->doDivideBy(divisor, xsink);
-                }
-                xsink->raiseException("DBI:ODBC:RESULT-ERROR",
-                    "error occured when getting value of row #%d, column #%d; could not allocate Qore number", readRows, column);
-                return 0;
             }
             break;
         }
