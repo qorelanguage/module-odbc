@@ -1,0 +1,247 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+%new-style
+%enable-all-warnings
+%require-types
+%strict-args
+
+%requires QUnit
+
+%try-module odbc
+%define NoOdbc
+%endtry
+
+%exec-class OdbcTest
+
+class OdbcTest inherits QUnit::Test {
+    public {
+        hash Columns = {
+            "c": {
+                "type": "CHAR(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
+            "vc": {
+                "type": "VARCHAR(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
+            "bin": {
+                "type": "BINARY(64)",
+                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+                "expected": (),
+            },
+            "vbin": {
+                "type": "VARBINARY(64)",
+                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+            },
+            "b": {
+                "type": "BOOLEAN",
+                "values": (True, False, True, True),
+                "expected": (1, 0, 1, 1),
+            },
+            "si": {
+                "type": "SMALLINT",
+                "values": (1, 0, 32767, -32768),
+            },
+            "i": {
+                "type": "INTEGER",
+                "values": (2147483647, 0, -1, -2147483648),
+            },
+            "bi": {
+                "type": "BIGINT",
+                "values": (2200100100, -111122223333, 0, 1258),
+            },
+            "decim": {
+                "type": "DECIMAL(5,2)",
+                "values": (123.45n, 0.0n, 999.99n, -999.99n),
+            },
+            "num": {
+                "type": "NUMERIC(5,2)",
+                "values": (-123.45n, 0.0n, 999.99n, -999.99n),
+            },
+            "fp": {
+                "type": "FLOAT(53)",
+                "values": (1.72, 3.1456789765432, 0.0, -2.7218281828),
+            },
+            "r": {
+                "type": "REAL",
+                "values": (0.00390625, 0.0078125, -0.0078125, 0.0),
+            },
+            "f": {
+                "type": "FLOAT",
+                "values": (0.00390625, 0.0078125, -0.0078125, 0.0),
+            },
+            "d": {
+                "type": "DOUBLE PRECISION",
+                "values": (1.72, 3.1456789765432, 0.0, -2.7218281828),
+            },
+            "dt": {
+                "type": "DATE",
+                "values": (2016-01-11, 1970-01-01, 2020-05-20, 1987-01-30),
+            },
+            "t": {
+                "type": "TIME",
+                "values": (00:00:00, 05:23:17, -03:00:20, 14:15:16),
+                "expected": (0s, 5*60m+23m+17s, -3*60m+20s, 14*60m+15m+16s),
+            },
+            "ts": {
+                "type": "TIMESTAMP",
+                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
+            },
+        };
+        list ColumnNamesAndTypes;
+    }
+
+    private {
+        *Datasource ds;
+        const tableName = "odbc_test_table";
+    }
+
+    constructor() : QUnit::Test("OdbcTest", "1.0", \ARGV) {
+        addTestCase("Basic test", \basicTest());
+        addTestCase("Types test", \typesTest());
+        addTestCase("Array bind test", \arrayBindTest());
+        set_return_value(main());
+    }
+
+    destructor() {}
+
+    globalSetUp() {
+        try {
+            initDatasource();
+        }
+        catch (e) {
+            exit(1);
+        }
+
+        foreach hash col in (Columns.pairIterator()) {
+            ColumnNamesAndTypes += col.key + " " + col.value.type;
+        }
+
+        for (int i = 0; i < Columns.bin.values.size(); i++) {
+            push Columns.bin.expected, Columns.bin.values[i];
+            reference exp = \Columns.bin.expected[i];
+            for (int j = exp.size(); j < 64; j++)
+                exp += <00>;
+        }
+    }
+
+    globalTearDown() {
+        if (ds) {
+            ds.exec("DROP TABLE IF EXISTS " + tableName + ";");
+            ds.commit();
+            ds.close();
+        }
+    }
+
+    initDatasource() {
+        *string connstr = ENV.QORE_DB_CONNSTR_ODBC;
+        if (!connstr) {
+            printf("No connection string set. Cannot run the tests.\n");
+            exit(1);
+        }
+
+        ds = new Datasource(connstr);
+        if (ds.getDriverName() != "odbc") {
+            printf("Cannot execute the odbc tests on a connection using driver %y.\n", ds.getDriverName());
+            exit(1);
+        }
+        ds.open();
+    }
+
+    basicTest() {
+        {
+            Datasource test = new Datasource("odbc", "abc", "xyz");
+            assertThrows("DBI:ODBC:CONNECTION-ERROR", sub() { test.open(); });
+        }
+
+        assertEq(0, ds.exec("DROP TABLE IF EXISTS " + tableName));
+        ds.commit();
+        assertEq(0, ds.exec("CREATE TABLE IF NOT EXISTS " + tableName + " (id int PRIMARY KEY, text varchar(128))"));
+        ds.commit();
+
+        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (1, 'abcdef123456')"));
+        ds.commit();
+
+        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (%v, %v)", 2, "test 789 abc lorem ipsum"));
+        ds.commit();
+
+        assertThrows("DBI:ODBC:BIND-ERROR", "not enough parameters passed for binding",
+            sub() { ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (%v, %v)", 3); });
+        assertThrows("DBI:ODBC:BIND-ERROR", "do not know how to bind values of type",
+            sub() { ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (%v, %v)", 3, {}); });
+
+        assertThrows("DBI:ODBC:EXEC-ERROR", "error during statement execution", sub() { ds.exec("bla bla bla"); });
+
+        hash results1 = {"id": (1, 2), "text": ("abcdef123456", "test 789 abc lorem ipsum")};
+        list results2 = ({"id": 1, "text": "abcdef123456"}, {"id": 2, "text": "test 789 abc lorem ipsum"});
+
+        assertEq(results1, ds.exec("SELECT * FROM " + tableName));
+        assertEq(results1, ds.select("SELECT * FROM " + tableName));
+        assertEq(results2, ds.selectRows("SELECT * FROM " + tableName));
+        assertEq(0, ds.exec("DROP TABLE " + tableName));
+        ds.commit();
+    }
+
+    typesTest() {
+        assertEq(0, ds.exec("DROP TABLE IF EXISTS " + tableName));
+        ds.commit();
+
+        string def = sprintf(" (%s)", foldl $1 + ", " + $2, ColumnNamesAndTypes);
+        assertEq(0, ds.exec("CREATE TABLE IF NOT EXISTS " + tableName + def));
+        ds.commit();
+
+        list arguments = ();
+        foreach hash col in (Columns.pairIterator()) {
+            push arguments, col.value.values;
+        }
+
+        string valdef = "";
+        for (int i = 0; i < ColumnNamesAndTypes.size(); i++)
+            valdef += "%v,";
+        valdef = valdef.substr(0, valdef.size()-1);
+
+        SQLStatement stmt = new SQLStatement(ds);
+        stmt.prepare("INSERT INTO " + tableName + sprintf(" (%s) VALUES (", foldl $1 + ", " + $2, Columns.keys()) + valdef + ")");
+        stmt.bindArgs(arguments);
+        stmt.exec();
+        stmt.commit();
+
+        hash results = Columns;
+        foreach string key in (results.keys()) {
+            if (exists results{key}.expected)
+                results{key} = results{key}.expected;
+            else
+                results{key} = results{key}.values;
+        }
+
+        assertEq(results, ds.exec("SELECT * FROM " + tableName));
+        assertEq(0, ds.exec("DROP TABLE " + tableName));
+        ds.commit();
+    }
+
+    arrayBindTest() {
+        assertEq(0, ds.exec("DROP TABLE IF EXISTS " + tableName));
+        ds.commit();
+        assertEq(0, ds.exec("CREATE TABLE IF NOT EXISTS " + tableName + " (id int, text varchar(48))"));
+        ds.commit();
+
+        SQLStatement stmt = new SQLStatement(ds);
+        stmt.prepare("INSERT INTO " + tableName + " (id, text) VALUES (%v, %v)");
+
+        stmt.bindArgs((2, ("text", "abc", "lorem")));
+        stmt.exec();
+        stmt.commit();
+
+        stmt.bindArgs(((4, 5), ("ipsum", "dolor")));
+        stmt.exec();
+        stmt.commit();
+
+        stmt.execArgs( ((6,), "sit") );
+        stmt.commit();
+
+        hash h = {"id": (2, 2, 2, 4, 5, 6), "text": ("text", "abc", "lorem", "ipsum", "dolor", "sit")};
+        assertEq(h, ds.select("SELECT * FROM " + tableName));
+    }
+}
+
