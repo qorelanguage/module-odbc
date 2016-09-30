@@ -632,6 +632,8 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
                     value += last * b;
                     last *= 16;
                 }
+                if (ns.sign == 0)
+                    value *= -1;
 
                 int64 divisor = 1;
                 if(ns.scale > 0) {
