@@ -184,6 +184,7 @@ class OdbcTest inherits QUnit::Test {
     }
 
     typesTest() {
+        ds.setOption("numeric-numbers", True);
         assertEq(0, ds.exec("DROP TABLE IF EXISTS " + tableName));
         ds.commit();
 

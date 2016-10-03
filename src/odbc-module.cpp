@@ -273,6 +273,17 @@ static int odbc_stmt_close(SQLStatement* stmt, ExceptionSink* xsink) {
     return *xsink ? -1 : 0;
 }
 
+static int odbc_opt_set(Datasource* ds, const char* opt, const AbstractQoreNode* val, ExceptionSink* xsink) {
+   ODBCConnection* conn = (ODBCConnection*)ds->getPrivateData();
+   return conn->setOption(opt, val, xsink);
+}
+
+static AbstractQoreNode* odbc_opt_get(const Datasource* ds, const char* opt) {
+   ODBCConnection* conn = (ODBCConnection*)ds->getPrivateData();
+   return conn->getOption(opt);
+}
+
+
 QoreNamespace OdbcNS("odbc");
 
 QoreStringNode *odbc_module_init() {
@@ -312,7 +323,12 @@ QoreStringNode *odbc_module_init() {
     methods.add(QDBI_METHOD_STMT_GET_OUTPUT, odbc_stmt_get_output);
     methods.add(QDBI_METHOD_STMT_GET_OUTPUT_ROWS, odbc_stmt_get_output_rows);
 
-    // options
+    methods.add(QDBI_METHOD_OPT_SET, odbc_opt_set);
+    methods.add(QDBI_METHOD_OPT_GET, odbc_opt_get);
+
+    methods.registerOption(DBI_OPT_NUMBER_OPT, "when set, numeric/decimal values are returned as integers if possible, otherwise as arbitrary-precision number values; the argument is ignored; setting this option turns it on and turns off 'string-numbers' and 'numeric-numbers'");
+   methods.registerOption(DBI_OPT_NUMBER_STRING, "when set, numeric/decimal values are returned as strings for backwards-compatibility; the argument is ignored; setting this option turns it on and turns off 'optimal-numbers' and 'numeric-numbers'");
+   methods.registerOption(DBI_OPT_NUMBER_NUMERIC, "when set, numeric/decimal values are returned as arbitrary-precision number values; the argument is ignored; setting this option turns it on and turns off 'string-numbers' and 'optimal-numbers'");
 
     DBID_ODBC = DBI.registerDriver("odbc", methods, DBI_ODBC_CAPS);
 

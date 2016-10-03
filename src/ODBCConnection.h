@@ -44,6 +44,8 @@
 #include "qore/QoreBigIntNode.h"
 #include "qore/QoreListNode.h"
 
+#include "EnumNumericOption.h"
+
 //! A class representing an ODBC connection.
 class ODBCConnection {
 public:
@@ -117,6 +119,25 @@ public:
      */
     DLLLOCAL void allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink);
 
+    //! Set an option for the connection.
+    /** @param opt option name
+        @param val option value to use
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int setOption(const char* opt, const AbstractQoreNode* val, ExceptionSink* xsink);
+
+    //! Get the current value of an option of the connection.
+    /** @param opt option name
+
+        @return option's value
+     */
+    DLLLOCAL AbstractQoreNode* getOption(const char* opt);
+
+    //! Get the current value of the numeric option of the connection.
+    DLLLOCAL NumericOption getNumericOption() const { return optNumeric; }
+
     //! Return ODBC driver (client) version.
     /** @return version in the form: major*1000000 + minor*10000 + sub
      */
@@ -148,6 +169,9 @@ private:
 
     //! Whether an ODBC connection has been opened.
     bool connected;
+
+    //! Option used for deciding how NUMERIC results will be returned.
+    NumericOption optNumeric;
 
     //! Version of the used ODBC DB driver.
     int clientVer;

@@ -31,6 +31,7 @@
 #include <memory>
 
 #include "qore/QoreLib.h"
+#include "qore/DBI.h"
 
 #include "ErrorHelper.h"
 #include "ODBCStatement.h"
@@ -39,6 +40,7 @@
 ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     ds(d),
     connected(false),
+    optNumeric(ENO_OPTIMAL),
     clientVer(0),
     serverVer(0)
 {
@@ -178,6 +180,37 @@ AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink*
         return res.getOutputHash(xsink, false);
 
     return new QoreBigIntNode(res.rowsAffected());
+}
+
+int ODBCConnection::setOption(const char* opt, const AbstractQoreNode* val, ExceptionSink* xsink) {
+    if (!strcasecmp(opt, DBI_OPT_NUMBER_OPT)) {
+        optNumeric = ENO_OPTIMAL;
+        return 0;
+    }
+    if (!strcasecmp(opt, DBI_OPT_NUMBER_STRING)) {
+        optNumeric = ENO_STRING;
+        return 0;
+    }
+    if (!strcasecmp(opt, DBI_OPT_NUMBER_NUMERIC)) {
+        optNumeric = ENO_NUMERIC;
+        return 0;
+    }
+
+    return 0;
+}
+
+AbstractQoreNode* ODBCConnection::getOption(const char* opt) {
+    assert(optNumeric == ENO_OPTIMAL || optNumeric == ENO_STRING);
+    if (!strcasecmp(opt, DBI_OPT_NUMBER_OPT))
+        return get_bool_node(optNumeric == ENO_OPTIMAL);
+
+    if (!strcasecmp(opt, DBI_OPT_NUMBER_STRING))
+        return get_bool_node(optNumeric == ENO_STRING);
+
+    if (!strcasecmp(opt, DBI_OPT_NUMBER_NUMERIC))
+        return get_bool_node(optNumeric == ENO_NUMERIC);
+
+    return 0;
 }
 
 void ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) {

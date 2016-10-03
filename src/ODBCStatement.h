@@ -28,6 +28,7 @@
 #ifndef _QORE_MODULE_ODBC_ODBCSTATEMENT_H
 #define _QORE_MODULE_ODBC_ODBCSTATEMENT_H
 
+#include <cerrno>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -54,6 +55,7 @@
 #include "qore/QoreListNode.h"
 #include "qore/QoreNullNode.h"
 
+#include "EnumNumericOption.h"
 #include "ErrorHelper.h"
 #include "ODBCResultColumn.h"
 #include "ParamArrayHolder.h"
@@ -226,6 +228,9 @@ private:
 
     //! Server encoding used for SQL_CHAR input and output parameters.
     QoreEncoding* serverEnc;
+
+    //! Option used for deciding how NUMERIC results will be returned.
+    NumericOption optNumeric;
 
     //! Count of rows affected by the executed UPDATE, INSERT or DELETE statements.
     SQLLEN affectedRowCount;
@@ -611,7 +616,26 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             char val[128];
             ret = SQLGetData(stmt, column, SQL_C_CHAR, val, 128, &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new QoreNumberNode(val);
+                if (optNumeric == ENO_OPTIMAL) {
+                    char* dot = strchr(val, '.');
+                    if (!dot) {
+                        errno = 0;
+                        long long num = strtoll(val, 0, 10);
+                        if (errno == ERANGE)
+                            return new QoreNumberNode(val);
+                        return new QoreBigIntNode(num);
+                    }
+                    SimpleRefHolder<QoreNumberNode> afterDot(new QoreNumberNode(dot+1));
+                    if (afterDot->equals(0LL))
+                        return new QoreBigIntNode(strtoll(val, 0, 10));
+                    return new QoreNumberNode(val);
+                }
+                else if (optNumeric == ENO_STRING) {
+                    return new QoreStringNode(val, QCS_UTF8);
+                }
+                else {
+                    return new QoreNumberNode(val);
+                }
             }
             break;
         }

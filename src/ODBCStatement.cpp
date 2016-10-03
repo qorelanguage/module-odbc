@@ -40,6 +40,7 @@
 ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
     conn(c),
     serverEnc(0),
+    optNumeric(conn->getNumericOption()),
     affectedRowCount(0),
     readRows(0),
     paramCountInSql(0),
@@ -56,6 +57,7 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
 ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     conn(static_cast<ODBCConnection*>(ds->getPrivateData())),
     serverEnc(0),
+    optNumeric(conn->getNumericOption()),
     affectedRowCount(0),
     readRows(0),
     paramCountInSql(0),
