@@ -54,7 +54,7 @@ public:
     DLLLOCAL qore_size_t getArraySize() const { return arraySize; }
 
     DLLLOCAL char** addCharArray(ExceptionSink* xsink) {
-        chars.push_back(new char*[arraySize]);
+        chars.push_back(new (std::nothrow) char*[arraySize]);
         char** array = chars[chars.size()-1];
         if (!array) {
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array");
@@ -66,7 +66,7 @@ public:
     }
 
     DLLLOCAL bool* addBoolArray(ExceptionSink* xsink) {
-        bools.push_back(new bool[arraySize]);
+        bools.push_back(new (std::nothrow) bool[arraySize]);
         bool* array = bools[bools.size()-1];
         if (!array)
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate bool array");
@@ -74,7 +74,7 @@ public:
     }
 
     DLLLOCAL int64* addIntArray(ExceptionSink* xsink) {
-        ints.push_back(new int64[arraySize]);
+        ints.push_back(new (std::nothrow) int64[arraySize]);
         int64* array = ints[ints.size()-1];
         if (!array)
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate int64 array");
@@ -82,7 +82,7 @@ public:
     }
 
     DLLLOCAL double* addFloatArray(ExceptionSink* xsink) {
-        floats.push_back(new double[arraySize]);
+        floats.push_back(new (std::nothrow) double[arraySize]);
         double* array = floats[floats.size()-1];
         if (!array)
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate double array");
@@ -90,7 +90,7 @@ public:
     }
 
     DLLLOCAL TIMESTAMP_STRUCT* addTimestampArray(ExceptionSink* xsink) {
-        timestamps.push_back(new TIMESTAMP_STRUCT[arraySize]);
+        timestamps.push_back(new (std::nothrow) TIMESTAMP_STRUCT[arraySize]);
         TIMESTAMP_STRUCT* array = timestamps[timestamps.size()-1];
         if (!array)
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate timestamp array");
@@ -98,7 +98,7 @@ public:
     }
 
     DLLLOCAL SQL_INTERVAL_STRUCT* addIntervalArray(ExceptionSink* xsink) {
-        intervals.push_back(new SQL_INTERVAL_STRUCT[arraySize]);
+        intervals.push_back(new (std::nothrow) SQL_INTERVAL_STRUCT[arraySize]);
         SQL_INTERVAL_STRUCT* array = intervals[intervals.size()-1];
         if (!array)
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate interval array");
@@ -106,7 +106,7 @@ public:
     }
 
     DLLLOCAL SQLLEN* addIndArray(ExceptionSink* xsink) {
-        indicators.push_back(new SQLLEN[arraySize]);
+        indicators.push_back(new (std::nothrow) SQLLEN[arraySize]);
         SQLLEN* array = indicators[indicators.size()-1];
         if (!array)
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate indicator array");
@@ -116,7 +116,7 @@ public:
     DLLLOCAL char* getNullArray(ExceptionSink* xsink) {
         if (nullArray)
             return nullArray;
-        nullArray = new char[arraySize];
+        nullArray = new (std::nothrow) char[arraySize];
         if (!nullArray) {
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate null array");
             return 0;
@@ -128,7 +128,7 @@ public:
     DLLLOCAL SQLLEN* getNullIndArray(ExceptionSink* xsink) {
         if (nullIndArray)
             return nullIndArray;
-        nullIndArray = new SQLLEN[arraySize];
+        nullIndArray = new (std::nothrow) SQLLEN[arraySize];
         if (!nullIndArray) {
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate null indicator array");
             return 0;

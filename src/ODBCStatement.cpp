@@ -1162,7 +1162,7 @@ int ODBCStatement::createArrayFromStringList(const QoreListNode* arg, char*& arr
     }
 
     // We have to create one big array and put all the strings in it one after another.
-    array = paramHolder.addC(new char[arraySize * maxlen]);
+    array = paramHolder.addC(new (std::nothrow) char[arraySize * maxlen]);
     if (!array) {
         xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*maxlen);
         return -1;
@@ -1205,7 +1205,7 @@ int ODBCStatement::createArrayFromNumberList(const QoreListNode* arg, char*& arr
     }
 
     // We have to create one big array and put all the strings in it one after another.
-    array = paramHolder.addC(new char[arraySize * maxlen]);
+    array = paramHolder.addC(new (std::nothrow) char[arraySize * maxlen]);
     if (!array) {
         xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*maxlen);
         return -1;
@@ -1238,7 +1238,7 @@ int ODBCStatement::createArrayFromBinaryList(const QoreListNode* arg, void*& arr
     }
 
     // We have to create one big array and put all the binaries in it one after another (kind of very inefficient).
-    char* charArray = paramHolder.addC(new char[arraySize * maxlen]);
+    char* charArray = paramHolder.addC(new (std::nothrow) char[arraySize * maxlen]);
     array = static_cast<void*>(charArray);
     if (!array) {
         xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*maxlen);

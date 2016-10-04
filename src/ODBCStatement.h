@@ -547,7 +547,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
                 return new QoreStringNode;
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 SQLLEN buflen = indicator + 2; // Ending \0 char.
-                std::unique_ptr<char> buf(new char[buflen]);
+                std::unique_ptr<char> buf(new (std::nothrow) char[buflen]);
                 if (!buf.get()) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
                         "could not allocate buffer for result character data of row #%d, column #%d", readRows, column);
@@ -583,7 +583,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
                 return new QoreStringNode;
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 SQLLEN buflen = indicator + 2; // Ending \0 char.
-                std::unique_ptr<char> buf(new char[buflen]);
+                std::unique_ptr<char> buf(new (std::nothrow) char[buflen]);
                 if (!buf.get()) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
                         "could not allocate buffer for result character data of row #%d, column #%d", readRows, column);
@@ -612,7 +612,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
                 return new BinaryNode;
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 SQLLEN size = indicator;
-                std::unique_ptr<char> buf(new char[size]);
+                std::unique_ptr<char> buf(new (std::nothrow) char[size]);
                 if (!buf.get()) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
                         "could not allocate buffer for result binary data of row #%d, column #%d", readRows, column);
