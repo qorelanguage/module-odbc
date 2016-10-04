@@ -186,6 +186,9 @@ private:
      */
     DLLLOCAL void handleDbcError(const char* err, const char* desc, ExceptionSink *xsink);
 
+    //! Parse options passed through Datasource.
+    DLLLOCAL void parseOptions();
+
     //! Prepare ODBC connection string and save it to the passed string.
     /** @param str connection string
         @param xsink exception sink

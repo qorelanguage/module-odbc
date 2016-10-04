@@ -44,6 +44,8 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     clientVer(0),
     serverVer(0)
 {
+    parseOptions();
+
     SQLRETURN ret;
     // Allocate an environment handle.
     ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
@@ -226,6 +228,24 @@ void ODBCConnection::handleDbcError(const char* err, const char* desc, Exception
     xsink->raiseException(err, s.c_str());
 }
 
+void ODBCConnection::parseOptions() {
+    ConstHashIterator hi(ds->getConnectOptions());
+    while (hi.next()) {
+        if (strcmp("optimal-numbers", hi.getKey()) == 0) {
+            optNumeric = ENO_OPTIMAL;
+            continue;
+        }
+        if (strcmp("string-numbers", hi.getKey()) == 0) {
+            optNumeric = ENO_STRING;
+            continue;
+        }
+        if (strcmp("numeric-numbers", hi.getKey()) == 0) {
+            optNumeric = ENO_NUMERIC;
+            continue;
+        }
+    }
+}
+
 int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsink) {
     if (ds->getDBName() && strlen(ds->getDBName()) > 0)
         str.sprintf("DSN=%s;", ds->getDBName());
@@ -240,6 +260,14 @@ int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsin
     while (hi.next()) {
         const AbstractQoreNode* val = hi.getValue();
         if (!val)
+            continue;
+
+        // Skip numeric options.
+        if (strcmp("optimal-numbers", hi.getKey()) == 0)
+            continue;
+        if (strcmp("string-numbers", hi.getKey()) == 0)
+            continue;
+        if (strcmp("numeric-numbers", hi.getKey()) == 0)
             continue;
 
         qore_type_t ntype = val->getType();
