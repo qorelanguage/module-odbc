@@ -538,21 +538,38 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
         case SQL_VARCHAR:
         case SQL_LONGVARCHAR: {
             char unused[1];
-            ret = SQLGetData(stmt, column, SQL_C_CHAR, unused, 0, &indicator); // Find out data size.
+            if (serverEnc) // Find out data size.
+                ret = SQLGetData(stmt, column, SQL_C_CHAR, unused, 0, &indicator);
+            else
+                ret = SQLGetData(stmt, column, SQL_C_WCHAR, unused, 0, &indicator);
+
             if (ret == SQL_NO_DATA) // No data, therefore returning empty string.
                 return new QoreStringNode;
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                SQLLEN buflen = indicator + 1; // Ending \0 char.
+                SQLLEN buflen = indicator + 2; // Ending \0 char.
                 std::unique_ptr<char> buf(new char[buflen]);
                 if (!buf.get()) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
                         "could not allocate buffer for result character data of row #%d, column #%d", readRows, column);
                     return 0;
                 }
-                ret = SQLGetData(stmt, column, SQL_C_CHAR, buf.get(), buflen, &indicator);
-                if (SQL_SUCCEEDED(ret)) {
-                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, serverEnc));
-                    return str.release();
+                if (serverEnc) {
+                    ret = SQLGetData(stmt, column, SQL_C_CHAR, buf.get(), buflen, &indicator);
+                    if (SQL_SUCCEEDED(ret)) {
+                        SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, serverEnc));
+                        return str.release();
+                    }
+                }
+                else {
+                    ret = SQLGetData(stmt, column, SQL_C_WCHAR, buf.get(), buflen, &indicator);
+                    if (SQL_SUCCEEDED(ret)) {
+#ifdef WORDS_BIGENDIAN
+                        SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QCS_UTF16BE));
+#else
+                        SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QCS_UTF16LE));
+#endif
+                        return str.release();
+                    }
                 }
             }
             break;
@@ -878,7 +895,15 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
 }
 
 char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink) {
-    TempEncodingHelper tstr(arg, serverEnc, xsink);
+    QoreEncoding* enc = serverEnc;
+    if (!enc) {
+#ifdef WORDS_BIGENDIAN
+        enc = const_cast<QoreEncoding*>(QCS_UTF16BE);
+#else
+        enc = const_cast<QoreEncoding*>(QCS_UTF16LE);
+#endif
+    }
+    TempEncodingHelper tstr(arg, enc, xsink);
     len = tstr->size();
     return tstr.giveBuffer();
 }

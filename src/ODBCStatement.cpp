@@ -47,7 +47,8 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
     params(new QoreListNode, xsink)
 {
     const char* dbEnc = c->getDatasource()->getDBEncoding();
-    serverEnc = const_cast<QoreEncoding*>(QEM.findCreate(dbEnc ? dbEnc : "UTF-8"));
+    if (dbEnc)
+        serverEnc = const_cast<QoreEncoding*>(QEM.findCreate(dbEnc));
 
     conn->allocStatementHandle(stmt, xsink);
     if (*xsink)
@@ -64,7 +65,8 @@ ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     params(new QoreListNode, xsink)
 {
     const char* dbEnc = ds->getDBEncoding();
-    serverEnc = const_cast<QoreEncoding*>(QEM.findCreate(dbEnc ? dbEnc : "UTF-8"));
+    if (dbEnc)
+        serverEnc = const_cast<QoreEncoding*>(QEM.findCreate(dbEnc));
 
     conn->allocStatementHandle(stmt, xsink);
     if (*xsink)
@@ -711,8 +713,14 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
                 if (*xsink)
                     return -1;
                 SQLLEN* indPtr = paramHolder.addL(len);
-                ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
-                    len, 0, reinterpret_cast<SQLCHAR*>(cstr), len, indPtr);
+                if (serverEnc) {
+                    ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
+                        len, 0, reinterpret_cast<SQLCHAR*>(cstr), len, indPtr);
+                }
+                else  {
+                    ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR,
+                        len, 0, reinterpret_cast<SQLWCHAR*>(cstr), len, indPtr);
+                }
                 break;
             }
             case NT_NUMBER: {
@@ -917,8 +925,14 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
             qore_size_t maxlen;
             if (createArrayFromStringList(lst, array, indArray, maxlen, xsink))
                 return -1;
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
-                maxlen, 0, reinterpret_cast<SQLCHAR*>(array), maxlen, indArray);
+            if (serverEnc) {
+                ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
+                    maxlen, 0, reinterpret_cast<SQLCHAR*>(array), maxlen, indArray);
+            }
+            else  {
+                ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR,
+                    maxlen, 0, reinterpret_cast<SQLWCHAR*>(array), maxlen, indArray);
+            }
             break;
         }
         case NT_NUMBER: {
@@ -1031,8 +1045,14 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
             SQLLEN* indArray = createIndArray(len, xsink);
             if (*xsink || !indArray)
                 return -1;
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
-                len, 0, reinterpret_cast<SQLCHAR**>(array), len, indArray);
+            if (serverEnc) {
+                ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
+                    len, 0, reinterpret_cast<SQLCHAR*>(array), len, indArray);
+            }
+            else  {
+                ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR,
+                    len, 0, reinterpret_cast<SQLWCHAR*>(array), len, indArray);
+            }
             break;
         }
         case NT_NUMBER: {
