@@ -110,7 +110,8 @@ class OdbcTest inherits QUnit::Test {
         try {
             initDatasource();
         }
-        catch (e) {
+        catch (hash ex) {
+            printf("%s: %s\n", ex.err, ex.desc);
             exit(1);
         }
 
@@ -147,6 +148,7 @@ class OdbcTest inherits QUnit::Test {
             exit(1);
         }
         ds.open();
+        printf("ver: %y\n", ds.getServerVersion());
     }
 
     basicTest() {
@@ -245,4 +247,3 @@ class OdbcTest inherits QUnit::Test {
         assertEq(h, ds.select("SELECT * FROM " + tableName));
     }
 }
-

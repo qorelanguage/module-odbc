@@ -89,8 +89,6 @@ QoreHashNode* ODBCStatement::describe(ExceptionSink* xsink) {
         return 0;
 
     ReferenceHolder<QoreHashNode> h(new QoreHashNode, xsink);
-    if (*xsink)
-        return 0;
 
     QoreString namestr("name");
     QoreString maxsizestr("maxsize");
@@ -100,28 +98,10 @@ QoreHashNode* ODBCStatement::describe(ExceptionSink* xsink) {
     int columnCount = resColumns.size();
 
     // Assign unique column names.
-    std::vector<std::string> cvec;
-    cvec.reserve(columnCount);
     for (int i = 0; i < columnCount; i++) {
         ODBCResultColumn& col = resColumns[i];
 
-        HashAssignmentHelper hah(**h, col.name);
-        if (*hah) { // Find a unique column name.
-            unsigned num = 1;
-            while (true) {
-                QoreStringMaker tmp("%s_%d", col.name.c_str(), num);
-                hah.reassign(tmp.c_str());
-                if (*hah) {
-                    ++num;
-                    continue;
-                }
-                cvec.push_back(tmp.c_str());
-                break;
-            }
-        }
-        else {
-            cvec.push_back(col.name);
-        }
+        HashColumnAssignmentHelper hah(**h, col.name);
 
         ReferenceHolder<QoreHashNode> desc(new QoreHashNode, xsink);
         desc->setKeyValue(namestr, new QoreStringNode(col.name), xsink);
@@ -294,51 +274,31 @@ QoreHashNode* ODBCStatement::describe(ExceptionSink* xsink) {
     return h.release();
 }
 
+void ODBCStatement::doColumns(QoreHashNode& h, std::vector<QoreListNode*>& columns) {
+    int columnCount = resColumns.size();
+    columns.resize(columnCount);
+
+    // Assign unique column names.
+    for (int i = 0; i < columnCount; i++) {
+        ODBCResultColumn& col = resColumns[i];
+
+        HashColumnAssignmentHelper hah(h, col.name);
+        columns[i] = new QoreListNode;
+        hah.assign(columns[i], 0);
+    }
+}
+
 QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashIfNothing, int maxRows) {
     if (fetchResultColumnMetadata(xsink))
         return 0;
 
     ReferenceHolder<QoreHashNode> h(new QoreHashNode, xsink);
-    if (*xsink)
-        return 0;
-
-    int columnCount = resColumns.size();
     std::vector<QoreListNode*> columns;
-    columns.resize(columnCount);
-
-    // Assign unique column names.
-    std::vector<std::string> cvec;
-    cvec.reserve(columnCount);
-    for (int i = 0; i < columnCount; i++) {
-        ODBCResultColumn& col = resColumns[i];
-
-        HashAssignmentHelper hah(**h, col.name);
-        if (*hah) { // Find a unique column name.
-            unsigned num = 1;
-            while (true) {
-                QoreStringMaker tmp("%s_%d", col.name.c_str(), num);
-                hah.reassign(tmp.c_str());
-                if (*hah) {
-                    ++num;
-                    continue;
-                }
-                cvec.push_back(tmp.c_str());
-                break;
-            }
-        }
-        else {
-            cvec.push_back(col.name);
-        }
-        columns[i] = new QoreListNode;
-        hah.assign(columns[i], xsink);
-    }
 
     int rowCount = 0;
     while (true) {
         SQLRETURN ret = SQLFetch(stmt);
         if (ret == SQL_NO_DATA) { // Reached the end of the result-set.
-            if (rowCount == 0 && emptyHashIfNothing)
-                h->clear(xsink);
             break;
         }
         if (!SQL_SUCCEEDED(ret)) { // error
@@ -348,11 +308,14 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashI
             return 0;
         }
 
-        for (int j = 0; j < columnCount; j++) {
+        for (int j = 0; j < resColumns.size(); j++) {
             ODBCResultColumn& rcol = resColumns[j];
             ReferenceHolder<AbstractQoreNode> n(getColumnValue(j+1, rcol, xsink), xsink);
             if (!n || *xsink)
                 return 0;
+
+            if (h->empty())
+               doColumns(**h, columns);
 
             (columns[j])->push(n.release());
         }
@@ -362,6 +325,9 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashI
             break;
     }
 
+    if (!rowCount && !emptyHashIfNothing)
+       doColumns(**h, columns);
+
     return h.release();
 }
 
@@ -370,8 +336,6 @@ QoreListNode* ODBCStatement::getOutputList(ExceptionSink* xsink, int maxRows) {
         return 0;
 
     ReferenceHolder<QoreListNode> l(new QoreListNode(), xsink);
-    if (*xsink)
-        return 0;
 
     int rowCount = 0;
     GetRowInternStatus status;
@@ -619,10 +583,6 @@ QoreHashNode* ODBCStatement::getRowIntern(GetRowInternStatus& status, ExceptionS
     }
 
     ReferenceHolder<QoreHashNode> h(new QoreHashNode, xsink); // Row hash.
-    if (*xsink) {
-        status = EGRIS_ERROR;
-        return 0;
-    }
 
     int columns = resColumns.size();
     for (int i = 0; i < columns; i++) {
@@ -1471,4 +1431,3 @@ SQLLEN* ODBCStatement::createIndArray(SQLLEN indicator, ExceptionSink* xsink) {
         array[i] = indicator;
     return array;
 }
-
