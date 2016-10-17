@@ -37,23 +37,7 @@
 #include <sql.h>
 #include <sqlext.h>
 
-#include "qore/common.h"
-#include "qore/QoreEncoding.h"
-#include "qore/QoreString.h"
-#include "qore/QoreStringNode.h"
-#include "qore/AbstractQoreNode.h"
-#include "qore/AbstractPrivateData.h"
-#include "qore/BinaryNode.h"
-#include "qore/QoreHashNode.h"
-#include "qore/Datasource.h"
-#include "qore/ExceptionSink.h"
-#include "qore/DateTimeNode.h"
-#include "qore/QoreBoolNode.h"
-#include "qore/QoreBigIntNode.h"
-#include "qore/QoreFloatNode.h"
-#include "qore/QoreNumberNode.h"
-#include "qore/QoreListNode.h"
-#include "qore/QoreNullNode.h"
+#include <qore/Qore.h>
 
 #include "EnumNumericOption.h"
 #include "ErrorHelper.h"
@@ -252,6 +236,12 @@ private:
 
     //! Result columns metadata.
     std::vector<ODBCResultColumn> resColumns;
+
+    //! Populate column hash.
+    /** @param h column hash
+        @param columns reference to a shortcut vector for column lists
+     */
+    DLLLOCAL void populateColumnHash(QoreHashNode& h, std::vector<QoreListNode*>& columns);
 
     //! Fetch metadata about result columns.
     /** @param xsink exception sink
@@ -467,6 +457,26 @@ private:
         @return ODBC interval structure
      */
     DLLLOCAL inline SQL_INTERVAL_STRUCT getIntervalFromDate(const DateTimeNode* arg);
+};
+
+class HashColumnAssignmentHelper : public HashAssignmentHelper {
+public:
+    DLLLOCAL HashColumnAssignmentHelper(QoreHashNode& h, const std::string& name) : HashAssignmentHelper(h, name.c_str()) {
+        if (!**this)
+            return;
+
+        // Find a unique column name.
+        unsigned num = 1;
+        while (true) {
+            QoreStringMaker tmp("%s_%d", name.c_str(), num);
+            reassign(tmp.c_str());
+            if (**this) {
+                ++num;
+                continue;
+            }
+            break;
+        }
+    }
 };
 
 inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, ExceptionSink* xsink) {
@@ -939,4 +949,3 @@ SQL_INTERVAL_STRUCT ODBCStatement::getIntervalFromDate(const DateTimeNode* arg) 
 }
 
 #endif // _QORE_MODULE_ODBC_ODBCSTATEMENT_H
-
