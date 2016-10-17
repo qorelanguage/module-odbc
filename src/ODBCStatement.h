@@ -237,8 +237,11 @@ private:
     //! Result columns metadata.
     std::vector<ODBCResultColumn> resColumns;
 
-    // populate column hash
-    DLLLOCAL void doColumns(QoreHashNode& h, std::vector<QoreListNode*>& columns);
+    //! Populate column hash.
+    /** @param h column hash
+        @param columns reference to a shortcut vector for column lists
+     */
+    DLLLOCAL void populateColumnHash(QoreHashNode& h, std::vector<QoreListNode*>& columns);
 
     //! Fetch metadata about result columns.
     /** @param xsink exception sink
@@ -458,20 +461,20 @@ private:
 
 class HashColumnAssignmentHelper : public HashAssignmentHelper {
 public:
-   DLLLOCAL HashColumnAssignmentHelper(QoreHashNode& h, const std::string& name) : HashAssignmentHelper(h, name.c_str()) {
+    DLLLOCAL HashColumnAssignmentHelper(QoreHashNode& h, const std::string& name) : HashAssignmentHelper(h, name.c_str()) {
         if (!**this)
-           return;
+            return;
 
         // Find a unique column name.
         unsigned num = 1;
         while (true) {
-           QoreStringMaker tmp("%s_%d", name.c_str(), num);
-           reassign(tmp.c_str());
-           if (**this) {
-              ++num;
-              continue;
-           }
-           break;
+            QoreStringMaker tmp("%s_%d", name.c_str(), num);
+            reassign(tmp.c_str());
+            if (**this) {
+                ++num;
+                continue;
+            }
+            break;
         }
     }
 };

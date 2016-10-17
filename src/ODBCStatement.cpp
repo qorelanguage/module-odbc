@@ -315,7 +315,7 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashI
                 return 0;
 
             if (h->empty())
-               doColumns(**h, columns);
+               populateColumnHash(**h, columns);
 
             (columns[j])->push(n.release());
         }
@@ -326,7 +326,7 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashI
     }
 
     if (!rowCount && !emptyHashIfNothing)
-       doColumns(**h, columns);
+       populateColumnHash(**h, columns);
 
     return h.release();
 }
