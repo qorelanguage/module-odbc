@@ -274,7 +274,7 @@ QoreHashNode* ODBCStatement::describe(ExceptionSink* xsink) {
     return h.release();
 }
 
-void ODBCStatement::doColumns(QoreHashNode& h, std::vector<QoreListNode*>& columns) {
+void ODBCStatement::populateColumnHash(QoreHashNode& h, std::vector<QoreListNode*>& columns) {
     int columnCount = resColumns.size();
     columns.resize(columnCount);
 
