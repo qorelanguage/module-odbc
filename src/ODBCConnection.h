@@ -46,6 +46,8 @@
 
 #include "EnumNumericOption.h"
 
+class AbstractQoreZoneInfo;
+
 //! A class representing an ODBC connection.
 class ODBCConnection {
 public:
@@ -76,7 +78,7 @@ public:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int rollback( ExceptionSink* xsink);
+    DLLLOCAL int rollback(ExceptionSink* xsink);
 
     //! Select multiple rows from the database.
     /** @param qstr Qore-style SQL statement
@@ -157,9 +159,17 @@ public:
         return ds;
     }
 
+    //! Return server timezone set for this connection.
+    DLLLOCAL const AbstractQoreZoneInfo* getServerTimezone() const {
+        return serverTz;
+    }
+
 private:
     //! Qore datasource.
     Datasource* ds;
+
+    //! Server timezone.
+    const AbstractQoreZoneInfo* serverTz;
 
     //! ODBC environment handle.
     SQLHENV env;
@@ -187,7 +197,11 @@ private:
     DLLLOCAL void handleDbcError(const char* err, const char* desc, ExceptionSink *xsink);
 
     //! Parse options passed through Datasource.
-    DLLLOCAL void parseOptions();
+    /** @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int parseOptions(ExceptionSink* xsink);
 
     //! Prepare ODBC connection string and save it to the passed string.
     /** @param str connection string

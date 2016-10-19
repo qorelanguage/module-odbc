@@ -37,14 +37,29 @@
 #include "ODBCStatement.h"
 
 
+static SQLINTEGER getUTF8CharCount(const char* str) {
+    SQLINTEGER len = 0;
+    for (; *str; ++str) if ((*str & 0xC0) != 0x80) ++len;
+    return len;
+}
+
 ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     ds(d),
+    serverTz(0),
     connected(false),
     optNumeric(ENO_OPTIMAL),
     clientVer(0),
     serverVer(0)
 {
-    parseOptions();
+    // Parse options passed through the datasource.
+    if (parseOptions(xsink))
+        return;
+
+    // Timezone handling.
+    if (!serverTz) {
+        DateTime d(false); // Used just to get the local zone info.
+        serverTz = d.getZone();
+    }
 
     SQLRETURN ret;
     // Allocate an environment handle.
@@ -86,7 +101,7 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     SQLWCHAR* odbcDS = reinterpret_cast<SQLWCHAR*>(const_cast<char*>(connStr->getBuffer()));
 
     // Connect.
-    ret = SQLDriverConnectW(dbConn, 0, odbcDS, SQL_NTS, 0, 0, 0, SQL_DRIVER_NOPROMPT);
+    ret = SQLDriverConnectW(dbConn, 0, odbcDS, getUTF8CharCount(tempConnStr.getBuffer()), 0, 0, 0, SQL_DRIVER_NOPROMPT);
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("could not connect to the datasource; connection string: '%s'");
         ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
@@ -108,9 +123,6 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     if (SQL_SUCCEEDED(ret)) {
         clientVer = parseOdbcVersion(verStr);
     }
-
-    // timezones
-    //  ???
 }
 
 ODBCConnection::~ODBCConnection() {
@@ -228,7 +240,7 @@ void ODBCConnection::handleDbcError(const char* err, const char* desc, Exception
     xsink->raiseException(err, s.c_str());
 }
 
-void ODBCConnection::parseOptions() {
+int ODBCConnection::parseOptions(ExceptionSink* xsink) {
     ConstHashIterator hi(ds->getConnectOptions());
     while (hi.next()) {
         if (strcmp("optimal-numbers", hi.getKey()) == 0) {
@@ -243,7 +255,21 @@ void ODBCConnection::parseOptions() {
             optNumeric = ENO_NUMERIC;
             continue;
         }
+        if (strcmp("qore-timezone", hi.getKey()) == 0) {
+            const AbstractQoreNode* val = hi.getValue();
+            if (val->getType() != NT_STRING) {
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "non-string value passed for the 'qore-timezone' option");
+                return -1;
+            }
+            const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
+            const AbstractQoreZoneInfo* tz = find_create_timezone(str->getBuffer(), xsink);
+            if (*xsink)
+                return -1;
+            serverTz = tz;
+            continue;
+        }
     }
+    return 0;
 }
 
 int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsink) {
@@ -262,14 +288,17 @@ int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsin
         if (!val)
             continue;
 
-        // Skip numeric options.
+        // Skip module-specific (non-ODBC) options.
         if (strcmp("optimal-numbers", hi.getKey()) == 0)
             continue;
         if (strcmp("string-numbers", hi.getKey()) == 0)
             continue;
         if (strcmp("numeric-numbers", hi.getKey()) == 0)
             continue;
+        if (strcmp("qore-timezone", hi.getKey()) == 0)
+            continue;
 
+        // Append options to the connection string.
         qore_type_t ntype = val->getType();
         switch (ntype) {
             case NT_STRING: {

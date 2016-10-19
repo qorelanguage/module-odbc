@@ -16,6 +16,8 @@
 
 class OdbcTest inherits QUnit::Test {
     public {
+        TimeZone utcTz = new TimeZone(0);
+        *string connStr;
         hash Columns = {
             "c": {
                 "type": "CHAR(128)",
@@ -34,12 +36,12 @@ class OdbcTest inherits QUnit::Test {
                 "type": "VARBINARY(64)",
                 "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
             },
-            "b": {
+            "bool": {
                 "type": "BOOLEAN",
                 "values": (True, False, True, True),
                 "expected": (1, 0, 1, 1),
             },
-            "si": {
+            "sint": {
                 "type": "SMALLINT",
                 "values": (1, 0, 32767, -32768),
             },
@@ -47,7 +49,7 @@ class OdbcTest inherits QUnit::Test {
                 "type": "INTEGER",
                 "values": (2147483647, 0, -1, -2147483648),
             },
-            "bi": {
+            "bint": {
                 "type": "BIGINT",
                 "values": (2200100100, -111122223333, 0, 1258),
             },
@@ -59,7 +61,7 @@ class OdbcTest inherits QUnit::Test {
                 "type": "NUMERIC(5,2)",
                 "values": (-123.45n, 0.0n, 999.99n, -999.99n),
             },
-            "fp": {
+            "fltp": {
                 "type": "FLOAT(53)",
                 "values": (1.72, 3.1456789765432, 0.0, -2.7218281828),
             },
@@ -67,26 +69,28 @@ class OdbcTest inherits QUnit::Test {
                 "type": "REAL",
                 "values": (0.00390625, 0.0078125, -0.0078125, 0.0),
             },
-            "f": {
+            "flt": {
                 "type": "FLOAT",
                 "values": (0.00390625, 0.0078125, -0.0078125, 0.0),
             },
-            "d": {
+            "dbl": {
                 "type": "DOUBLE PRECISION",
                 "values": (1.72, 3.1456789765432, 0.0, -2.7218281828),
             },
             "dt": {
                 "type": "DATE",
                 "values": (2016-01-11, 1970-01-01, 2020-05-20, 1987-01-30),
+                "expected": (),
             },
-            "t": {
+            "tm": {
                 "type": "TIME",
-                "values": (00:00:00, 05:23:17, -03:00:20, 14:15:16),
-                "expected": (0s, 5*60m+23m+17s, -3*60m+20s, 14*60m+15m+16s),
+                "values": (00:00:00Z, 05:23:17Z, -03:00:20Z, 14:15:16Z),
+                "expected": (0s, 5*60m+23m+17s, 20*60m+59m+40s, 14*60m+15m+16s),
             },
-            "ts": {
+            "tstamp": {
                 "type": "TIMESTAMP",
                 "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
+                "expected": (),
             },
         };
         list ColumnNamesAndTypes;
@@ -100,6 +104,7 @@ class OdbcTest inherits QUnit::Test {
     constructor() : QUnit::Test("OdbcTest", "1.0", \ARGV) {
         addTestCase("Basic test", \basicTest());
         addTestCase("Types test", \typesTest());
+        addTestCase("Timezone test", \timezoneTest());
         addTestCase("Array bind test", \arrayBindTest());
         set_return_value(main());
     }
@@ -111,7 +116,7 @@ class OdbcTest inherits QUnit::Test {
             initDatasource();
         }
         catch (hash ex) {
-            printf("%s: %s\n", ex.err, ex.desc);
+            printf("Exception happened during datasource initialization:\n%s: %s\n", ex.err, ex.desc);
             exit(1);
         }
 
@@ -119,11 +124,18 @@ class OdbcTest inherits QUnit::Test {
             ColumnNamesAndTypes += col.key + " " + col.value.type;
         }
 
+        # Prepare test data.
         for (int i = 0; i < Columns.bin.values.size(); i++) {
             push Columns.bin.expected, Columns.bin.values[i];
             reference exp = \Columns.bin.expected[i];
             for (int j = exp.size(); j < 64; j++)
                 exp += <00>;
+        }
+        for (int i = 0; i < Columns.dt.values.size(); i++) {
+            push Columns.dt.expected, utcTz.date(Columns.dt.values[i]);
+        }
+        for (int i = 0; i < Columns.tstamp.values.size(); i++) {
+            push Columns.tstamp.expected, utcTz.date(Columns.tstamp.values[i]);
         }
     }
 
@@ -136,13 +148,13 @@ class OdbcTest inherits QUnit::Test {
     }
 
     initDatasource() {
-        *string connstr = ENV.QORE_DB_CONNSTR_ODBC;
-        if (!connstr) {
+        connStr = ENV.QORE_DB_CONNSTR_ODBC;
+        if (!connStr) {
             printf("No connection string set. Cannot run the tests.\n");
             exit(1);
         }
 
-        ds = new Datasource(connstr);
+        ds = new Datasource(connStr);
         if (ds.getDriverName() != "odbc") {
             printf("Cannot execute the odbc tests on a connection using driver %y.\n", ds.getDriverName());
             exit(1);
@@ -221,6 +233,28 @@ class OdbcTest inherits QUnit::Test {
         assertEq(results, ds.exec("SELECT * FROM " + tableName));
         assertEq(0, ds.exec("DROP TABLE " + tableName));
         ds.commit();
+    }
+
+    timezoneTest() {
+        Datasource tzDs = new Datasource(connStr);
+        tzDs.setOption("qore-timezone", "Asia/Tokyo");
+        tzDs.open();
+
+        assertEq(0, tzDs.exec("DROP TABLE IF EXISTS " + tableName));
+        tzDs.commit();
+
+        assertEq(0, tzDs.exec("CREATE TABLE IF NOT EXISTS " + tableName + " (id int, t timestamp)"));
+        tzDs.commit();
+
+        assertEq(1, tzDs.exec("INSERT INTO " + tableName + " (id, t) VALUES (%v, %v)", 1, 2016-01-11T00:00:00Z));
+        tzDs.commit();
+        assertEq(1, tzDs.exec("INSERT INTO " + tableName + " (id, t) VALUES (%v, %v)", 2, 2016-01-11T09:00:00+09:00));
+        tzDs.commit();
+
+        hash h = {"id": (1, 2), "t": (2016-01-11T09:00:00+09:00, 2016-01-11T09:00:00+09:00)};
+        assertEq(h, tzDs.select("SELECT * FROM " + tableName));
+
+        tzDs.close();
     }
 
     arrayBindTest() {

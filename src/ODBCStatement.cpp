@@ -40,6 +40,7 @@
 ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
     conn(c),
     serverEnc(0),
+    serverTz(conn->getServerTimezone()),
     optNumeric(conn->getNumericOption()),
     affectedRowCount(0),
     readRows(0),
@@ -48,7 +49,7 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
 {
     const char* dbEnc = c->getDatasource()->getDBEncoding();
     if (dbEnc)
-        serverEnc = const_cast<QoreEncoding*>(QEM.findCreate(dbEnc));
+        serverEnc = QEM.findCreate(dbEnc);
 
     conn->allocStatementHandle(stmt, xsink);
     if (*xsink)
@@ -58,6 +59,7 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
 ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     conn(static_cast<ODBCConnection*>(ds->getPrivateData())),
     serverEnc(0),
+    serverTz(conn->getServerTimezone()),
     optNumeric(conn->getNumericOption()),
     affectedRowCount(0),
     readRows(0),
@@ -66,7 +68,7 @@ ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
 {
     const char* dbEnc = ds->getDBEncoding();
     if (dbEnc)
-        serverEnc = const_cast<QoreEncoding*>(QEM.findCreate(dbEnc));
+        serverEnc = QEM.findCreate(dbEnc);
 
     conn->allocStatementHandle(stmt, xsink);
     if (*xsink)

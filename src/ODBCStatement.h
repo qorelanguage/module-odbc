@@ -211,7 +211,10 @@ private:
     ODBCConnection* conn;
 
     //! Server encoding used for SQL_CHAR input and output parameters.
-    QoreEncoding* serverEnc;
+    const QoreEncoding* serverEnc;
+
+    //! Server timezone used for the date/time input and output parameters.
+    const AbstractQoreZoneInfo* serverTz;
 
     //! Option used for deciding how NUMERIC results will be returned.
     NumericOption optNumeric;
@@ -667,7 +670,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             break;
         }
 
-        // Various.
+        // One-bit value.
         case SQL_BIT: {
             SQLCHAR val;
             ret = SQLGetData(stmt, column, SQL_C_BIT, &val, sizeof(SQLCHAR), &indicator);
@@ -682,7 +685,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             TIMESTAMP_STRUCT val;
             ret = SQLGetData(stmt, column, SQL_C_TYPE_TIMESTAMP, &val, sizeof(TIMESTAMP_STRUCT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new DateTimeNode(val.year, val.month, val.day, val.hour, val.minute, val.second, val.fraction/1000000, false);
+                return DateTimeNode::makeAbsolute(serverTz, val.year, val.month, val.day, val.hour, val.minute, val.second, val.fraction/1000000);
             }
             break;
         }
@@ -698,7 +701,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             DATE_STRUCT val;
             ret = SQLGetData(stmt, column, SQL_C_TYPE_DATE, &val, sizeof(DATE_STRUCT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new DateTimeNode(val.year, val.month, val.day, 0, 0, 0, 0, false);
+                return DateTimeNode::makeAbsolute(serverTz, val.year, val.month, val.day, 0, 0, 0, 0);
             }
             break;
         }
@@ -905,7 +908,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
 }
 
 char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink) {
-    QoreEncoding* enc = serverEnc;
+    const QoreEncoding* enc = serverEnc;
     if (!enc) {
 #ifdef WORDS_BIGENDIAN
         enc = const_cast<QoreEncoding*>(QCS_UTF16BE);
@@ -920,13 +923,16 @@ char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, qore_size_t& 
 
 TIMESTAMP_STRUCT ODBCStatement::getTimestampFromDate(const DateTimeNode* arg) {
     TIMESTAMP_STRUCT t;
-    t.year = arg->getYear();
-    t.month = arg->getMonth();
-    t.day = arg->getDay();
-    t.hour = arg->getHour();
-    t.minute = arg->getMinute();
-    t.second = arg->getSecond();
-    t.fraction = arg->getMicrosecond() * 1000;
+    qore_tm info;
+    info.clear();
+    arg->getInfo(serverTz, info);
+    t.year = info.year;
+    t.month = info.month;
+    t.day = info.day;
+    t.hour = info.hour;
+    t.minute = info.minute;
+    t.second = info.second;
+    t.fraction = info.us * 1000;
     return t;
 }
 
