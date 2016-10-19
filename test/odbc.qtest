@@ -141,7 +141,13 @@ class OdbcTest inherits QUnit::Test {
 
     globalTearDown() {
         if (ds) {
-            ds.exec("DROP TABLE IF EXISTS " + tableName + ";");
+            try {
+                ds.exec("DROP TABLE " + tableName);
+            }
+            catch (hash ex) {
+                if (ex.err != "DBI:ODBC:EXEC-ERROR")
+                    rethrow;
+            }
             ds.commit();
             ds.close();
         }
@@ -169,9 +175,15 @@ class OdbcTest inherits QUnit::Test {
             assertThrows("DBI:ODBC:CONNECTION-ERROR", sub() { test.open(); });
         }
 
-        assertEq(0, ds.exec("DROP TABLE IF EXISTS " + tableName));
+        try {
+            ds.exec("DROP TABLE " + tableName);
+        }
+        catch (hash ex) {
+            if (ex.err != "DBI:ODBC:EXEC-ERROR")
+                rethrow;
+        }
         ds.commit();
-        assertEq(0, ds.exec("CREATE TABLE IF NOT EXISTS " + tableName + " (id int PRIMARY KEY, text varchar(128))"));
+        assertEq(0, ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, text varchar(128))"));
         ds.commit();
 
         assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (1, 'abcdef123456')"));
@@ -199,11 +211,17 @@ class OdbcTest inherits QUnit::Test {
 
     typesTest() {
         ds.setOption("numeric-numbers", True);
-        assertEq(0, ds.exec("DROP TABLE IF EXISTS " + tableName));
+        try {
+            ds.exec("DROP TABLE " + tableName);
+        }
+        catch (hash ex) {
+            if (ex.err != "DBI:ODBC:EXEC-ERROR")
+                rethrow;
+        }
         ds.commit();
 
         string def = sprintf(" (%s)", foldl $1 + ", " + $2, ColumnNamesAndTypes);
-        assertEq(0, ds.exec("CREATE TABLE IF NOT EXISTS " + tableName + def));
+        assertEq(0, ds.exec("CREATE TABLE " + tableName + def));
         ds.commit();
 
         list arguments = ();
@@ -240,10 +258,16 @@ class OdbcTest inherits QUnit::Test {
         tzDs.setOption("qore-timezone", "Asia/Tokyo");
         tzDs.open();
 
-        assertEq(0, tzDs.exec("DROP TABLE IF EXISTS " + tableName));
+        try {
+            tzDs.exec("DROP TABLE " + tableName);
+        }
+        catch (hash ex) {
+            if (ex.err != "DBI:ODBC:EXEC-ERROR")
+                rethrow;
+        }
         tzDs.commit();
 
-        assertEq(0, tzDs.exec("CREATE TABLE IF NOT EXISTS " + tableName + " (id int, t timestamp)"));
+        assertEq(0, tzDs.exec("CREATE TABLE " + tableName + " (id int, t timestamp)"));
         tzDs.commit();
 
         assertEq(1, tzDs.exec("INSERT INTO " + tableName + " (id, t) VALUES (%v, %v)", 1, 2016-01-11T00:00:00Z));
@@ -258,9 +282,15 @@ class OdbcTest inherits QUnit::Test {
     }
 
     arrayBindTest() {
-        assertEq(0, ds.exec("DROP TABLE IF EXISTS " + tableName));
+        try {
+            ds.exec("DROP TABLE " + tableName);
+        }
+        catch (hash ex) {
+            if (ex.err != "DBI:ODBC:EXEC-ERROR")
+                rethrow;
+        }
         ds.commit();
-        assertEq(0, ds.exec("CREATE TABLE IF NOT EXISTS " + tableName + " (id int, text varchar(48))"));
+        assertEq(0, ds.exec("CREATE TABLE " + tableName + " (id int, text varchar(48))"));
         ds.commit();
 
         SQLStatement stmt = new SQLStatement(ds);
