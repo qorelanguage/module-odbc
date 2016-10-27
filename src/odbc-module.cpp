@@ -4,7 +4,7 @@
 
   Qore ODBC module
 
-  Copyright (C) 2016 Ondrej Musil
+  Copyright (C) 2016 Qore Technologies s.r.o.
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -99,29 +99,49 @@ static int odbc_close(Datasource* ds) {
 
 static AbstractQoreNode* odbc_select(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    if (!conn) {
+        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        return 0;
+    }
     return conn->exec(qstr, args, xsink);
 }
 
 #ifdef _QORE_HAS_DBI_SELECT_ROW
 static QoreHashNode* odbc_select_row(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    if (!conn) {
+        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        return 0;
+    }
     return conn->selectRow(qstr, args, xsink);
 }
 #endif
 
 static AbstractQoreNode* odbc_select_rows(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    if (!conn) {
+        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        return 0;
+    }
     return conn->selectRows(qstr, args, xsink);
 }
 
 static AbstractQoreNode* odbc_exec(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    if (!conn) {
+        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        return 0;
+    }
     return conn->exec(qstr, args, xsink);
 }
 
 #ifdef _QORE_HAS_DBI_EXECRAW
 static AbstractQoreNode* odbc_execRaw(Datasource* ds, const QoreString* qstr, ExceptionSink* xsink) {
     ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    if (!conn) {
+        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        return 0;
+    }
     return conn->execRaw(qstr, xsink);
 }
 #endif
@@ -132,21 +152,37 @@ static int odbc_begin_transaction(Datasource* ds, ExceptionSink* xsink) {
 
 static int odbc_commit(Datasource* ds, ExceptionSink* xsink) {
     ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    if (!conn) {
+        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        return -1;
+    }
     return conn->commit(xsink);
 }
 
 static int odbc_rollback(Datasource* ds, ExceptionSink* xsink) {
     ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    if (!conn) {
+        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        return -1;
+    }
     return conn->rollback(xsink);
 }
 
 static AbstractQoreNode* odbc_get_client_version(const Datasource* ds, ExceptionSink* xsink) {
     ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    if (!conn) {
+        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        return 0;
+    }
     return new QoreBigIntNode(conn->getClientVersion());
 }
 
 static AbstractQoreNode* odbc_get_server_version(Datasource* ds, ExceptionSink* xsink) {
     ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    if (!conn) {
+        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        return 0;
+    }
     return new QoreBigIntNode(conn->getServerVersion());
 }
 
@@ -273,13 +309,20 @@ static int odbc_stmt_close(SQLStatement* stmt, ExceptionSink* xsink) {
 }
 
 static int odbc_opt_set(Datasource* ds, const char* opt, const AbstractQoreNode* val, ExceptionSink* xsink) {
-   ODBCConnection* conn = (ODBCConnection*)ds->getPrivateData();
-   return conn->setOption(opt, val, xsink);
+    ODBCConnection* conn = (ODBCConnection*)ds->getPrivateData();
+    if (!conn) {
+        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        return -1;
+    }
+    return conn->setOption(opt, val, xsink);
 }
 
 static AbstractQoreNode* odbc_opt_get(const Datasource* ds, const char* opt) {
-   ODBCConnection* conn = (ODBCConnection*)ds->getPrivateData();
-   return conn->getOption(opt);
+    ODBCConnection* conn = (ODBCConnection*)ds->getPrivateData();
+    if (!conn) {
+        return 0;
+    }
+    return conn->getOption(opt);
 }
 
 
