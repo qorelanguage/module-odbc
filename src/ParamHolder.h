@@ -48,16 +48,47 @@ public:
         strings.reserve(16);
         bools.reserve(8);
         lengths.reserve(32);
-        dates.reserve(8);
-        times.reserve(8);
+        dates.reserve(4);
+        timestamps.reserve(4);
+        times.reserve(4);
+        intervals.reserve(4);
     }
     DLLLOCAL ~ParamHolder() { clear(); }
 
-    DLLLOCAL char* addC(char* s) { strings.push_back(s); return s; }
-    DLLLOCAL bool* addB(bool b) { bools.push_back(b); return &(bools[bools.size()-1].val); }
-    DLLLOCAL SQLLEN* addL(SQLLEN l) { lengths.push_back(l); return &(lengths[lengths.size()-1]); }
-    DLLLOCAL TIMESTAMP_STRUCT* addD(TIMESTAMP_STRUCT d) { dates.push_back(d); return &(dates[dates.size()-1]); }
-    DLLLOCAL SQL_INTERVAL_STRUCT* addT(SQL_INTERVAL_STRUCT t) { times.push_back(t); return &(times[times.size()-1]); }
+    DLLLOCAL char* addChars(char* s) {
+        strings.push_back(s);
+        return s;
+    }
+
+    DLLLOCAL bool* addBool(bool b) {
+        bools.push_back(b);
+        return &(bools[bools.size()-1].val);
+    }
+
+    DLLLOCAL SQLLEN* addLength(SQLLEN l) {
+        lengths.push_back(l);
+        return &(lengths[lengths.size()-1]);
+    }
+
+    DLLLOCAL DATE_STRUCT* addDate(DATE_STRUCT d) {
+        dates.push_back(d);
+        return &(dates[dates.size()-1]);
+    }
+
+    DLLLOCAL TIME_STRUCT* addTime(TIME_STRUCT t) {
+        times.push_back(t);
+        return &(times[times.size()-1]);
+    }
+
+    DLLLOCAL TIMESTAMP_STRUCT* addTimestamp(TIMESTAMP_STRUCT ts) {
+        timestamps.push_back(ts);
+        return &(timestamps[timestamps.size()-1]);
+    }
+
+    DLLLOCAL SQL_INTERVAL_STRUCT* addInterval(SQL_INTERVAL_STRUCT i) {
+        intervals.push_back(i);
+        return &(intervals[intervals.size()-1]);
+    }
 
     DLLLOCAL void clear() {
         unsigned int count = strings.size();
@@ -75,8 +106,10 @@ private:
     std::vector<char*> strings;
     std::vector<BoolWrapper> bools;
     std::vector<SQLLEN> lengths;
-    std::vector<TIMESTAMP_STRUCT> dates;
-    std::vector<SQL_INTERVAL_STRUCT> times;
+    std::vector<DATE_STRUCT> dates;
+    std::vector<TIME_STRUCT> times;
+    std::vector<TIMESTAMP_STRUCT> timestamps;
+    std::vector<SQL_INTERVAL_STRUCT> intervals;
 };
 
 #endif // _QORE_MODULE_ODBC_PARAMHOLDER_H

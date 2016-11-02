@@ -655,7 +655,7 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
         SQLRETURN ret;
 
         if (!arg || is_null(arg) || is_nothing(arg)) { // Bind NULL argument.
-            SQLLEN* len = paramHolder.addL(SQL_NULL_DATA);
+            SQLLEN* len = paramHolder.addLength(SQL_NULL_DATA);
             ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 0, 0, 0, 0, len);
             if (!SQL_SUCCEEDED(ret)) { // error
                 std::string s("failed binding NULL parameter with index %d (column %d)");
@@ -671,10 +671,10 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
             case NT_STRING: {
                 const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(arg);
                 qore_size_t len;
-                char* cstr = paramHolder.addC(getCharsFromString(str, len, xsink));
+                char* cstr = paramHolder.addChars(getCharsFromString(str, len, xsink));
                 if (*xsink)
                     return -1;
-                SQLLEN* indPtr = paramHolder.addL(len);
+                SQLLEN* indPtr = paramHolder.addLength(len);
                 if (serverEnc) {
                     ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
                         len, 0, reinterpret_cast<SQLCHAR*>(cstr), len, indPtr);
@@ -690,20 +690,20 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
                 if (*xsink)
                     return -1;
                 qore_size_t len = vh->strlen();
-                SQLLEN* indPtr = paramHolder.addL(len);
-                char* cstr = paramHolder.addC(vh.giveBuffer());
+                SQLLEN* indPtr = paramHolder.addLength(len);
+                char* cstr = paramHolder.addChars(vh.giveBuffer());
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, cstr, len, indPtr);
                 break;
             }
             case NT_DATE: {
                 const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
                 if (date->isAbsolute()) {
-                    TIMESTAMP_STRUCT* tval = paramHolder.addD(getTimestampFromDate(date));
+                    TIMESTAMP_STRUCT* tval = paramHolder.addTimestamp(getTimestampFromDate(date));
                     ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
                         SQL_TYPE_TIMESTAMP, 29, 9, tval, sizeof(TIMESTAMP_STRUCT), 0);
                 }
                 else {
-                    SQL_INTERVAL_STRUCT* tval = paramHolder.addT(getIntervalFromDate(date));
+                    SQL_INTERVAL_STRUCT* tval = paramHolder.addInterval(getIntervalFromDate(date));
                     ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
                         SQL_INTERVAL_DAY_TO_SECOND, 29, 9, tval, sizeof(SQL_INTERVAL_STRUCT), 0);
                 }
@@ -723,7 +723,7 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
             }
             case NT_BOOLEAN: {
                 bool b = reinterpret_cast<const QoreBoolNode*>(arg)->getValue();
-                bool* bval = paramHolder.addB(b);
+                bool* bval = paramHolder.addBool(b);
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_BIT,
                     SQL_CHAR, 1, 0, bval, sizeof(bool), 0);
                 break;
@@ -731,10 +731,89 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
             case NT_BINARY: {
                 const BinaryNode* b = reinterpret_cast<const BinaryNode*>(arg);
                 qore_size_t len = b->size();
-                SQLLEN* indPtr = paramHolder.addL(len);
+                SQLLEN* indPtr = paramHolder.addLength(len);
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_BINARY,
                     SQL_BINARY, len, 0, const_cast<void*>(b->getPtr()), len, indPtr);
                 break;
+            }
+            case NT_HASH: {
+                const QoreHashNode* h = reinterpret_cast<const QoreHashNode*>(arg);
+                const AbstractQoreNode* odbct = h->getKeyValue("^odbct^");
+                const AbstractQoreNode* value = h->getKeyValue("^value^");
+                if (!odbct || !value || odbct->getType() != NT_INT) {
+                    xsink->raiseException("DBI:ODBC:BIND-ERROR", "hash parameter not in correct format for odbc_bind; ODBC module cannot bind hash values");
+                    return -1;
+                }
+                const QoreBigIntNode* odbcType = reinterpret_cast<const QoreBigIntNode*>(odbct);
+                switch (odbcType->val) {
+                    case SQL_TYPE_DATE:
+                        if (bindTypeDate(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_TYPE_TIME:
+                        if (bindTypeTime(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_TYPE_TIMESTAMP:
+                        if (bindTypeTimestamp(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_MONTH:
+                        if (bindTypeIntMonth(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_YEAR:
+                        if (bindTypeIntYear(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_YEAR_TO_MONTH:
+                        if (bindTypeIntMonth(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_DAY:
+                        if (bindTypeIntDay(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_HOUR:
+                        if (bindTypeIntHour(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_MINUTE:
+                        if (bindTypeIntMinute(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_SECOND:
+                        if (bindTypeIntSecond(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_DAY_TO_HOUR:
+                        if (bindTypeIntDayHour(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_DAY_TO_MINUTE:
+                        if (bindTypeIntDayMinute(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_DAY_TO_SECOND:
+                        if (bindTypeIntDaySecond(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_HOUR_TO_MINUTE:
+                        if (bindTypeIntHourMinute(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_HOUR_TO_SECOND:
+                        if (bindTypeIntHourSecond(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    case SQL_INTERVAL_MINUTE_TO_SECOND:
+                        if (bindTypeIntMinuteSecond(i+1, value, ret, xsink))
+                            return -1;
+                        break;
+                    default:
+                        xsink->raiseException("DBI:ODBC:BIND-ERROR", "odbc_bind used with an unknown type identifier: %d", odbcType->val);
+                        return -1;
+                }
             }
             default: {
                 xsink->raiseException("DBI:ODBC:BIND-ERROR", "do not know how to bind values of type '%s'", arg->getTypeName());
@@ -759,8 +838,9 @@ int ODBCStatement::bindInternArray(const QoreListNode* args, ExceptionSink* xsin
     paramHolder.clear();
 
     // Check that enough parameters were passed for binding.
-    if (args && paramCountInSql > args->size()) {
-        xsink->raiseException("DBI:ODBC:BIND-ERROR", "not enough parameters passed for binding; %u required but only %u passed",
+    if (args && paramCountInSql != args->size()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR",
+            "mismatch between the parameter list size and number of parameters in the SQL command; %u required, %u passed",
             paramCountInSql, args->size());
         return -1;
     }
@@ -809,6 +889,18 @@ int ODBCStatement::bindInternArray(const QoreListNode* args, ExceptionSink* xsin
                 if (bindParamArraySingleValue(i+1, arg, xsink))
                     return -1;
                 break;
+            case NT_HASH: {
+                const QoreHashNode* h = reinterpret_cast<const QoreHashNode*>(arg);
+                const AbstractQoreNode* odbct = h->getKeyValue("^odbct^");
+                const AbstractQoreNode* value = h->getKeyValue("^value^");
+                if (!odbct || !value || odbct->getType() != NT_INT) {
+                    xsink->raiseException("DBI:ODBC:BIND-ERROR", "hash parameter not in correct format for odbc_bind; ODBC module cannot bind hash values");
+                    return -1;
+                }
+                if (bindParamArrayBindHash(i+1, h, xsink))
+                    return -1;
+                break;
+            }
             default:
                 xsink->raiseException("DBI:ODBC:BIND-ERROR", "do not know how to bind values of type '%s'", arg->getTypeName());
                 return -1;
@@ -1099,6 +1191,1182 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
     return 0;
 }
 
+int ODBCStatement::bindParamArrayBindHash(int column, const QoreHashNode* h, ExceptionSink* xsink) {
+    SQLRETURN ret;
+    const AbstractQoreNode* odbct = h->getKeyValue("^odbct^");
+    const AbstractQoreNode* value = h->getKeyValue("^value^");
+    const QoreBigIntNode* odbcType = reinterpret_cast<const QoreBigIntNode*>(odbct);
+    switch (odbcType->val) {
+        case SQL_TYPE_DATE:
+            if (bindTypeDateArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_TYPE_TIME:
+            if (bindTypeTimeArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_TYPE_TIMESTAMP:
+            if (bindTypeTimestampArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_MONTH:
+            if (bindTypeIntMonthArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_YEAR:
+            if (bindTypeIntYearArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_YEAR_TO_MONTH:
+            if (bindTypeIntMonthArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_DAY:
+            if (bindTypeIntDayArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_HOUR:
+            if (bindTypeIntHourArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_MINUTE:
+            if (bindTypeIntMinuteArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_SECOND:
+            if (bindTypeIntSecondArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_DAY_TO_HOUR:
+            if (bindTypeIntDayHourArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_DAY_TO_MINUTE:
+            if (bindTypeIntDayMinuteArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_DAY_TO_SECOND:
+            if (bindTypeIntDaySecondArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_HOUR_TO_MINUTE:
+            if (bindTypeIntHourMinuteArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_HOUR_TO_SECOND:
+            if (bindTypeIntHourSecondArray(column, value, ret, xsink))
+                return -1;
+            break;
+        case SQL_INTERVAL_MINUTE_TO_SECOND:
+            if (bindTypeIntMinuteSecondArray(column, value, ret, xsink))
+                return -1;
+            break;
+        default:
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "odbc_bind used with an unknown type identifier: %d", odbcType->val);
+            return -1;
+    }
+
+    if (!SQL_SUCCEEDED(ret)) { // error
+        std::string s("failed binding parameter array column #%d");
+        ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column);
+        return -1;
+    }
+
+    return 0;
+}
+
+int ODBCStatement::bindTypeDate(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_DATE odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isRelative()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "a relative date value passed with ODBCT_DATE odbc_bind");
+        return -1;
+    }
+
+    DATE_STRUCT d;
+    qore_tm info;
+    info.clear();
+    date->getInfo(info);
+    d.year = info.year;
+    d.month = info.month;
+    d.day = info.day;
+    DATE_STRUCT* dval = paramHolder.addDate(d);
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_DATE,
+        SQL_TYPE_DATE, 10, 0, dval, sizeof(DATE_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeTime(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_TIME odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isRelative()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "a relative date value passed with ODBCT_TIME odbc_bind");
+        return -1;
+    }
+
+    TIME_STRUCT t;
+    qore_tm info;
+    info.clear();
+    date->getInfo(info);
+    t.hour = info.hour;
+    t.minute = info.minute;
+    t.second = info.second;
+    TIME_STRUCT* tval = paramHolder.addTime(t);
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
+        SQL_TYPE_TIME, 8, 0, tval, sizeof(TIME_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeTimestamp(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_TIMESTAMP odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isRelative()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "a relative date value passed with ODBCT_TIMESTAMP odbc_bind");
+        return -1;
+    }
+
+    TIMESTAMP_STRUCT* tval = paramHolder.addTimestamp(getTimestampFromDate(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
+        SQL_TYPE_TIMESTAMP, 29, 9, tval, sizeof(TIMESTAMP_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntYear(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_YEAR odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_YEAR odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getYearInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR,
+        SQL_INTERVAL_YEAR, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntMonth(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_MONTH odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_MONTH odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getMonthInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MONTH,
+        SQL_INTERVAL_MONTH, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntYearMonth(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_YEARMONTH odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_YEARMONTH odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getYearMonthInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR_TO_MONTH,
+        SQL_INTERVAL_YEAR_TO_MONTH, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntDay(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_DAY odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAY odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getDayInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY,
+        SQL_INTERVAL_DAY, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntHour(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_HOUR odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_HOUR odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getHourInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR,
+        SQL_INTERVAL_HOUR, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_MINUTE odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_MINUTE odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getMinuteInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE,
+        SQL_INTERVAL_MINUTE, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_SECOND odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_SECOND odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getSecondInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_SECOND,
+        SQL_INTERVAL_SECOND, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntDayHour(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_DAYHOUR odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYHOUR odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getDayHourInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_HOUR,
+        SQL_INTERVAL_DAY_TO_HOUR, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntDayMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_DAYMINUTE odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYMINUTE odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getDayMinuteInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_MINUTE,
+        SQL_INTERVAL_DAY_TO_MINUTE, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntDaySecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_DAYSECOND odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYSECOND odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getDaySecondInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
+        SQL_INTERVAL_DAY_TO_SECOND, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntHourMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_HOURMINUTE odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_HOURMINUTE odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getHourMinuteInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_MINUTE,
+        SQL_INTERVAL_HOUR_TO_MINUTE, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntHourSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_HOURSECOND odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_HOURSECOND odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getHourSecondInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_SECOND,
+        SQL_INTERVAL_HOUR_TO_SECOND, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeIntMinuteSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t ntype = arg->getType();
+    if (ntype != NT_DATE) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value passed with ODBCT_INT_MINUTESECOND odbc_bind");
+        return -1;
+    }
+    const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+    if (date->isAbsolute()) {
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_MINUTESECOND odbc_bind");
+        return -1;
+    }
+
+    SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getMinuteSecondInterval(date));
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE_TO_SECOND,
+        SQL_INTERVAL_MINUTE_TO_SECOND, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+    return 0;
+}
+
+int ODBCStatement::bindTypeDateArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        DATE_STRUCT* array = arrayHolder.addDateArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            DATE_STRUCT d;
+            qore_tm info;
+            info.clear();
+            date->getInfo(date->getZone(), info);
+            d.year = info.year;
+            d.month = info.month;
+            d.day = info.day;
+            array[i] = d;
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_DATE,
+                SQL_TYPE_DATE, 10, 0, array, sizeof(DATE_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isRelative()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "a relative date value passed with ODBCT_DATE odbc_bind");
+            return -1;
+        }
+        DATE_STRUCT* array = arrayHolder.addDateArray(xsink);
+        if (!array)
+            return -1;
+
+        DATE_STRUCT d;
+        qore_tm info;
+        info.clear();
+        date->getInfo(date->getZone(), info);
+        d.year = info.year;
+        d.month = info.month;
+        d.day = info.day;
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = d;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_DATE,
+            SQL_TYPE_DATE, 10, 0, array, sizeof(DATE_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_DATE odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeTimeArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        TIME_STRUCT* array = arrayHolder.addTimeArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            TIME_STRUCT t;
+            qore_tm info;
+            info.clear();
+            date->getInfo(date->getZone(), info);
+            t.hour = info.hour;
+            t.minute = info.minute;
+            t.second = info.second;
+            array[i] = t;
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
+                SQL_TYPE_TIME, 8, 0, array, sizeof(TIME_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isRelative()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "a relative date value passed with ODBCT_TIME odbc_bind");
+            return -1;
+        }
+        TIME_STRUCT* array = arrayHolder.addTimeArray(xsink);
+        if (!array)
+            return -1;
+
+        TIME_STRUCT t;
+        qore_tm info;
+        info.clear();
+        date->getInfo(date->getZone(), info);
+        t.hour = info.hour;
+        t.minute = info.minute;
+        t.second = info.second;
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = t;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
+            SQL_TYPE_TIME, 8, 0, array, sizeof(TIME_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_TIME odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeTimestampArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        TIMESTAMP_STRUCT* array = arrayHolder.addTimestampArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            TIMESTAMP_STRUCT t = getTimestampFromDate(date);
+            array[i] = t;
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
+                SQL_TYPE_TIMESTAMP, 29, 9, array, sizeof(TIMESTAMP_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isRelative()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "a relative date value passed with ODBCT_TIMESTAMP odbc_bind");
+            return -1;
+        }
+        TIMESTAMP_STRUCT* array = arrayHolder.addTimestampArray(xsink);
+        if (!array)
+            return -1;
+
+        TIMESTAMP_STRUCT t = getTimestampFromDate(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = t;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
+            SQL_TYPE_TIMESTAMP, 29, 9, array, sizeof(TIMESTAMP_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_TIMESTAMP odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntYearArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getYearInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR,
+                SQL_INTERVAL_YEAR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_YEAR odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getYearInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR,
+            SQL_INTERVAL_YEAR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_YEAR odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntMonthArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getMonthInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MONTH,
+                SQL_INTERVAL_MONTH, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_MONTH odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getMonthInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MONTH,
+            SQL_INTERVAL_MONTH, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_MONTH odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntYearMonthArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getYearMonthInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR_TO_MONTH,
+                SQL_INTERVAL_YEAR_TO_MONTH, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_YEARMONTH odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getYearMonthInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR_TO_MONTH,
+            SQL_INTERVAL_YEAR_TO_MONTH, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_YEARMONTH odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntDayArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getDayInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY,
+                SQL_INTERVAL_DAY, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAY odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getDayInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY,
+            SQL_INTERVAL_DAY, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAY odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntHourArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getHourInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR,
+                SQL_INTERVAL_HOUR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_HOUR odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getHourInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR,
+            SQL_INTERVAL_HOUR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_HOUR odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getMinuteInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE,
+                SQL_INTERVAL_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_MINUTE odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getMinuteInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE,
+            SQL_INTERVAL_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_MINUTE odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntSecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getSecondInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_SECOND,
+                SQL_INTERVAL_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_SECOND odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getSecondInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_SECOND,
+            SQL_INTERVAL_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_SECOND odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntDayHourArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getDayHourInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_HOUR,
+                SQL_INTERVAL_DAY_TO_HOUR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYHOUR odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getDayHourInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_HOUR,
+            SQL_INTERVAL_DAY_TO_HOUR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAYHOUR odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntDayMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getDayMinuteInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_MINUTE,
+                SQL_INTERVAL_DAY_TO_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYMINUTE odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getDayMinuteInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_MINUTE,
+            SQL_INTERVAL_DAY_TO_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAYMINUTE odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntDaySecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getDaySecondInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
+                SQL_INTERVAL_DAY_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYSECOND odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getDaySecondInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
+            SQL_INTERVAL_DAY_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAYSECOND odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntHourMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getHourMinuteInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_MINUTE,
+                SQL_INTERVAL_HOUR_TO_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_HOURMINUTE odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getHourMinuteInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_MINUTE,
+            SQL_INTERVAL_HOUR_TO_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_HOURMINUTE odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntHourSecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getHourSecondInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_SECOND,
+                SQL_INTERVAL_HOUR_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_HOURSECOND odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getHourSecondInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_SECOND,
+            SQL_INTERVAL_HOUR_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_HOURSECOND odbc_bind");
+    return -1;
+}
+
+int ODBCStatement::bindTypeIntMinuteSecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink) {
+    qore_type_t argtype = arg->getType();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    if (argtype == NT_LIST) {
+        const QoreListNode* lst = reinterpret_cast<const QoreListNode*>(arg);
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+        if (lst->size() != arraySize) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
+                column, arraySize, lst->size());
+            return -1;
+        }
+
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
+            array[i] = getMinuteSecondInterval(date);
+
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE_TO_SECOND,
+                SQL_INTERVAL_MINUTE_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            return 0;
+        }
+    }
+    else if (argtype == NT_DATE) {
+        const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
+        if (date->isAbsolute()) {
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", "an absolute date value passed with ODBCT_INT_MINUTESECOND odbc_bind");
+            return -1;
+        }
+        SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+        if (!array)
+            return -1;
+
+        SQL_INTERVAL_STRUCT interval = getMinuteSecondInterval(date);
+        for (qore_size_t i = 0; i < arraySize; i++) {
+            array[i] = interval;
+        }
+
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE_TO_SECOND,
+            SQL_INTERVAL_MINUTE_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
+    }
+
+    xsink->raiseException("DBI:ODBC:BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_MINUTESECOND odbc_bind");
+    return -1;
+}
+
 int ODBCStatement::createArrayFromStringList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink) {
     char** stringArray = arrayHolder.addCharArray(xsink);
     if (!stringArray)
@@ -1124,7 +2392,7 @@ int ODBCStatement::createArrayFromStringList(const QoreListNode* arg, char*& arr
     }
 
     // We have to create one big array and put all the strings in it one after another.
-    array = paramHolder.addC(new (std::nothrow) char[arraySize * maxlen]);
+    array = paramHolder.addChars(new (std::nothrow) char[arraySize * maxlen]);
     if (!array) {
         xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*maxlen);
         return -1;
@@ -1167,7 +2435,7 @@ int ODBCStatement::createArrayFromNumberList(const QoreListNode* arg, char*& arr
     }
 
     // We have to create one big array and put all the strings in it one after another.
-    array = paramHolder.addC(new (std::nothrow) char[arraySize * maxlen]);
+    array = paramHolder.addChars(new (std::nothrow) char[arraySize * maxlen]);
     if (!array) {
         xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*maxlen);
         return -1;
@@ -1200,7 +2468,7 @@ int ODBCStatement::createArrayFromBinaryList(const QoreListNode* arg, void*& arr
     }
 
     // We have to create one big array and put all the binaries in it one after another (kind of very inefficient).
-    char* charArray = paramHolder.addC(new (std::nothrow) char[arraySize * maxlen]);
+    char* charArray = paramHolder.addChars(new (std::nothrow) char[arraySize * maxlen]);
     array = static_cast<void*>(charArray);
     if (!array) {
         xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*maxlen);
@@ -1326,12 +2594,14 @@ int ODBCStatement::createArrayFromFloatList(const QoreListNode* arg, double*& ar
 
 char* ODBCStatement::createArrayFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink) {
     qore_size_t arraySize = arrayHolder.getArraySize();
-    char* val = paramHolder.addC(getCharsFromString(arg, len, xsink));
+    char* val = paramHolder.addChars(getCharsFromString(arg, len, xsink));
     if (!val)
         return 0;
-    char* array = paramHolder.addC(new char[arraySize * len]);
-    if (!array)
+    char* array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
+    if (!array) {
+        xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*len);
         return 0;
+    }
     for (qore_size_t i = 0; i < arraySize; i++)
         memcpy((array + i*len), val, len);
 
@@ -1344,10 +2614,12 @@ char* ODBCStatement::createArrayFromNumber(const QoreNumberNode* arg, qore_size_
         return 0;
     len = vh->strlen();
     qore_size_t arraySize = arrayHolder.getArraySize();
-    char* val = paramHolder.addC(vh.giveBuffer());
-    char* array = paramHolder.addC(new char[arraySize * len]);
-    if (!array)
+    char* val = paramHolder.addChars(vh.giveBuffer());
+    char* array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
+    if (!array) {
+        xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*len);
         return 0;
+    }
     for (qore_size_t i = 0; i < arraySize; i++)
         memcpy((array + i*len), val, len);
 
@@ -1358,9 +2630,11 @@ void* ODBCStatement::createArrayFromBinary(const BinaryNode* arg, qore_size_t& l
     len = arg->size();
     qore_size_t arraySize = arrayHolder.getArraySize();
     void* val = const_cast<void*>(arg->getPtr());
-    char* array = paramHolder.addC(new char[arraySize * len]);
-    if (!array)
+    char* array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
+    if (!array) {
+        xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*len);
         return 0;
+    }
     for (qore_size_t i = 0; i < arraySize; i++)
         memcpy((array + i*len), val, len);
 

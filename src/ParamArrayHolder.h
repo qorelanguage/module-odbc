@@ -44,8 +44,10 @@ public:
         bools.reserve(8);
         ints.reserve(8);
         floats.reserve(8);
-        timestamps.reserve(8);
-        intervals.reserve(8);
+        dates.reserve(4);
+        times.reserve(4);
+        timestamps.reserve(4);
+        intervals.reserve(4);
         indicators.reserve(32);
     }
     DLLLOCAL ~ParamArrayHolder() { clear(); }
@@ -86,6 +88,22 @@ public:
         double* array = floats[floats.size()-1];
         if (!array)
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate double array");
+        return array;
+    }
+
+    DLLLOCAL DATE_STRUCT* addDateArray(ExceptionSink* xsink) {
+        dates.push_back(new (std::nothrow) DATE_STRUCT[arraySize]);
+        DATE_STRUCT* array = dates[dates.size()-1];
+        if (!array)
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate timestamp array");
+        return array;
+    }
+
+    DLLLOCAL TIME_STRUCT* addTimeArray(ExceptionSink* xsink) {
+        times.push_back(new (std::nothrow) TIME_STRUCT[arraySize]);
+        TIME_STRUCT* array = times[times.size()-1];
+        if (!array)
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate time array");
         return array;
     }
 
@@ -158,6 +176,14 @@ public:
         for (unsigned int i = 0; i < count; i++)
             delete [] (floats[i]);
 
+        count = dates.size();
+        for (unsigned int i = 0; i < count; i++)
+            delete [] (dates[i]);
+
+        count = times.size();
+        for (unsigned int i = 0; i < count; i++)
+            delete [] (times[i]);
+
         count = timestamps.size();
         for (unsigned int i = 0; i < count; i++)
             delete [] (timestamps[i]);
@@ -174,6 +200,8 @@ public:
         bools.clear();
         ints.clear();
         floats.clear();
+        dates.clear();
+        times.clear();
         timestamps.clear();
         intervals.clear();
         indicators.clear();
@@ -193,6 +221,8 @@ private:
     std::vector<bool*> bools;
     std::vector<int64*> ints;
     std::vector<double*> floats;
+    std::vector<DATE_STRUCT*> dates;
+    std::vector<TIME_STRUCT*> times;
     std::vector<TIMESTAMP_STRUCT*> timestamps;
     std::vector<SQL_INTERVAL_STRUCT*> intervals;
     std::vector<SQLLEN*> indicators;

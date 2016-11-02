@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 
 project(qore-odbc-module)
+SET(PROJECT_VERSION "0.0.1")
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
@@ -28,6 +29,7 @@ else()
     message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
+set(QPP_SRC src/ql_odbc.qpp)
 
 set(CPP_SRC
     src/odbc-module.cpp
@@ -36,17 +38,24 @@ set(CPP_SRC
     src/ODBCPreparedStatement.cpp
 )
 
+qore_wrap_qpp(QPP_SOURCES ${QPP_SRC})
+add_custom_target(QPP_GENERATED_FILES DEPENDS ${QPP_SOURCES})
+
 set(module_name "odbc")
 
 add_library(${module_name} SHARED ${CPP_SRC} ${QPP_SOURCES})
+
+if (WIN32 AND MINGW AND MSYS)
+    target_compile_definitions(${module_name} PUBLIC BUILDING_DLL)
+endif (WIN32 AND MINGW AND MSYS)
 
 target_include_directories(${module_name} PUBLIC ${ODBC_INCLUDE_DIR})
 
 target_link_libraries(${module_name} ${ODBC_LIBRARIES})
 
-qore_binary_module(${module_name} "0.0.1")
+qore_binary_module(${module_name} ${PROJECT_VERSION})
 
-qore_dist("${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+qore_dist(${PROJECT_VERSION})
 
 qore_config_info()
 

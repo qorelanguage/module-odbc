@@ -280,6 +280,49 @@ private:
      */
     DLLLOCAL int bindParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink);
 
+    //! Bind a value or a list of values passed using \c odbc_bind as an array.
+    /** @param column ODBC column number, starting from 1
+        @param arg \c odbc_bind hash
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindParamArrayBindHash(int column, const QoreHashNode* arg, ExceptionSink* xsink);
+
+    DLLLOCAL int bindTypeDate(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeTime(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeTimestamp(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntYear(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMonth(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntYearMonth(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDay(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHour(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDayHour(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDayMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDaySecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHourMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHourSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMinuteSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    DLLLOCAL int bindTypeDateArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeTimeArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeTimestampArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntYearArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMonthArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntYearMonthArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDayArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHourArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntSecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDayHourArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDayMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDaySecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHourMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHourSecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMinuteSecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
     //! Create a new char array filled with string values from the passed Qore list.
     /** @param arg list of Qore strings used to fill the array
         @param array pointer to the created array will be written here (do not delete)
@@ -460,6 +503,20 @@ private:
         @return ODBC interval structure
      */
     DLLLOCAL inline SQL_INTERVAL_STRUCT getIntervalFromDate(const DateTimeNode* arg);
+
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getYearInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getMonthInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getYearMonthInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getDayInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getHourInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getMinuteInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getSecondInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getDayHourInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getDayMinuteInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getDaySecondInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getHourMinuteInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getHourSecondInterval(const DateTimeNode* arg);
+    DLLLOCAL inline SQL_INTERVAL_STRUCT getMinuteSecondInterval(const DateTimeNode* arg);
 };
 
 class HashColumnAssignmentHelper : public HashAssignmentHelper {
@@ -952,6 +1009,164 @@ SQL_INTERVAL_STRUCT ODBCStatement::getIntervalFromDate(const DateTimeNode* arg) 
     t.intval.day_second.second = secs;
     t.intval.day_second.fraction = 0;
     return t;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getYearInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int year = arg->getYear();
+    i.intval.year_month.year = (year >= 0 ? year : -year);
+    i.interval_type = SQL_IS_YEAR;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getMonthInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int month = arg->getMonth();
+    i.intval.year_month.month = (month >= 0 ? month : -month);
+    i.interval_type = SQL_IS_MONTH;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getYearMonthInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int year = arg->getYear();
+    int month = arg->getMonth();
+    i.intval.year_month.year = (year >= 0 ? year : -year);
+    i.intval.year_month.month = (month >= 0 ? month : -month);
+    i.interval_type = SQL_IS_YEAR_TO_MONTH;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getDayInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int day = arg->getDay();
+    i.intval.day_second.day = (day >= 0 ? day : -day);
+    i.interval_type = SQL_IS_DAY;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getHourInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int hour = arg->getHour();
+    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
+    i.interval_type = SQL_IS_HOUR;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getMinuteInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int minute = arg->getMinute();
+    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
+    i.interval_type = SQL_IS_MINUTE;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getSecondInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int second = arg->getSecond();
+    i.intval.day_second.second = (second >= 0 ? second : -second);
+    i.interval_type = SQL_IS_SECOND;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getDayHourInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int day = arg->getDay();
+    int hour = arg->getHour();
+    i.intval.day_second.day = (day >= 0 ? day : -day);
+    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
+    i.interval_type = SQL_IS_DAY_TO_HOUR;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getDayMinuteInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int day = arg->getDay();
+    int hour = arg->getHour();
+    int minute = arg->getMinute();
+    i.intval.day_second.day = (day >= 0 ? day : -day);
+    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
+    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
+    i.interval_type = SQL_IS_DAY_TO_MINUTE;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getDaySecondInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int day = arg->getDay();
+    int hour = arg->getHour();
+    int minute = arg->getMinute();
+    int second = arg->getSecond();
+    int micros = arg->getMicrosecond();
+    i.intval.day_second.day = (day >= 0 ? day : -day);
+    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
+    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
+    i.intval.day_second.second = (second >= 0 ? second : -second);
+    i.intval.day_second.fraction = (micros >= 0 ? micros : -micros) * 1000;
+    i.interval_type = SQL_IS_DAY_TO_SECOND;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getHourMinuteInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int hour = arg->getHour();
+    int minute = arg->getMinute();
+    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
+    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
+    i.interval_type = SQL_IS_HOUR_TO_MINUTE;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getHourSecondInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int hour = arg->getHour();
+    int minute = arg->getMinute();
+    int second = arg->getSecond();
+    int micros = arg->getMicrosecond();
+    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
+    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
+    i.intval.day_second.second = (second >= 0 ? second : -second);
+    i.intval.day_second.fraction = (micros >= 0 ? micros : -micros) * 1000;
+    i.interval_type = SQL_IS_HOUR_TO_SECOND;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
+}
+
+SQL_INTERVAL_STRUCT ODBCStatement::getMinuteSecondInterval(const DateTimeNode* arg) {
+    SQL_INTERVAL_STRUCT i;
+    memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
+    int minute = arg->getMinute();
+    int second = arg->getSecond();
+    int micros = arg->getMicrosecond();
+    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
+    i.intval.day_second.second = (second >= 0 ? second : -second);
+    i.intval.day_second.fraction = (micros >= 0 ? micros : -micros) * 1000;
+    i.interval_type = SQL_IS_MINUTE_TO_SECOND;
+    i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
+    return i;
 }
 
 #endif // _QORE_MODULE_ODBC_ODBCSTATEMENT_H
