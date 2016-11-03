@@ -112,6 +112,11 @@ class OdbcTest inherits QUnit::Test {
     destructor() {}
 
     globalSetUp() {
+%ifdef NoOdbc
+        printf("ODBC module is not available. Exiting.\n");
+        exit(0);
+%endif
+
         try {
             initDatasource();
         }
