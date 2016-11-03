@@ -194,7 +194,7 @@ class OdbcTest inherits QUnit::Test {
 
         assertThrows("DBI:ODBC:BIND-ERROR", "not enough parameters passed for binding",
             sub() { ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (%v, %v)", 3); });
-        assertThrows("DBI:ODBC:BIND-ERROR", "do not know how to bind values of type",
+        assertThrows("DBI:ODBC:BIND-ERROR", "hash parameter not in correct format for odbc_bind",
             sub() { ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (%v, %v)", 3, {}); });
 
         assertThrows("DBI:ODBC:EXEC-ERROR", "error during statement execution", sub() { ds.exec("bla bla bla"); });
