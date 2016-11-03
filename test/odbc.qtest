@@ -79,13 +79,13 @@ class OdbcTest inherits QUnit::Test {
             },
             "dt": {
                 "type": "DATE",
-                "values": (2016-01-11, 1970-01-01, 2020-05-20, 1987-01-30),
-                "expected": (),
+                "values": odbc_bind(ODBCT_DATE, (2016-01-11, 1970-01-01, 2020-05-20, 1987-01-30)),
+                "expected": (2016-01-11, 1970-01-01, 2020-05-20, 1987-01-30),
             },
             "tm": {
                 "type": "TIME",
-                "values": (00:00:00Z, 05:23:17Z, -03:00:20Z, 14:15:16Z),
-                "expected": (0s, 5*60m+23m+17s, 20*60m+59m+40s, 14*60m+15m+16s),
+                "values": odbc_bind(ODBCT_TIME, (00:00:00Z, 05:23:17Z, 03:59:20Z, 14:15:16Z)),
+                "expected": (0s, 5*60m+23m+17s, 3*60m+59m+20s, 14*60m+15m+16s),
             },
             "tstamp": {
                 "type": "TIMESTAMP",
@@ -131,9 +131,9 @@ class OdbcTest inherits QUnit::Test {
             for (int j = exp.size(); j < 64; j++)
                 exp += <00>;
         }
-        for (int i = 0; i < Columns.dt.values.size(); i++) {
+        /*for (int i = 0; i < Columns.dt.values.size(); i++) {
             push Columns.dt.expected, utcTz.date(Columns.dt.values[i]);
-        }
+        }*/
         for (int i = 0; i < Columns.tstamp.values.size(); i++) {
             push Columns.tstamp.expected, utcTz.date(Columns.tstamp.values[i]);
         }
