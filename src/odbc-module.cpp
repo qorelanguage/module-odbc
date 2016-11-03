@@ -36,6 +36,9 @@
 #include "ODBCConnection.h"
 #include "ODBCPreparedStatement.h"
 
+void init_odbc_functions(QoreNamespace& ns);
+void init_odbc_constants(QoreNamespace& ns);
+
 QoreStringNode *odbc_module_init();
 void odbc_module_ns_init(QoreNamespace *rns, QoreNamespace *qns);
 void odbc_module_delete();
@@ -328,10 +331,12 @@ static AbstractQoreNode* odbc_opt_get(const Datasource* ds, const char* opt) {
     return conn->getOption(opt);
 }
 
-
 QoreNamespace OdbcNS("odbc");
 
 QoreStringNode *odbc_module_init() {
+    init_odbc_functions(OdbcNS);
+    init_odbc_constants(OdbcNS);
+
     qore_dbi_method_list methods;
     methods.add(QDBI_METHOD_OPEN, odbc_open);
     methods.add(QDBI_METHOD_CLOSE, odbc_close);
