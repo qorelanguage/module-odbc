@@ -29,6 +29,7 @@
 #define _QORE_MODULE_ODBC_ODBCSTATEMENT_H
 
 #include <cerrno>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -1377,8 +1378,7 @@ SQL_INTERVAL_STRUCT ODBCStatement::getIntervalFromDate(const DateTimeNode* arg) 
 SQL_INTERVAL_STRUCT ODBCStatement::getYearInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int year = arg->getYear();
-    i.intval.year_month.year = (year >= 0 ? year : -year);
+    i.intval.year_month.year = abs(arg->getYear());
     i.interval_type = SQL_IS_YEAR;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1387,8 +1387,7 @@ SQL_INTERVAL_STRUCT ODBCStatement::getYearInterval(const DateTimeNode* arg) {
 SQL_INTERVAL_STRUCT ODBCStatement::getMonthInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int month = arg->getMonth();
-    i.intval.year_month.month = (month >= 0 ? month : -month);
+    i.intval.year_month.month = abs(arg->getMonth());
     i.interval_type = SQL_IS_MONTH;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1397,10 +1396,8 @@ SQL_INTERVAL_STRUCT ODBCStatement::getMonthInterval(const DateTimeNode* arg) {
 SQL_INTERVAL_STRUCT ODBCStatement::getYearMonthInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int year = arg->getYear();
-    int month = arg->getMonth();
-    i.intval.year_month.year = (year >= 0 ? year : -year);
-    i.intval.year_month.month = (month >= 0 ? month : -month);
+    i.intval.year_month.year = abs(arg->getYear());
+    i.intval.year_month.month = abs(arg->getMonth());
     i.interval_type = SQL_IS_YEAR_TO_MONTH;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1409,8 +1406,7 @@ SQL_INTERVAL_STRUCT ODBCStatement::getYearMonthInterval(const DateTimeNode* arg)
 SQL_INTERVAL_STRUCT ODBCStatement::getDayInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int day = arg->getDay();
-    i.intval.day_second.day = (day >= 0 ? day : -day);
+    i.intval.day_second.day = abs(arg->getDay());
     i.interval_type = SQL_IS_DAY;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1419,8 +1415,7 @@ SQL_INTERVAL_STRUCT ODBCStatement::getDayInterval(const DateTimeNode* arg) {
 SQL_INTERVAL_STRUCT ODBCStatement::getHourInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int hour = arg->getHour();
-    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
+    i.intval.day_second.hour = abs(arg->getHour());
     i.interval_type = SQL_IS_HOUR;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1429,8 +1424,7 @@ SQL_INTERVAL_STRUCT ODBCStatement::getHourInterval(const DateTimeNode* arg) {
 SQL_INTERVAL_STRUCT ODBCStatement::getMinuteInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int minute = arg->getMinute();
-    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
+    i.intval.day_second.minute = abs(arg->getMinute());
     i.interval_type = SQL_IS_MINUTE;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1439,8 +1433,7 @@ SQL_INTERVAL_STRUCT ODBCStatement::getMinuteInterval(const DateTimeNode* arg) {
 SQL_INTERVAL_STRUCT ODBCStatement::getSecondInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int second = arg->getSecond();
-    i.intval.day_second.second = (second >= 0 ? second : -second);
+    i.intval.day_second.second = abs(arg->getSecond());
     i.interval_type = SQL_IS_SECOND;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1449,10 +1442,8 @@ SQL_INTERVAL_STRUCT ODBCStatement::getSecondInterval(const DateTimeNode* arg) {
 SQL_INTERVAL_STRUCT ODBCStatement::getDayHourInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int day = arg->getDay();
-    int hour = arg->getHour();
-    i.intval.day_second.day = (day >= 0 ? day : -day);
-    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
+    i.intval.day_second.day = abs(arg->getDay());
+    i.intval.day_second.hour = abs(arg->getHour());
     i.interval_type = SQL_IS_DAY_TO_HOUR;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1461,12 +1452,9 @@ SQL_INTERVAL_STRUCT ODBCStatement::getDayHourInterval(const DateTimeNode* arg) {
 SQL_INTERVAL_STRUCT ODBCStatement::getDayMinuteInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int day = arg->getDay();
-    int hour = arg->getHour();
-    int minute = arg->getMinute();
-    i.intval.day_second.day = (day >= 0 ? day : -day);
-    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
-    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
+    i.intval.day_second.day = abs(arg->getDay());
+    i.intval.day_second.hour = abs(arg->getHour());
+    i.intval.day_second.minute = abs(arg->getMinute());
     i.interval_type = SQL_IS_DAY_TO_MINUTE;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1475,16 +1463,11 @@ SQL_INTERVAL_STRUCT ODBCStatement::getDayMinuteInterval(const DateTimeNode* arg)
 SQL_INTERVAL_STRUCT ODBCStatement::getDaySecondInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int day = arg->getDay();
-    int hour = arg->getHour();
-    int minute = arg->getMinute();
-    int second = arg->getSecond();
-    int micros = arg->getMicrosecond();
-    i.intval.day_second.day = (day >= 0 ? day : -day);
-    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
-    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
-    i.intval.day_second.second = (second >= 0 ? second : -second);
-    i.intval.day_second.fraction = (micros >= 0 ? micros : -micros) * 1000;
+    i.intval.day_second.day = abs(arg->getDay());
+    i.intval.day_second.hour = abs(arg->getHour());
+    i.intval.day_second.minute = abs(arg->getMinute());
+    i.intval.day_second.second = abs(arg->getSecond());
+    i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
     i.interval_type = SQL_IS_DAY_TO_SECOND;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1493,10 +1476,8 @@ SQL_INTERVAL_STRUCT ODBCStatement::getDaySecondInterval(const DateTimeNode* arg)
 SQL_INTERVAL_STRUCT ODBCStatement::getHourMinuteInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int hour = arg->getHour();
-    int minute = arg->getMinute();
-    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
-    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
+    i.intval.day_second.hour = abs(arg->getHour());
+    i.intval.day_second.minute = abs(arg->getMinute());
     i.interval_type = SQL_IS_HOUR_TO_MINUTE;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1505,14 +1486,10 @@ SQL_INTERVAL_STRUCT ODBCStatement::getHourMinuteInterval(const DateTimeNode* arg
 SQL_INTERVAL_STRUCT ODBCStatement::getHourSecondInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int hour = arg->getHour();
-    int minute = arg->getMinute();
-    int second = arg->getSecond();
-    int micros = arg->getMicrosecond();
-    i.intval.day_second.hour = (hour >= 0 ? hour : -hour);
-    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
-    i.intval.day_second.second = (second >= 0 ? second : -second);
-    i.intval.day_second.fraction = (micros >= 0 ? micros : -micros) * 1000;
+    i.intval.day_second.hour = abs(arg->getHour());
+    i.intval.day_second.minute = abs(arg->getMinute());
+    i.intval.day_second.second = abs(arg->getSecond());
+    i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
     i.interval_type = SQL_IS_HOUR_TO_SECOND;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1521,12 +1498,9 @@ SQL_INTERVAL_STRUCT ODBCStatement::getHourSecondInterval(const DateTimeNode* arg
 SQL_INTERVAL_STRUCT ODBCStatement::getMinuteSecondInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
-    int minute = arg->getMinute();
-    int second = arg->getSecond();
-    int micros = arg->getMicrosecond();
-    i.intval.day_second.minute = (minute >= 0 ? minute : -minute);
-    i.intval.day_second.second = (second >= 0 ? second : -second);
-    i.intval.day_second.fraction = (micros >= 0 ? micros : -micros) * 1000;
+    i.intval.day_second.minute = abs(arg->getMinute());
+    i.intval.day_second.second = abs(arg->getSecond());
+    i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
     i.interval_type = SQL_IS_MINUTE_TO_SECOND;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
