@@ -30,6 +30,7 @@
 #include "qore/QoreLib.h"
 #include "qore/DBI.h"
 
+#include "ODBCColumnSizeConstants.h"
 #include "ODBCConnection.h"
 
 
@@ -700,25 +701,25 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
                 if (date->isAbsolute()) {
                     TIMESTAMP_STRUCT* tval = paramHolder.addTimestamp(getTimestampFromDate(date));
                     ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
-                        SQL_TYPE_TIMESTAMP, 29, 9, tval, sizeof(TIMESTAMP_STRUCT), 0);
+                        SQL_TYPE_TIMESTAMP, TYPE_TIMESTAMP_COLSIZE, 9, tval, sizeof(TIMESTAMP_STRUCT), 0);
                 }
                 else {
                     SQL_INTERVAL_STRUCT* tval = paramHolder.addInterval(getIntervalFromDate(date));
                     ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
-                        SQL_INTERVAL_DAY_TO_SECOND, 29, 9, tval, sizeof(SQL_INTERVAL_STRUCT), 0);
+                        SQL_INTERVAL_DAY_TO_SECOND, INT_DAYSECOND_COLSIZE, 9, tval, sizeof(SQL_INTERVAL_STRUCT), 0);
                 }
                 break;
             }
             case NT_INT: {
                 const int64* ival = &(reinterpret_cast<const QoreBigIntNode*>(arg)->val);
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_SBIGINT,
-                    SQL_BIGINT, 19, 0, const_cast<int64*>(ival), sizeof(int64), 0);
+                    SQL_BIGINT, BIGINT_COLSIZE, 0, const_cast<int64*>(ival), sizeof(int64), 0);
                 break;
             }
             case NT_FLOAT: {
                 const double* f = &(reinterpret_cast<const QoreFloatNode*>(arg)->f);
                 ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_DOUBLE,
-                    SQL_DOUBLE, 15, 0, const_cast<double*>(f), sizeof(double), 0);
+                    SQL_DOUBLE, DOUBLE_COLSIZE, 0, const_cast<double*>(f), sizeof(double), 0);
                 break;
             }
             case NT_BOOLEAN: {
@@ -1004,14 +1005,14 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
                 if (createArrayFromAbsoluteDateList(lst, array, indArray, xsink))
                     return -1;
                 ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
-                    SQL_TYPE_TIMESTAMP, 29, 9, array, sizeof(TIMESTAMP_STRUCT), indArray);
+                    SQL_TYPE_TIMESTAMP, TYPE_TIMESTAMP_COLSIZE, 9, array, sizeof(TIMESTAMP_STRUCT), indArray);
             }
             else {
                 SQL_INTERVAL_STRUCT* array;
                 if (createArrayFromRelativeDateList(lst, array, indArray, xsink))
                     return -1;
                 ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
-                    SQL_INTERVAL_DAY_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), indArray);
+                    SQL_INTERVAL_DAY_TO_SECOND, INT_DAYSECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), indArray);
             }
             break;
         }
@@ -1020,7 +1021,7 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
             if (createArrayFromIntList(lst, array, indArray, xsink))
                 return -1;
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_SBIGINT,
-                SQL_BIGINT, 19, 0, array, sizeof(int64), indArray);
+                SQL_BIGINT, BIGINT_COLSIZE, 0, array, sizeof(int64), indArray);
             break;
         }
         case NT_FLOAT: {
@@ -1028,7 +1029,7 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
             if (createArrayFromFloatList(lst, array, indArray, xsink))
                 return -1;
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_DOUBLE,
-                SQL_DOUBLE, 15, 0, array, sizeof(double), 0);
+                SQL_DOUBLE, DOUBLE_COLSIZE, 0, array, sizeof(double), 0);
             break;
         }
         case NT_BOOLEAN: {
@@ -1127,14 +1128,14 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
                 if (*xsink || !array)
                     return -1;
                 ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
-                        SQL_TYPE_TIMESTAMP, 29, 9, array, sizeof(TIMESTAMP_STRUCT), 0);
+                        SQL_TYPE_TIMESTAMP, TYPE_TIMESTAMP_COLSIZE, 9, array, sizeof(TIMESTAMP_STRUCT), 0);
             }
             else {
                 SQL_INTERVAL_STRUCT* array = createArrayFromRelativeDate(date, xsink);
                 if (*xsink || !array)
                     return -1;
                 ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
-                        SQL_INTERVAL_DAY_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                        SQL_INTERVAL_DAY_TO_SECOND, INT_DAYSECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             }
             break;
         }
@@ -1143,7 +1144,7 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
             if (*xsink || !array)
                 return -1;
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_SBIGINT,
-                SQL_BIGINT, 19, 0, array, sizeof(int64), 0);
+                SQL_BIGINT, BIGINT_COLSIZE, 0, array, sizeof(int64), 0);
             break;
         }
         case NT_FLOAT: {
@@ -1151,7 +1152,7 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
             if (*xsink || !array)
                 return -1;
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_DOUBLE,
-                SQL_DOUBLE, 15, 0, array, sizeof(double), 0);
+                SQL_DOUBLE, DOUBLE_COLSIZE, 0, array, sizeof(double), 0);
             break;
         }
         case NT_BOOLEAN: {
@@ -1297,7 +1298,7 @@ int ODBCStatement::bindTypeDate(int column, const AbstractQoreNode* arg, SQLRETU
     d.day = info.day;
     DATE_STRUCT* dval = paramHolder.addDate(d);
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_DATE,
-        SQL_TYPE_DATE, 10, 0, dval, sizeof(DATE_STRUCT), 0);
+        SQL_TYPE_DATE, TYPE_DATE_COLSIZE, 0, dval, sizeof(DATE_STRUCT), 0);
     return 0;
 }
 
@@ -1322,7 +1323,7 @@ int ODBCStatement::bindTypeTime(int column, const AbstractQoreNode* arg, SQLRETU
     t.second = info.second;
     TIME_STRUCT* tval = paramHolder.addTime(t);
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
-        SQL_TYPE_TIME, 8, 0, tval, sizeof(TIME_STRUCT), 0);
+        SQL_TYPE_TIME, TYPE_TIME_COLSIZE, 0, tval, sizeof(TIME_STRUCT), 0);
     return 0;
 }
 
@@ -1340,7 +1341,7 @@ int ODBCStatement::bindTypeTimestamp(int column, const AbstractQoreNode* arg, SQ
 
     TIMESTAMP_STRUCT* tval = paramHolder.addTimestamp(getTimestampFromDate(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
-        SQL_TYPE_TIMESTAMP, 29, 9, tval, sizeof(TIMESTAMP_STRUCT), 0);
+        SQL_TYPE_TIMESTAMP, TYPE_TIMESTAMP_COLSIZE, 9, tval, sizeof(TIMESTAMP_STRUCT), 0);
     return 0;
 }
 
@@ -1358,7 +1359,7 @@ int ODBCStatement::bindTypeIntYear(int column, const AbstractQoreNode* arg, SQLR
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getYearInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR,
-        SQL_INTERVAL_YEAR, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_YEAR, INT_YEAR_COLSIZE, 0, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1376,7 +1377,7 @@ int ODBCStatement::bindTypeIntMonth(int column, const AbstractQoreNode* arg, SQL
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getMonthInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MONTH,
-        SQL_INTERVAL_MONTH, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_MONTH, INT_MONTH_COLSIZE, 0, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1394,7 +1395,7 @@ int ODBCStatement::bindTypeIntYearMonth(int column, const AbstractQoreNode* arg,
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getYearMonthInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR_TO_MONTH,
-        SQL_INTERVAL_YEAR_TO_MONTH, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_YEAR_TO_MONTH, INT_YEARMONTH_COLSIZE, 0, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1412,7 +1413,7 @@ int ODBCStatement::bindTypeIntDay(int column, const AbstractQoreNode* arg, SQLRE
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getDayInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY,
-        SQL_INTERVAL_DAY, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_DAY, INT_DAY_COLSIZE, 0, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1430,7 +1431,7 @@ int ODBCStatement::bindTypeIntHour(int column, const AbstractQoreNode* arg, SQLR
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getHourInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR,
-        SQL_INTERVAL_HOUR, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_HOUR, INT_HOUR_COLSIZE, 0, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1448,7 +1449,7 @@ int ODBCStatement::bindTypeIntMinute(int column, const AbstractQoreNode* arg, SQ
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getMinuteInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE,
-        SQL_INTERVAL_MINUTE, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_MINUTE, INT_MINUTE_COLSIZE, 0, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1466,7 +1467,7 @@ int ODBCStatement::bindTypeIntSecond(int column, const AbstractQoreNode* arg, SQ
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getSecondInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_SECOND,
-        SQL_INTERVAL_SECOND, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_SECOND, INT_SECOND_COLSIZE, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1484,7 +1485,7 @@ int ODBCStatement::bindTypeIntDayHour(int column, const AbstractQoreNode* arg, S
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getDayHourInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_HOUR,
-        SQL_INTERVAL_DAY_TO_HOUR, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_DAY_TO_HOUR, INT_DAYHOUR_COLSIZE, 0, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1502,7 +1503,7 @@ int ODBCStatement::bindTypeIntDayMinute(int column, const AbstractQoreNode* arg,
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getDayMinuteInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_MINUTE,
-        SQL_INTERVAL_DAY_TO_MINUTE, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_DAY_TO_MINUTE, INT_DAYMINUTE_COLSIZE, 0, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1520,7 +1521,7 @@ int ODBCStatement::bindTypeIntDaySecond(int column, const AbstractQoreNode* arg,
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getDaySecondInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
-        SQL_INTERVAL_DAY_TO_SECOND, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_DAY_TO_SECOND, INT_DAYSECOND_COLSIZE, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1538,7 +1539,7 @@ int ODBCStatement::bindTypeIntHourMinute(int column, const AbstractQoreNode* arg
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getHourMinuteInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_MINUTE,
-        SQL_INTERVAL_HOUR_TO_MINUTE, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_HOUR_TO_MINUTE, INT_HOURMINUTE_COLSIZE, 0, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1556,7 +1557,7 @@ int ODBCStatement::bindTypeIntHourSecond(int column, const AbstractQoreNode* arg
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getHourSecondInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_SECOND,
-        SQL_INTERVAL_HOUR_TO_SECOND, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_HOUR_TO_SECOND, INT_HOURSECOND_COLSIZE, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1574,7 +1575,7 @@ int ODBCStatement::bindTypeIntMinuteSecond(int column, const AbstractQoreNode* a
 
     SQL_INTERVAL_STRUCT* ival = paramHolder.addInterval(getMinuteSecondInterval(date));
     ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE_TO_SECOND,
-        SQL_INTERVAL_MINUTE_TO_SECOND, 29, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
+        SQL_INTERVAL_MINUTE_TO_SECOND, INT_MINUTESECOND_COLSIZE, 9, ival, sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
@@ -1603,7 +1604,7 @@ int ODBCStatement::bindTypeDateArray(int column, const AbstractQoreNode* arg, SQ
             d.day = info.day;
             array[i] = d;
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_DATE,
-                SQL_TYPE_DATE, 10, 0, array, sizeof(DATE_STRUCT), 0);
+                SQL_TYPE_DATE, TYPE_DATE_COLSIZE, 0, array, sizeof(DATE_STRUCT), 0);
             return 0;
         }
     }
@@ -1629,7 +1630,7 @@ int ODBCStatement::bindTypeDateArray(int column, const AbstractQoreNode* arg, SQ
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_DATE,
-            SQL_TYPE_DATE, 10, 0, array, sizeof(DATE_STRUCT), 0);
+            SQL_TYPE_DATE, TYPE_DATE_COLSIZE, 0, array, sizeof(DATE_STRUCT), 0);
         return 0;
     }
 
@@ -1662,7 +1663,7 @@ int ODBCStatement::bindTypeTimeArray(int column, const AbstractQoreNode* arg, SQ
             t.second = info.second;
             array[i] = t;
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
-                SQL_TYPE_TIME, 8, 0, array, sizeof(TIME_STRUCT), 0);
+                SQL_TYPE_TIME, TYPE_TIME_COLSIZE, 0, array, sizeof(TIME_STRUCT), 0);
             return 0;
         }
     }
@@ -1688,7 +1689,7 @@ int ODBCStatement::bindTypeTimeArray(int column, const AbstractQoreNode* arg, SQ
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
-            SQL_TYPE_TIME, 8, 0, array, sizeof(TIME_STRUCT), 0);
+            SQL_TYPE_TIME, TYPE_TIME_COLSIZE, 0, array, sizeof(TIME_STRUCT), 0);
         return 0;
     }
 
@@ -1715,7 +1716,7 @@ int ODBCStatement::bindTypeTimestampArray(int column, const AbstractQoreNode* ar
             TIMESTAMP_STRUCT t = getTimestampFromDate(date);
             array[i] = t;
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
-                SQL_TYPE_TIMESTAMP, 29, 9, array, sizeof(TIMESTAMP_STRUCT), 0);
+                SQL_TYPE_TIMESTAMP, TYPE_TIMESTAMP_COLSIZE, 9, array, sizeof(TIMESTAMP_STRUCT), 0);
             return 0;
         }
     }
@@ -1735,7 +1736,7 @@ int ODBCStatement::bindTypeTimestampArray(int column, const AbstractQoreNode* ar
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
-            SQL_TYPE_TIMESTAMP, 29, 9, array, sizeof(TIMESTAMP_STRUCT), 0);
+            SQL_TYPE_TIMESTAMP, TYPE_TIMESTAMP_COLSIZE, 9, array, sizeof(TIMESTAMP_STRUCT), 0);
         return 0;
     }
 
@@ -1763,7 +1764,7 @@ int ODBCStatement::bindTypeIntYearArray(int column, const AbstractQoreNode* arg,
             array[i] = getYearInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR,
-                SQL_INTERVAL_YEAR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_YEAR, INT_YEAR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -1783,7 +1784,7 @@ int ODBCStatement::bindTypeIntYearArray(int column, const AbstractQoreNode* arg,
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR,
-            SQL_INTERVAL_YEAR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_YEAR, INT_YEAR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -1811,7 +1812,7 @@ int ODBCStatement::bindTypeIntMonthArray(int column, const AbstractQoreNode* arg
             array[i] = getMonthInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MONTH,
-                SQL_INTERVAL_MONTH, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_MONTH, INT_MONTH_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -1831,7 +1832,7 @@ int ODBCStatement::bindTypeIntMonthArray(int column, const AbstractQoreNode* arg
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MONTH,
-            SQL_INTERVAL_MONTH, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_MONTH, INT_MONTH_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -1859,7 +1860,7 @@ int ODBCStatement::bindTypeIntYearMonthArray(int column, const AbstractQoreNode*
             array[i] = getYearMonthInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR_TO_MONTH,
-                SQL_INTERVAL_YEAR_TO_MONTH, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_YEAR_TO_MONTH, INT_YEARMONTH_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -1879,7 +1880,7 @@ int ODBCStatement::bindTypeIntYearMonthArray(int column, const AbstractQoreNode*
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR_TO_MONTH,
-            SQL_INTERVAL_YEAR_TO_MONTH, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_YEAR_TO_MONTH, INT_YEARMONTH_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -1907,7 +1908,7 @@ int ODBCStatement::bindTypeIntDayArray(int column, const AbstractQoreNode* arg, 
             array[i] = getDayInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY,
-                SQL_INTERVAL_DAY, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_DAY, INT_DAY_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -1927,7 +1928,7 @@ int ODBCStatement::bindTypeIntDayArray(int column, const AbstractQoreNode* arg, 
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY,
-            SQL_INTERVAL_DAY, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_DAY, INT_DAY_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -1955,7 +1956,7 @@ int ODBCStatement::bindTypeIntHourArray(int column, const AbstractQoreNode* arg,
             array[i] = getHourInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR,
-                SQL_INTERVAL_HOUR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_HOUR, INT_HOUR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -1975,7 +1976,7 @@ int ODBCStatement::bindTypeIntHourArray(int column, const AbstractQoreNode* arg,
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR,
-            SQL_INTERVAL_HOUR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_HOUR, INT_HOUR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -2003,7 +2004,7 @@ int ODBCStatement::bindTypeIntMinuteArray(int column, const AbstractQoreNode* ar
             array[i] = getMinuteInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE,
-                SQL_INTERVAL_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_MINUTE, INT_MINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -2023,7 +2024,7 @@ int ODBCStatement::bindTypeIntMinuteArray(int column, const AbstractQoreNode* ar
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE,
-            SQL_INTERVAL_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_MINUTE, INT_MINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -2051,7 +2052,7 @@ int ODBCStatement::bindTypeIntSecondArray(int column, const AbstractQoreNode* ar
             array[i] = getSecondInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_SECOND,
-                SQL_INTERVAL_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_SECOND, INT_SECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -2071,7 +2072,7 @@ int ODBCStatement::bindTypeIntSecondArray(int column, const AbstractQoreNode* ar
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_SECOND,
-            SQL_INTERVAL_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_SECOND, INT_SECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -2099,7 +2100,7 @@ int ODBCStatement::bindTypeIntDayHourArray(int column, const AbstractQoreNode* a
             array[i] = getDayHourInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_HOUR,
-                SQL_INTERVAL_DAY_TO_HOUR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_DAY_TO_HOUR, INT_DAYHOUR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -2119,7 +2120,7 @@ int ODBCStatement::bindTypeIntDayHourArray(int column, const AbstractQoreNode* a
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_HOUR,
-            SQL_INTERVAL_DAY_TO_HOUR, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_DAY_TO_HOUR, INT_DAYHOUR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -2147,7 +2148,7 @@ int ODBCStatement::bindTypeIntDayMinuteArray(int column, const AbstractQoreNode*
             array[i] = getDayMinuteInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_MINUTE,
-                SQL_INTERVAL_DAY_TO_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_DAY_TO_MINUTE, INT_DAYMINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -2167,7 +2168,7 @@ int ODBCStatement::bindTypeIntDayMinuteArray(int column, const AbstractQoreNode*
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_MINUTE,
-            SQL_INTERVAL_DAY_TO_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_DAY_TO_MINUTE, INT_DAYMINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -2195,7 +2196,7 @@ int ODBCStatement::bindTypeIntDaySecondArray(int column, const AbstractQoreNode*
             array[i] = getDaySecondInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
-                SQL_INTERVAL_DAY_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_DAY_TO_SECOND, INT_DAYSECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -2215,7 +2216,7 @@ int ODBCStatement::bindTypeIntDaySecondArray(int column, const AbstractQoreNode*
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
-            SQL_INTERVAL_DAY_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_DAY_TO_SECOND, INT_DAYSECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -2243,7 +2244,7 @@ int ODBCStatement::bindTypeIntHourMinuteArray(int column, const AbstractQoreNode
             array[i] = getHourMinuteInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_MINUTE,
-                SQL_INTERVAL_HOUR_TO_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_HOUR_TO_MINUTE, INT_HOURMINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -2263,7 +2264,7 @@ int ODBCStatement::bindTypeIntHourMinuteArray(int column, const AbstractQoreNode
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_MINUTE,
-            SQL_INTERVAL_HOUR_TO_MINUTE, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_HOUR_TO_MINUTE, INT_HOURMINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -2291,7 +2292,7 @@ int ODBCStatement::bindTypeIntHourSecondArray(int column, const AbstractQoreNode
             array[i] = getHourSecondInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_SECOND,
-                SQL_INTERVAL_HOUR_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_HOUR_TO_SECOND, INT_HOURSECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -2311,7 +2312,7 @@ int ODBCStatement::bindTypeIntHourSecondArray(int column, const AbstractQoreNode
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_SECOND,
-            SQL_INTERVAL_HOUR_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_HOUR_TO_SECOND, INT_HOURSECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
@@ -2339,7 +2340,7 @@ int ODBCStatement::bindTypeIntMinuteSecondArray(int column, const AbstractQoreNo
             array[i] = getMinuteSecondInterval(date);
 
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE_TO_SECOND,
-                SQL_INTERVAL_MINUTE_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+                SQL_INTERVAL_MINUTE_TO_SECOND, INT_MINUTESECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             return 0;
         }
     }
@@ -2359,7 +2360,7 @@ int ODBCStatement::bindTypeIntMinuteSecondArray(int column, const AbstractQoreNo
         }
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE_TO_SECOND,
-            SQL_INTERVAL_MINUTE_TO_SECOND, 29, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+            SQL_INTERVAL_MINUTE_TO_SECOND, INT_MINUTESECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
         return 0;
     }
 
