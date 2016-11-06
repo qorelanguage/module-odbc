@@ -38,6 +38,7 @@ Datasource db = new Datasource(SQL::DSODBC, user, pass, dsn, "UTF8");
     - \c DBI_CAP_HAS_ARRAY_BIND
     - \c DBI_CAP_HAS_EXECRAW
     - \c DBI_CAP_HAS_STATEMENT
+    - \c DBI_CAP_HAS_DESCRIBE
     - \c DBI_CAP_HAS_SELECT_ROW
     - \c DBI_CAP_HAS_NUMBER_SUPPORT
     - \c DBI_CAP_HAS_OPTION_SUPPORT
@@ -67,6 +68,7 @@ major_version * 1000000 + minor_version * 10000 + sub_version
     - \c "optimal-numbers": return numeric types as an integer if possible, if not return them as an arbitrary-precision number
     - \c "string-numbers": return numeric types as strings (for backwards-compatibility)
     - \c "numeric-numbers": return numeric types as arbitrary-precision number values
+    - \c "qore-timezone": accepts a string argument that can be either a region name (ex: \c "Europe/Prague") or a UTC offset (ex: \c "+01:00") to set the server's time zone rules; this is useful if connecting to a database server in a different time zone.  If this option is not set then the server's time zone is assumed to be the same as the client's time zone; see @ref timezone.
 
     Options can be set in the \c Datasource or \c DatasourcePool constructors as in the following examples:
     @code
@@ -90,6 +92,8 @@ major_version * 1000000 + minor_version * 10000 + sub_version
 
     @section odbcbind Binding and Types
 
+    Apart from simply passing values for binding you can also use the \ref odbc_bind() function to specify the type to bind. See @ref odbc_binding_by_value for more information about how types are bound when binding by value with this driver.
+
     For \c NUMERIC columns, the %d specification in the query string can be used to substitute a numeric value or a literal null directly in the query string, providing the same effect as a bind by value in a very convenient form for the programmer. For example:
 
     @code
@@ -98,9 +102,7 @@ major_version * 1000000 + minor_version * 10000 + sub_version
 *hash results = db.select("select * from table where id = %d", id);
     @endcode
 
-    Due to the fact that Qore date/time values support time zone information, when PostgreSQL data including a time zone component is converted to a Qore data type, the time zone information is also maintained. Also, Qore date/time values support a microsecond resolution, matching PostgreSQL's microsecond support, so this information is also maintained.
-
-    Note that binding by placeholder is not required or supported by this driver as PostgreSQL returns values directly; Qore DBI placeholder buffer specifications are ignored when the odbc driver is used.
+    Note that binding by placeholder is not required or supported by this driver; Qore DBI placeholder buffer specifications are ignored when the ODBC driver is used.
 
     When binding arrays, all data types in the Qore list must be identical.
 
@@ -108,7 +110,7 @@ major_version * 1000000 + minor_version * 10000 + sub_version
 
     @subsection odbc_timezone Time Zone Support
 
-    The driver now sets the server's time zone rules when the connection is established; this is taken from the current time zone settings of the calling Program object and can also be overridden/changed by setting the \c "timezone" driver option (see @ref odbcoptions).
+    The driver now sets the server's time zone rules when the connection is established; this is taken from the current time zone settings of the calling Program object and can also be overridden/changed by setting the \c "qore-timezone" driver option (see @ref odbcoptions).
 
     All date/time values bound by value are converted to the server's time zone before binding to ensure that date/time values are stored correctly in the server.
 
@@ -130,7 +132,7 @@ major_version * 1000000 + minor_version * 10000 + sub_version
     |\c binary|\c SQL_C_BINARY|\c SQL_BINARY|Qore binary data is bound directly as binary data.
 
     @subsection odbc_to_qore ODBC to Qore Type Mappings
-    |!PostgreSQL Type|!Qore Type|!Notes
+    |!ODBC Type|!Qore Type|!Notes
     |\c SQL_BIT|\c bool|direct conversion
     |\c SQL_BINARY|\c binary|direct conversion
     |\c SQL_VARBINARY|\c binary|direct conversion
