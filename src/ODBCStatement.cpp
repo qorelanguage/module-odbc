@@ -1603,10 +1603,10 @@ int ODBCStatement::bindTypeDateArray(int column, const AbstractQoreNode* arg, SQ
             d.month = info.month;
             d.day = info.day;
             array[i] = d;
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_DATE,
-                SQL_TYPE_DATE, TYPE_DATE_COLSIZE, 0, array, sizeof(DATE_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_DATE,
+            SQL_TYPE_DATE, TYPE_DATE_COLSIZE, 0, array, sizeof(DATE_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -1662,10 +1662,10 @@ int ODBCStatement::bindTypeTimeArray(int column, const AbstractQoreNode* arg, SQ
             t.minute = info.minute;
             t.second = info.second;
             array[i] = t;
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
-                SQL_TYPE_TIME, TYPE_TIME_COLSIZE, 0, array, sizeof(TIME_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIME,
+            SQL_TYPE_TIME, TYPE_TIME_COLSIZE, 0, array, sizeof(TIME_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -1715,10 +1715,10 @@ int ODBCStatement::bindTypeTimestampArray(int column, const AbstractQoreNode* ar
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             TIMESTAMP_STRUCT t = getTimestampFromDate(date);
             array[i] = t;
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
-                SQL_TYPE_TIMESTAMP, TYPE_TIMESTAMP_COLSIZE, 9, array, sizeof(TIMESTAMP_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
+            SQL_TYPE_TIMESTAMP, TYPE_TIMESTAMP_COLSIZE, 9, array, sizeof(TIMESTAMP_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -1762,11 +1762,10 @@ int ODBCStatement::bindTypeIntYearArray(int column, const AbstractQoreNode* arg,
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getYearInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR,
-                SQL_INTERVAL_YEAR, INT_YEAR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR,
+            SQL_INTERVAL_YEAR, INT_YEAR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -1810,11 +1809,10 @@ int ODBCStatement::bindTypeIntMonthArray(int column, const AbstractQoreNode* arg
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getMonthInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MONTH,
-                SQL_INTERVAL_MONTH, INT_MONTH_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MONTH,
+            SQL_INTERVAL_MONTH, INT_MONTH_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -1858,11 +1856,10 @@ int ODBCStatement::bindTypeIntYearMonthArray(int column, const AbstractQoreNode*
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getYearMonthInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR_TO_MONTH,
-                SQL_INTERVAL_YEAR_TO_MONTH, INT_YEARMONTH_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_YEAR_TO_MONTH,
+            SQL_INTERVAL_YEAR_TO_MONTH, INT_YEARMONTH_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -1906,11 +1903,10 @@ int ODBCStatement::bindTypeIntDayArray(int column, const AbstractQoreNode* arg, 
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getDayInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY,
-                SQL_INTERVAL_DAY, INT_DAY_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY,
+            SQL_INTERVAL_DAY, INT_DAY_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -1954,11 +1950,10 @@ int ODBCStatement::bindTypeIntHourArray(int column, const AbstractQoreNode* arg,
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getHourInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR,
-                SQL_INTERVAL_HOUR, INT_HOUR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR,
+            SQL_INTERVAL_HOUR, INT_HOUR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -2002,11 +1997,10 @@ int ODBCStatement::bindTypeIntMinuteArray(int column, const AbstractQoreNode* ar
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getMinuteInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE,
-                SQL_INTERVAL_MINUTE, INT_MINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE,
+            SQL_INTERVAL_MINUTE, INT_MINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -2050,11 +2044,10 @@ int ODBCStatement::bindTypeIntSecondArray(int column, const AbstractQoreNode* ar
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getSecondInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_SECOND,
-                SQL_INTERVAL_SECOND, INT_SECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_SECOND,
+            SQL_INTERVAL_SECOND, INT_SECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -2098,11 +2091,10 @@ int ODBCStatement::bindTypeIntDayHourArray(int column, const AbstractQoreNode* a
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getDayHourInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_HOUR,
-                SQL_INTERVAL_DAY_TO_HOUR, INT_DAYHOUR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_HOUR,
+            SQL_INTERVAL_DAY_TO_HOUR, INT_DAYHOUR_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -2146,11 +2138,10 @@ int ODBCStatement::bindTypeIntDayMinuteArray(int column, const AbstractQoreNode*
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getDayMinuteInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_MINUTE,
-                SQL_INTERVAL_DAY_TO_MINUTE, INT_DAYMINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_MINUTE,
+            SQL_INTERVAL_DAY_TO_MINUTE, INT_DAYMINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -2194,11 +2185,10 @@ int ODBCStatement::bindTypeIntDaySecondArray(int column, const AbstractQoreNode*
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getDaySecondInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
-                SQL_INTERVAL_DAY_TO_SECOND, INT_DAYSECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
+            SQL_INTERVAL_DAY_TO_SECOND, INT_DAYSECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -2242,11 +2232,10 @@ int ODBCStatement::bindTypeIntHourMinuteArray(int column, const AbstractQoreNode
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getHourMinuteInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_MINUTE,
-                SQL_INTERVAL_HOUR_TO_MINUTE, INT_HOURMINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_MINUTE,
+            SQL_INTERVAL_HOUR_TO_MINUTE, INT_HOURMINUTE_COLSIZE, 0, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -2290,11 +2279,10 @@ int ODBCStatement::bindTypeIntHourSecondArray(int column, const AbstractQoreNode
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getHourSecondInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_SECOND,
-                SQL_INTERVAL_HOUR_TO_SECOND, INT_HOURSECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_HOUR_TO_SECOND,
+            SQL_INTERVAL_HOUR_TO_SECOND, INT_HOURSECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
@@ -2338,11 +2326,10 @@ int ODBCStatement::bindTypeIntMinuteSecondArray(int column, const AbstractQoreNo
         for (qore_size_t i = 0; i < arraySize; i++) {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(lst->retrieve_entry(i));
             array[i] = getMinuteSecondInterval(date);
-
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE_TO_SECOND,
-                SQL_INTERVAL_MINUTE_TO_SECOND, INT_MINUTESECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
-            return 0;
         }
+        ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE_TO_SECOND,
+            SQL_INTERVAL_MINUTE_TO_SECOND, INT_MINUTESECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+        return 0;
     }
     else if (argtype == NT_DATE) {
         const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
