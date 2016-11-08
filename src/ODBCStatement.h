@@ -29,6 +29,7 @@
 #define _QORE_MODULE_ODBC_ODBCSTATEMENT_H
 
 #include <cerrno>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -671,7 +672,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromBoolList(const QoreListNode* arg, bool*& array, SQLLEN*& indArray, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromBoolList(const QoreListNode* arg, int8_t*& array, SQLLEN*& indArray, ExceptionSink* xsink);
 
     //! Create an int64 array filled with Qore ints from the passed Qore list.
     /** @param arg list of Qore ints used to fill the array
@@ -742,7 +743,7 @@ private:
 
         @return pointer to the created array (do not delete) or 0 in case of error
      */
-    DLLLOCAL bool* createArrayFromBool(const QoreBoolNode* arg, ExceptionSink* xsink);
+    DLLLOCAL int8_t* createArrayFromBool(const QoreBoolNode* arg, ExceptionSink* xsink);
 
     //! Create an int64 array filled with the passed Qore int value.
     /** @param arg Qore int used for initializing the array values
@@ -906,6 +907,7 @@ public:
 inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, ExceptionSink* xsink) {
     SQLLEN indicator;
     SQLRETURN ret;
+    //fprintf(stderr, "getColumnValue: row=%d, col=%d, dataType=%d\n", readRows, column, rcol.dataType);
     switch(rcol.dataType) {
         // Integer types.
         case SQL_INTEGER: {
@@ -984,7 +986,8 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
                 std::unique_ptr<char> buf(new (std::nothrow) char[buflen]);
                 if (!buf.get()) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
-                        "could not allocate buffer for result character data of row #%d, column #%d", readRows, column);
+                        "could not allocate buffer for result character data of row #%d, index #%d (column #%d)",
+                        readRows, column-1, column);
                     return 0;
                 }
                 if (serverEnc) {
@@ -1020,7 +1023,8 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
                 std::unique_ptr<char> buf(new (std::nothrow) char[buflen]);
                 if (!buf.get()) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
-                        "could not allocate buffer for result character data of row #%d, column #%d", readRows, column);
+                        "could not allocate buffer for result character data of row #%d, index #%d (column #%d)",
+                        readRows, column-1, column);
                     return 0;
                 }
                 ret = SQLGetData(stmt, column, SQL_C_WCHAR, reinterpret_cast<SQLWCHAR*>(buf.get()), buflen, &indicator);
@@ -1049,7 +1053,8 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
                 std::unique_ptr<char> buf(new (std::nothrow) char[size]);
                 if (!buf.get()) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
-                        "could not allocate buffer for result binary data of row #%d, column #%d", readRows, column);
+                        "could not allocate buffer for result binary data of row #%d, index #%d (column #%d)",
+                        readRows, column-1, column);
                     return 0;
                 }
                 ret = SQLGetData(stmt, column, SQL_C_BINARY, reinterpret_cast<void*>(buf.get()), size, &indicator);
@@ -1320,9 +1325,9 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
     }
 
     if (!SQL_SUCCEEDED(ret)) { // error
-        std::string s("error occured when getting value of row #%d, column #%d");
+        std::string s("error occured when getting value of row #%d, index #%d (column #%d)");
         ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-        xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.c_str(), readRows, column);
+        xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.c_str(), readRows, column-1, column);
     }
 
     return 0;

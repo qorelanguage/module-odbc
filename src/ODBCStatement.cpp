@@ -724,9 +724,9 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
             }
             case NT_BOOLEAN: {
                 bool b = reinterpret_cast<const QoreBoolNode*>(arg)->getValue();
-                bool* bval = paramHolder.addBool(b);
-                ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_BIT,
-                    SQL_CHAR, 1, 0, bval, sizeof(bool), 0);
+                int8_t* bval = paramHolder.addTinyint(b);
+                ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_STINYINT,
+                    SQL_TINYINT, 3, 0, bval, sizeof(int8_t), 0);
                 break;
             }
             case NT_BINARY: {
@@ -823,9 +823,9 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
         } // switch
 
         if (!SQL_SUCCEEDED(ret)) { // error
-            std::string s("failed binding parameter with index %d of type '%s'");
+            std::string s("failed binding parameter with index %d (column #%d) of type '%s'");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), i, arg->getTypeName());
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), i, i+1, arg->getTypeName());
             return -1;
         }
     } // for
@@ -933,17 +933,17 @@ int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
         ret = SQLDescribeColA(stmt, i+1, reinterpret_cast<SQLCHAR*>(name), 512, &nameLength, &col.dataType,
             &col.colSize, &col.decimalDigits, &col.nullable);
         if (!SQL_SUCCEEDED(ret)) { // error
-            std::string s("error occured when fetching result column metadata of column #%d");
+            std::string s("error occured when fetching result column metadata with index #%d (column #%d)");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i+1);
+            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i, i+1);
             return -1;
         }
 
         ret = SQLColAttributeA(stmt, i+1, SQL_DESC_OCTET_LENGTH, 0, 0, 0, &col.byteSize);
         if (!SQL_SUCCEEDED(ret)) { // error
-            std::string s("error occured when fetching result column metadata of column #%d");
+            std::string s("error occured when fetching result column metadata with index #%d (column #%d)");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i+1);
+            xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i, i+1);
             return -1;
         }
         col.name = name;
@@ -968,7 +968,8 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
                     absoluteDate = reinterpret_cast<const DateTimeNode*>(arg)->isAbsolute();
             }
             else if (ntype != arg->getType()) { // Different types in the same array -> error.
-                xsink->raiseException("DBI:ODBC:BIND-ERROR", "different datatypes in the same parameter array for column #%d", column);
+                xsink->raiseException("DBI:ODBC:BIND-ERROR",
+                    "different datatypes in the same parameter array with index #%d (column #%d)", column-1, column);
                 return -1;
             }
         }
@@ -1033,11 +1034,11 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
             break;
         }
         case NT_BOOLEAN: {
-            bool* array;
+            int8_t* array;
             if (createArrayFromBoolList(lst, array, indArray, xsink))
                 return -1;
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_BIT,
-                SQL_CHAR, 1, 0, array, sizeof(bool), 0);
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_STINYINT,
+                SQL_TINYINT, 3, 0, array, sizeof(int8_t), 0);
             break;
         }
         case NT_BINARY: {
@@ -1060,9 +1061,9 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
     } // switch
 
     if (!SQL_SUCCEEDED(ret)) { // error
-        std::string s("failed binding parameter array column #%d");
+        std::string s("failed binding parameter array with index #%d (column #%d)");
         ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-        xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column);
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column);
         return -1;
     }
 
@@ -1082,9 +1083,9 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
 
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_BINARY, SQL_BINARY, 0, 0, array, 0, indArray);
         if (!SQL_SUCCEEDED(ret)) { // error
-            std::string s("failed binding NULL single value parameter (column %d)");
+            std::string s("failed binding NULL single value parameter with index #%d (column #%d)");
             ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column);
+            xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column);
             return -1;
         }
         return 0;
@@ -1156,11 +1157,11 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
             break;
         }
         case NT_BOOLEAN: {
-            bool* array = createArrayFromBool(reinterpret_cast<const QoreBoolNode*>(arg), xsink);
+            int8_t* array = createArrayFromBool(reinterpret_cast<const QoreBoolNode*>(arg), xsink);
             if (*xsink || !array)
                 return -1;
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_BIT,
-                SQL_CHAR, 1, 0, array, sizeof(bool), 0);
+            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_STINYINT,
+                SQL_TINYINT, 3, 0, array, sizeof(int8_t), 0);
             break;
         }
         case NT_BINARY: {
@@ -1183,9 +1184,9 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
     } // switch
 
     if (!SQL_SUCCEEDED(ret)) { // error
-        std::string s("failed binding parameter array column #%d of type '%s'");
+        std::string s("failed binding parameter array with index #%d (column #%d) of type '%s'");
         ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-        xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column, arg->getTypeName());
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column, arg->getTypeName());
         return -1;
     }
 
@@ -1268,9 +1269,9 @@ int ODBCStatement::bindParamArrayBindHash(int column, const QoreHashNode* h, Exc
     }
 
     if (!SQL_SUCCEEDED(ret)) { // error
-        std::string s("failed binding parameter array column #%d");
+        std::string s("failed binding parameter array with index #%d (column #%d)");
         ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-        xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column);
+        xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column);
         return -1;
     }
 
@@ -1589,8 +1590,8 @@ int ODBCStatement::bindTypeDateArray(int column, const AbstractQoreNode* arg, SQ
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
         for (qore_size_t i = 0; i < arraySize; i++) {
@@ -1648,8 +1649,8 @@ int ODBCStatement::bindTypeTimeArray(int column, const AbstractQoreNode* arg, SQ
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
         for (qore_size_t i = 0; i < arraySize; i++) {
@@ -1707,8 +1708,8 @@ int ODBCStatement::bindTypeTimestampArray(int column, const AbstractQoreNode* ar
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
         for (qore_size_t i = 0; i < arraySize; i++) {
@@ -1754,8 +1755,8 @@ int ODBCStatement::bindTypeIntYearArray(int column, const AbstractQoreNode* arg,
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -1801,8 +1802,8 @@ int ODBCStatement::bindTypeIntMonthArray(int column, const AbstractQoreNode* arg
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -1848,8 +1849,8 @@ int ODBCStatement::bindTypeIntYearMonthArray(int column, const AbstractQoreNode*
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -1895,8 +1896,8 @@ int ODBCStatement::bindTypeIntDayArray(int column, const AbstractQoreNode* arg, 
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -1942,8 +1943,8 @@ int ODBCStatement::bindTypeIntHourArray(int column, const AbstractQoreNode* arg,
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -1989,8 +1990,8 @@ int ODBCStatement::bindTypeIntMinuteArray(int column, const AbstractQoreNode* ar
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2036,8 +2037,8 @@ int ODBCStatement::bindTypeIntSecondArray(int column, const AbstractQoreNode* ar
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2083,8 +2084,8 @@ int ODBCStatement::bindTypeIntDayHourArray(int column, const AbstractQoreNode* a
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2130,8 +2131,8 @@ int ODBCStatement::bindTypeIntDayMinuteArray(int column, const AbstractQoreNode*
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2177,8 +2178,8 @@ int ODBCStatement::bindTypeIntDaySecondArray(int column, const AbstractQoreNode*
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2224,8 +2225,8 @@ int ODBCStatement::bindTypeIntHourMinuteArray(int column, const AbstractQoreNode
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2271,8 +2272,8 @@ int ODBCStatement::bindTypeIntHourSecondArray(int column, const AbstractQoreNode
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2318,8 +2319,8 @@ int ODBCStatement::bindTypeIntMinuteSecondArray(int column, const AbstractQoreNo
             return -1;
         if (lst->size() != arraySize) {
             xsink->raiseException("DBI:ODBC:BIND-ERROR",
-                "mismatch between the list size and required number of list elements (column #%d); %u required, %u passed",
-                column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2515,8 +2516,8 @@ int ODBCStatement::createArrayFromRelativeDateList(const QoreListNode* arg, SQL_
     return 0;
 }
 
-int ODBCStatement::createArrayFromBoolList(const QoreListNode* arg, bool*& array, SQLLEN*& indArray, ExceptionSink* xsink) {
-    array = arrayHolder.addBoolArray(xsink);
+int ODBCStatement::createArrayFromBoolList(const QoreListNode* arg, int8_t*& array, SQLLEN*& indArray, ExceptionSink* xsink) {
+    array = arrayHolder.addTinyintArray(xsink);
     if (!array)
         return -1;
     indArray = arrayHolder.addIndArray(xsink);
@@ -2531,7 +2532,7 @@ int ODBCStatement::createArrayFromBoolList(const QoreListNode* arg, bool*& array
             continue;
         }
         array[i] = bn->getValue();
-        indArray[i] = sizeof(bool);
+        indArray[i] = sizeof(int8_t);
     }
     return 0;
 }
@@ -2653,9 +2654,9 @@ SQL_INTERVAL_STRUCT* ODBCStatement::createArrayFromRelativeDate(const DateTimeNo
     return array;
 }
 
-bool* ODBCStatement::createArrayFromBool(const QoreBoolNode* arg, ExceptionSink* xsink) {
+int8_t* ODBCStatement::createArrayFromBool(const QoreBoolNode* arg, ExceptionSink* xsink) {
     bool val = arg->getValue();
-    bool* array = arrayHolder.addBoolArray(xsink);
+    int8_t* array = arrayHolder.addTinyintArray(xsink);
     if (!array)
         return 0;
     qore_size_t arraySize = arrayHolder.getArraySize();

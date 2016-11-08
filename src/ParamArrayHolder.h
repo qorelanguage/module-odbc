@@ -28,6 +28,7 @@
 #ifndef _QORE_MODULE_ODBC_PARAMARRAYHOLDER_H
 #define _QORE_MODULE_ODBC_PARAMARRAYHOLDER_H
 
+#include <cstdint>
 #include <vector>
 
 #include <sql.h>
@@ -41,8 +42,8 @@ class ParamArrayHolder {
 public:
     DLLLOCAL ParamArrayHolder() : nullArray(0), nullIndArray(0), arraySize(0) {
         chars.reserve(16);
-        bools.reserve(8);
         ints.reserve(8);
+        tinyints.reserve(4);
         floats.reserve(8);
         dates.reserve(4);
         times.reserve(4);
@@ -67,19 +68,19 @@ public:
         return array;
     }
 
-    DLLLOCAL bool* addBoolArray(ExceptionSink* xsink) {
-        bools.push_back(new (std::nothrow) bool[arraySize]);
-        bool* array = bools[bools.size()-1];
-        if (!array)
-            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate bool array");
-        return array;
-    }
-
     DLLLOCAL int64* addIntArray(ExceptionSink* xsink) {
         ints.push_back(new (std::nothrow) int64[arraySize]);
         int64* array = ints[ints.size()-1];
         if (!array)
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate int64 array");
+        return array;
+    }
+
+    DLLLOCAL int8_t* addTinyintArray(ExceptionSink* xsink) {
+        tinyints.push_back(new (std::nothrow) int8_t[arraySize]);
+        int8_t* array = tinyints[tinyints.size()-1];
+        if (!array)
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate int8_t (tinyint) array");
         return array;
     }
 
@@ -164,13 +165,13 @@ public:
             delete [] (chars[i]);
         }
 
-        count = bools.size();
-        for (unsigned int i = 0; i < count; i++)
-            delete [] (bools[i]);
-
         count = ints.size();
         for (unsigned int i = 0; i < count; i++)
             delete [] (ints[i]);
+
+        count = tinyints.size();
+        for (unsigned int i = 0; i < count; i++)
+            delete [] (tinyints[i]);
 
         count = floats.size();
         for (unsigned int i = 0; i < count; i++)
@@ -197,8 +198,8 @@ public:
             delete [] (indicators[i]);
 
         chars.clear();
-        bools.clear();
         ints.clear();
+        tinyints.clear();
         floats.clear();
         dates.clear();
         times.clear();
@@ -218,8 +219,8 @@ public:
 
 private:
     std::vector<char**> chars;
-    std::vector<bool*> bools;
     std::vector<int64*> ints;
+    std::vector<int8_t*> tinyints;
     std::vector<double*> floats;
     std::vector<DATE_STRUCT*> dates;
     std::vector<TIME_STRUCT*> times;

@@ -18,6 +18,8 @@ class OdbcTest inherits QUnit::Test {
     public {
         TimeZone utcTz = new TimeZone(0);
         *string connStr;
+
+        # Generally compatible types will be here.
         hash Columns = {
             "c": {
                 "type": "CHAR(128)",
@@ -26,15 +28,6 @@ class OdbcTest inherits QUnit::Test {
             "vc": {
                 "type": "VARCHAR(128)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
-            },
-            "bin": {
-                "type": "BINARY(64)",
-                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
-                "expected": (),
-            },
-            "vbin": {
-                "type": "VARBINARY(64)",
-                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
             },
             "bool": {
                 "type": "BOOLEAN",
@@ -51,7 +44,7 @@ class OdbcTest inherits QUnit::Test {
             },
             "bint": {
                 "type": "BIGINT",
-                "values": (2200100100, -111122223333, 0, 1258),
+                "values": (2200100100, -9223372036854775807, 0, 9223372036854775807),
             },
             "decim": {
                 "type": "DECIMAL(5,2)",
@@ -94,6 +87,74 @@ class OdbcTest inherits QUnit::Test {
             },
         };
         list ColumnNamesAndTypes;
+
+        # MySQL-specific types.
+        hash MysqlColumns = {
+            "bin": {
+                "type": "BINARY(64)",
+                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+                "expected": (),
+            },
+            "vbin": {
+                "type": "VARBINARY(64)",
+                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+            },
+            "myblob": {
+                "type": "BLOB(64)",
+                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+            },
+            "mytext": {
+                "type": "TEXT(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
+            "tint": {
+                "type": "TINYINT",
+                "values": (1, 0, 127, -128),
+            },
+            /*"tintunsig": {
+                "type": "TINYINT UNSIGNED",
+                "values": (1, 0, 127, 255),
+            },*/
+            "mint": {
+                "type": "MEDIUMINT",
+                "values": (1, 0, 8388607, -8388608),
+            },
+            "mintunsig": {
+                "type": "MEDIUMINT UNSIGNED",
+                "values": (1, 0, 127, 16777215),
+            },
+            /*"intunsig": {
+                "type": "INTEGER UNSIGNED",
+                "values": (1, 0, 127, 4294967295),
+            },*/
+            /*"mysqlbit": {
+                "type": "BIT",
+                "values": (0, 1, 1, 0),
+            },*/
+            "dtime": {
+                "type": "DATETIME",
+                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
+                "expected": (),
+            },
+            "yr": {
+                "type": "YEAR",
+                "values": (2016-01-11, 2012-01-11, 2016-01-30, 1970-01-11),
+                "expected": (2016-00-00, 2012-00-00, 2016-00-00, 1970-00-00),
+            },
+        };
+
+        # PostgreSQL-specific types.
+        hash PgsqlColumns = {
+            "pgbin": {
+                "type": "bytea",
+                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+                "expected": (),
+            },
+            "pgmoney": {
+                "type": "MONEY",
+                "values": (123.45n, 0.0n, 92233720368547758.07n, -92233720368547758.08n),
+            },
+        };
     }
 
     private {
@@ -123,24 +184,6 @@ class OdbcTest inherits QUnit::Test {
         catch (hash ex) {
             printf("Exception happened during datasource initialization:\n%s: %s\n", ex.err, ex.desc);
             exit(1);
-        }
-
-        foreach hash col in (Columns.pairIterator()) {
-            ColumnNamesAndTypes += col.key + " " + col.value.type;
-        }
-
-        # Prepare test data.
-        for (int i = 0; i < Columns.bin.values.size(); i++) {
-            push Columns.bin.expected, Columns.bin.values[i];
-            reference exp = \Columns.bin.expected[i];
-            for (int j = exp.size(); j < 64; j++)
-                exp += <00>;
-        }
-        /*for (int i = 0; i < Columns.dt.values.size(); i++) {
-            push Columns.dt.expected, utcTz.date(Columns.dt.values[i]);
-        }*/
-        for (int i = 0; i < Columns.tstamp.values.size(); i++) {
-            push Columns.tstamp.expected, utcTz.date(Columns.tstamp.values[i]);
         }
     }
 
@@ -210,11 +253,73 @@ class OdbcTest inherits QUnit::Test {
         assertEq(results1, ds.exec("SELECT * FROM " + tableName));
         assertEq(results1, ds.select("SELECT * FROM " + tableName));
         assertEq(results2, ds.selectRows("SELECT * FROM " + tableName));
-        assertEq(0, ds.exec("DROP TABLE " + tableName));
+        ds.exec("DROP TABLE " + tableName);
         ds.commit();
     }
 
+    prepareTypesTest() {
+        for (int i = 0; i < Columns.tstamp.values.size(); i++) {
+            push Columns.tstamp.expected, utcTz.date(Columns.tstamp.values[i]);
+        }
+
+        # Try additional MySQL types.
+        string mysqlTable = tableName + "_mysql_types_test";
+        try { ds.exec("DROP TABLE " + mysqlTable); } catch (e) {}
+        HashIterator mysql(MysqlColumns);
+        while (mysql.next()) {
+            try {
+                ds.exec("CREATE TABLE " + mysqlTable + " (" + mysql.getKey() + " " + mysql.getValue().type + ")");
+            }
+            catch (hash ex) { continue; }
+            try { ds.exec("DROP TABLE " + mysqlTable); } catch (e) {}
+
+            # Add the type to the typesTest Columns.
+            Columns{mysql.getKey()} = mysql.getValue();
+
+            if (mysql.getKey() == "bin") {
+                for (int i = 0; i < Columns.bin.values.size(); i++) {
+                    push Columns.bin.expected, Columns.bin.values[i];
+                    reference exp = \Columns.bin.expected[i];
+                    for (int j = exp.size(); j < 64; j++)
+                        exp += <00>;
+                }
+            }
+            else if (mysql.getKey() == "dtime") {
+                for (int i = 0; i < Columns.dtime.values.size(); i++) {
+                    push Columns.dtime.expected, utcTz.date(Columns.dtime.values[i]);
+                }
+            }
+        }
+
+        # Try additional PostgreSQL types.
+        string pgsqlTable = tableName + "_pgsql_types_test";
+        try { ds.exec("DROP TABLE " + pgsqlTable); } catch (e) {}
+        HashIterator pgsql(PgsqlColumns);
+        while (pgsql.next()) {
+            try {
+                ds.exec("CREATE TABLE " + pgsqlTable + " (" + pgsql.getKey() + " " + pgsql.getValue().type + ")");
+            }
+            catch (hash ex) { continue; }
+            try { ds.exec("DROP TABLE " + pgsqlTable); } catch (e) {}
+
+            # Add the type to the typesTest Columns.
+            Columns{pgsql.getKey()} = pgsql.getValue();
+        }
+
+        foreach hash col in (Columns.pairIterator()) {
+            ColumnNamesAndTypes += col.key + " " + col.value.type;
+        }
+    }
+
     typesTest() {
+        prepareTypesTest();
+        printf("\n**************************\n");
+        printf("The following columns and their types are tested in the 'types test':\n");
+        foreach string col in (ColumnNamesAndTypes.iterator()) {
+            printf("%s\n", col);
+        }
+        printf("**************************\n\n");
+
         ds.setOption("numeric-numbers", True);
         try {
             ds.exec("DROP TABLE " + tableName);
@@ -254,7 +359,7 @@ class OdbcTest inherits QUnit::Test {
         }
 
         assertEq(results, ds.exec("SELECT * FROM " + tableName));
-        assertEq(0, ds.exec("DROP TABLE " + tableName));
+        ds.exec("DROP TABLE " + tableName);
         ds.commit();
     }
 

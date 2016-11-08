@@ -28,6 +28,7 @@
 #ifndef _QORE_MODULE_ODBC_PARAMHOLDER_H
 #define _QORE_MODULE_ODBC_PARAMHOLDER_H
 
+#include <cstdint>
 #include <vector>
 
 #include <sql.h>
@@ -35,18 +36,12 @@
 
 #include "qore/common.h"
 
-// Needed because vector<bool> stores the values as bits instead of separate values in an array.
-struct BoolWrapper {
-    bool val;
-    BoolWrapper(bool b) : val(b) {}
-};
-
 //! Class used by @ref ODBCStatement for temporary storage of SQL parameters.
 class ParamHolder {
 public:
     DLLLOCAL ParamHolder() {
         strings.reserve(16);
-        bools.reserve(8);
+        tinyints.reserve(8);
         lengths.reserve(32);
         dates.reserve(4);
         timestamps.reserve(4);
@@ -60,9 +55,9 @@ public:
         return s;
     }
 
-    DLLLOCAL bool* addBool(bool b) {
-        bools.push_back(b);
-        return &(bools[bools.size()-1].val);
+    DLLLOCAL int8_t* addTinyint(int8_t i) {
+        tinyints.push_back(i);
+        return &(tinyints[tinyints.size()-1]);
     }
 
     DLLLOCAL SQLLEN* addLength(SQLLEN l) {
@@ -96,7 +91,7 @@ public:
             delete [] (strings[i]);
 
         strings.clear();
-        bools.clear();
+        tinyints.clear();
         lengths.clear();
         dates.clear();
         times.clear();
@@ -104,7 +99,7 @@ public:
 
 private:
     std::vector<char*> strings;
-    std::vector<BoolWrapper> bools;
+    std::vector<int8_t> tinyints;
     std::vector<SQLLEN> lengths;
     std::vector<DATE_STRUCT> dates;
     std::vector<TIME_STRUCT> times;
