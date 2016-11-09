@@ -925,10 +925,11 @@ int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
     }
 
     char name[512];
-    name[511] = '\0';
+    name[0] = '\0';
     resColumns.resize(columns);
     for (int i = 0; i < columns; i++) {
         ODBCResultColumn& col = resColumns[i];
+        col.number = i+1;
         SQLSMALLINT nameLength;
         ret = SQLDescribeColA(stmt, i+1, reinterpret_cast<SQLCHAR*>(name), 512, &nameLength, &col.dataType,
             &col.colSize, &col.decimalDigits, &col.nullable);

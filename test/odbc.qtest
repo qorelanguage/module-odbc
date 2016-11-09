@@ -29,11 +29,6 @@ class OdbcTest inherits QUnit::Test {
                 "type": "VARCHAR(128)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
             },
-            "bool": {
-                "type": "BOOLEAN",
-                "values": (True, False, True, True),
-                "expected": (1, 0, 1, 1),
-            },
             "sint": {
                 "type": "SMALLINT",
                 "values": (1, 0, 32767, -32768),
@@ -103,6 +98,11 @@ class OdbcTest inherits QUnit::Test {
                 "type": "BLOB(64)",
                 "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
             },
+            "mybool": {
+                "type": "BOOLEAN",
+                "values": (True, False, True, True),
+                "expected": (1, 0, 1, 1),
+            },
             "mytext": {
                 "type": "TEXT(128)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
@@ -148,11 +148,15 @@ class OdbcTest inherits QUnit::Test {
             "pgbin": {
                 "type": "bytea",
                 "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
-                "expected": (),
+            },
+            "pgbool": {
+                "type": "BOOLEAN",
+                "values": (True, False, True, True),
             },
             "pgmoney": {
                 "type": "MONEY",
                 "values": (123.45n, 0.0n, 92233720368547758.07n, -92233720368547758.08n),
+                "expected": (123.45, 0.0, 92233720368547758.07, -92233720368547758.08),
             },
         };
     }
@@ -262,50 +266,114 @@ class OdbcTest inherits QUnit::Test {
             push Columns.tstamp.expected, utcTz.date(Columns.tstamp.values[i]);
         }
 
+        string typesTable = tableName + "_types_test";
+        try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
+
+        bool mysqlDB = False;
+        bool pgsqlDB = False;
+        bool oracleDB = False;
+        bool mssqlDB = False;
+        bool sybaseDB = False;
+
+        # Test if connected to a MySQL database.
+        try { # LINESTRING is a MySQL-only datatype.
+            ds.exec("CREATE TABLE " + typesTable + " (ls LINESTRING)");
+            mysqlDB = True;
+            try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
+        }
+        catch (hash ex) {
+            mysqlDB = False;
+        }
+
+        # Test if connected to a PostgreSQL database.
+        try { # BYTEA is a PostgreSQL-only datatype.
+            ds.exec("CREATE TABLE " + typesTable + " (bt bytea)");
+            pgsqlDB = True;
+            try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
+        }
+        catch (hash ex) {
+            pgsqlDB = False;
+        }
+
+        # Test if connected to an Oracle database.
+        try { # BINARY_FLOAT is an Oracle-only datatype.
+            ds.exec("CREATE TABLE " + typesTable + " (bf BINARY_FLOAT)");
+            oracleDB = True;
+            try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
+        }
+        catch (hash ex) {
+            oracleDB = False;
+        }
+
+        # Test if connected to a MSSQL database.
+        try { # IMAGE is a MSSQL-only datatype.
+            ds.exec("CREATE TABLE " + typesTable + " (img IMAGE)");
+            mssqlDB = True;
+            try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
+        }
+        catch (hash ex) {
+            mssqlDB = False;
+        }
+
+        # Test if connected to a Sybase database.
+        try { # UNIQUEIDENTIFIERSTR is a Sybase-only datatype.
+            ds.exec("CREATE TABLE " + typesTable + " (uis UNIQUEIDENTIFIERSTR)");
+            sybaseDB = True;
+            try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
+        }
+        catch (hash ex) {
+            sybaseDB = False;
+        }
+
         # Try additional MySQL types.
-        string mysqlTable = tableName + "_mysql_types_test";
-        try { ds.exec("DROP TABLE " + mysqlTable); } catch (e) {}
-        HashIterator mysql(MysqlColumns);
-        while (mysql.next()) {
-            try {
-                ds.exec("CREATE TABLE " + mysqlTable + " (" + mysql.getKey() + " " + mysql.getValue().type + ")");
-            }
-            catch (hash ex) { continue; }
+        if (mysqlDB) {
+            string mysqlTable = tableName + "_mysql_types_test";
             try { ds.exec("DROP TABLE " + mysqlTable); } catch (e) {}
-
-            # Add the type to the typesTest Columns.
-            Columns{mysql.getKey()} = mysql.getValue();
-
-            if (mysql.getKey() == "bin") {
-                for (int i = 0; i < Columns.bin.values.size(); i++) {
-                    push Columns.bin.expected, Columns.bin.values[i];
-                    reference exp = \Columns.bin.expected[i];
-                    for (int j = exp.size(); j < 64; j++)
-                        exp += <00>;
+            HashIterator mysql(MysqlColumns);
+            while (mysql.next()) {
+                try {
+                    ds.exec("CREATE TABLE " + mysqlTable + " (" + mysql.getKey() + " " + mysql.getValue().type + ")");
                 }
-            }
-            else if (mysql.getKey() == "dtime") {
-                for (int i = 0; i < Columns.dtime.values.size(); i++) {
-                    push Columns.dtime.expected, utcTz.date(Columns.dtime.values[i]);
+                catch (hash ex) { continue; }
+                try { ds.exec("DROP TABLE " + mysqlTable); } catch (e) {}
+
+                # Add the type to the typesTest Columns.
+                Columns{mysql.getKey()} = mysql.getValue();
+
+                if (mysql.getKey() == "bin") {
+                    for (int i = 0; i < Columns.bin.values.size(); i++) {
+                        push Columns.bin.expected, Columns.bin.values[i];
+                        reference exp = \Columns.bin.expected[i];
+                        for (int j = exp.size(); j < 64; j++)
+                            exp += <00>;
+                    }
+                }
+                else if (mysql.getKey() == "dtime") {
+                    for (int i = 0; i < Columns.dtime.values.size(); i++) {
+                        push Columns.dtime.expected, utcTz.date(Columns.dtime.values[i]);
+                    }
                 }
             }
         }
 
         # Try additional PostgreSQL types.
-        string pgsqlTable = tableName + "_pgsql_types_test";
-        try { ds.exec("DROP TABLE " + pgsqlTable); } catch (e) {}
-        HashIterator pgsql(PgsqlColumns);
-        while (pgsql.next()) {
-            try {
-                ds.exec("CREATE TABLE " + pgsqlTable + " (" + pgsql.getKey() + " " + pgsql.getValue().type + ")");
-            }
-            catch (hash ex) { continue; }
+        if (pgsqlDB) {
+            string pgsqlTable = tableName + "_pgsql_types_test";
             try { ds.exec("DROP TABLE " + pgsqlTable); } catch (e) {}
+            HashIterator pgsql(PgsqlColumns);
+            while (pgsql.next()) {
+                try {
+                    ds.exec("CREATE TABLE " + pgsqlTable + " (" + pgsql.getKey() + " " + pgsql.getValue().type + ")");
+                }
+                catch (hash ex) { continue; }
+                try { ds.exec("DROP TABLE " + pgsqlTable); } catch (e) {}
 
-            # Add the type to the typesTest Columns.
-            Columns{pgsql.getKey()} = pgsql.getValue();
+                # Add the type to the typesTest Columns.
+                Columns{pgsql.getKey()} = pgsql.getValue();
+            }
         }
 
+        # Prepare final list of columns and their types.
         foreach hash col in (Columns.pairIterator()) {
             ColumnNamesAndTypes += col.key + " " + col.value.type;
         }

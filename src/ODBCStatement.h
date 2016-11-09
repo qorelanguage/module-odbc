@@ -907,7 +907,11 @@ public:
 inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, ExceptionSink* xsink) {
     SQLLEN indicator;
     SQLRETURN ret;
-    //fprintf(stderr, "getColumnValue: row=%d, col=%d, dataType=%d\n", readRows, column, rcol.dataType);
+
+    /*fprintf(stderr, "getColumnValue: row=%d, col=%d, dataType=%d\n", readRows, column, rcol.dataType);
+    fprintf(stderr, "col: number=%d, name='%s', colSize=%d, byteSize=%d, dDigits=%d\n",
+        rcol.number, rcol.name.c_str(), rcol.colSize, rcol.byteSize, rcol.decimalDigits);*/
+
     switch(rcol.dataType) {
         // Integer types.
         case SQL_INTEGER: {
@@ -973,41 +977,31 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
         case SQL_CHAR:
         case SQL_VARCHAR:
         case SQL_LONGVARCHAR: {
-            char unused[1];
-            if (serverEnc) // Find out data size.
-                ret = SQLGetData(stmt, column, SQL_C_CHAR, unused, 0, &indicator);
-            else
-                ret = SQLGetData(stmt, column, SQL_C_WCHAR, unused, 0, &indicator);
+            char buffer[512];
+            buffer[0] = '\0';
+            SimpleRefHolder<QoreStringNode> str(new QoreStringNode("", serverEnc));
+            while (true) {
+                ret = SQLGetData(stmt, column, SQL_C_CHAR, buffer, 512, &indicator);
+                if (ret == SQL_NO_DATA) // No (more) data.
+                    return str.release();
+                if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
+                    str->concat(buffer);
 
-            if (ret == SQL_NO_DATA) // No data, therefore returning empty string.
-                return new QoreStringNode;
-            if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                SQLLEN buflen = indicator + 2; // Ending \0 char.
-                std::unique_ptr<char> buf(new (std::nothrow) char[buflen]);
-                if (!buf.get()) {
-                    xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
-                        "could not allocate buffer for result character data of row #%d, index #%d (column #%d)",
-                        readRows, column-1, column);
-                    return 0;
-                }
-                if (serverEnc) {
-                    ret = SQLGetData(stmt, column, SQL_C_CHAR, buf.get(), buflen, &indicator);
-                    if (SQL_SUCCEEDED(ret)) {
-                        SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, serverEnc));
-                        return str.release();
+                    // PostgreSQL-specific hack.
+                    // Needed because Postgre returns BOOLEAN type as VARCHAR string with values '0' or '1'.
+                    if (str->size() == 1 && (buffer[0] == '0' || buffer[0] == '1')) {
+                        char descTypeName[32];
+                        SQLColAttributeA(stmt, column, SQL_DESC_TYPE_NAME, descTypeName, 32, 0, 0);
+                        if (strcmp(descTypeName, "bool") == 0) {
+                            return get_bool_node((buffer[0])-48);
+                        }
                     }
+
+                    if (indicator > 0)
+                        continue;
+                    break;
                 }
-                else {
-                    ret = SQLGetData(stmt, column, SQL_C_WCHAR, buf.get(), buflen, &indicator);
-                    if (SQL_SUCCEEDED(ret)) {
-#ifdef WORDS_BIGENDIAN
-                        SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QCS_UTF16BE));
-#else
-                        SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QCS_UTF16LE));
-#endif
-                        return str.release();
-                    }
-                }
+                break;
             }
             break;
         }
@@ -1107,6 +1101,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
         }
 
         // Time types.
+        case SQL_TIMESTAMP:
         case SQL_TYPE_TIMESTAMP: {
             TIMESTAMP_STRUCT val;
             ret = SQLGetData(stmt, column, SQL_C_TYPE_TIMESTAMP, &val, sizeof(TIMESTAMP_STRUCT), &indicator);
@@ -1115,6 +1110,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             }
             break;
         }
+        case SQL_TIME:
         case SQL_TYPE_TIME: {
             TIME_STRUCT val;
             ret = SQLGetData(stmt, column, SQL_C_TYPE_TIME, &val, sizeof(TIME_STRUCT), &indicator);
@@ -1123,6 +1119,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             }
             break;
         }
+        case SQL_DATE:
         case SQL_TYPE_DATE: {
             DATE_STRUCT val;
             ret = SQLGetData(stmt, column, SQL_C_TYPE_DATE, &val, sizeof(DATE_STRUCT), &indicator);
@@ -1297,15 +1294,14 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             }
             break;
         }
-        case SQL_GUID: {
+        case SQL_GUID: { // Same as UUID.
             SQLGUID val;
             ret = SQLGetData(stmt, column, SQL_C_GUID, &val, sizeof(SQLGUID), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 SimpleRefHolder<QoreStringNode> s(new QoreStringNode);
                 if (*s) {
-                    s->sprintf("%d-%d-%d-%d", val.Data1, val.Data2, val.Data3, val.Data4[0]);
-                    for (int i = 1; i < 8; i++)
-                        s->sprintf(".%d", val.Data4[i]);
+                    s->sprintf("%x-%x-%x-%x-", val.Data1, val.Data2, val.Data3, val.Data4[0], val.Data4[1]);
+                    s->sprintf("%x%x%x%x%x%x", val.Data4[2], val.Data4[3], val.Data4[4], val.Data4[5], val.Data4[6], val.Data4[7]);
                 }
                 return s.release();
             }
