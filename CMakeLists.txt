@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 
 project(qore-odbc-module)
-SET(PROJECT_VERSION "0.0.1")
+SET(PROJECT_VERSION "1.0")
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
