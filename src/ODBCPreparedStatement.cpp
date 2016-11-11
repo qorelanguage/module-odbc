@@ -30,6 +30,8 @@
 #include <sql.h>
 #include <sqlext.h>
 
+namespace odbc {
+
 ODBCPreparedStatement::ODBCPreparedStatement(ODBCConnection* c, ExceptionSink* xsink) :
     ODBCStatement(c, xsink),
     bindArgs(xsink),
@@ -119,3 +121,4 @@ bool ODBCPreparedStatement::next(ExceptionSink* xsink) {
     return false;
 }
 
+} // namespace odbc

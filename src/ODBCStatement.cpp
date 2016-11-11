@@ -33,6 +33,7 @@
 #include "ODBCColumnSizeConstants.h"
 #include "ODBCConnection.h"
 
+namespace odbc {
 
 /////////////////////////////
 //     Public methods     //
@@ -306,7 +307,7 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashI
         }
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("error occured when fetching row #%d");
-            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), readRows);
             return 0;
         }
@@ -439,7 +440,7 @@ int ODBCStatement::exec(const QoreString* qstr, ExceptionSink* xsink) {
 
 void ODBCStatement::handleStmtError(const char* err, const char* desc, ExceptionSink* xsink) {
     std::string s(desc);
-    ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+    intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
     xsink->raiseException(err, s.c_str());
 }
 
@@ -579,7 +580,7 @@ QoreHashNode* ODBCStatement::getRowIntern(GetRowInternStatus& status, ExceptionS
     }
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("error occured when fetching row #%d");
-        ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), readRows);
         status = EGRIS_ERROR;
         return 0;
@@ -660,7 +661,7 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
             ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 0, 0, 0, 0, len);
             if (!SQL_SUCCEEDED(ret)) { // error
                 std::string s("failed binding NULL parameter with index %d (column %d)");
-                ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+                intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
                 xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), i, i+1);
                 return -1;
             }
@@ -824,7 +825,7 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
 
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("failed binding parameter with index %d (column #%d) of type '%s'");
-            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), i, i+1, arg->getTypeName());
             return -1;
         }
@@ -935,7 +936,7 @@ int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
             &col.colSize, &col.decimalDigits, &col.nullable);
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("error occured when fetching result column metadata with index #%d (column #%d)");
-            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i, i+1);
             return -1;
         }
@@ -943,7 +944,7 @@ int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
         ret = SQLColAttributeA(stmt, i+1, SQL_DESC_OCTET_LENGTH, 0, 0, 0, &col.byteSize);
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("error occured when fetching result column metadata with index #%d (column #%d)");
-            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i, i+1);
             return -1;
         }
@@ -1063,7 +1064,7 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
 
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("failed binding parameter array with index #%d (column #%d)");
-        ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column);
         return -1;
     }
@@ -1085,7 +1086,7 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_BINARY, SQL_BINARY, 0, 0, array, 0, indArray);
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("failed binding NULL single value parameter with index #%d (column #%d)");
-            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column);
             return -1;
         }
@@ -1186,7 +1187,7 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
 
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("failed binding parameter array with index #%d (column #%d) of type '%s'");
-        ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column, arg->getTypeName());
         return -1;
     }
@@ -1271,7 +1272,7 @@ int ODBCStatement::bindParamArrayBindHash(int column, const QoreHashNode* h, Exc
 
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("failed binding parameter array with index #%d (column #%d)");
-        ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column);
         return -1;
     }
@@ -2697,3 +2698,5 @@ SQLLEN* ODBCStatement::createIndArray(SQLLEN indicator, ExceptionSink* xsink) {
         array[i] = indicator;
     return array;
 }
+
+} // namespace odbc

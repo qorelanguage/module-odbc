@@ -36,6 +36,10 @@
 
 #include "qore/common.h"
 
+namespace odbc {
+
+namespace intern {
+
 //! Class used by @ref ODBCStatement for temporary storage of SQL parameters.
 class ParamHolder {
 public:
@@ -106,6 +110,10 @@ private:
     std::vector<TIMESTAMP_STRUCT> timestamps;
     std::vector<SQL_INTERVAL_STRUCT> intervals;
 };
+
+} // namespace intern
+
+} // namespace odbc
 
 #endif // _QORE_MODULE_ODBC_PARAMHOLDER_H
 

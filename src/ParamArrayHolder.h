@@ -37,6 +37,10 @@
 #include "qore/common.h"
 #include "qore/ExceptionSink.h"
 
+namespace odbc {
+
+namespace intern {
+
 //! Class used by @ref ODBCStatement for temporary storage of SQL parameter arrays.
 class ParamArrayHolder {
 public:
@@ -233,6 +237,10 @@ private:
 
     qore_size_t arraySize;
 };
+
+} // namespace intern
+
+} // namespace odbc
 
 #endif // _QORE_MODULE_ODBC_PARAMARRAYHOLDER_H
 

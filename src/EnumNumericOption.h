@@ -28,11 +28,15 @@
 #ifndef _QORE_MODULE_ODBC_ENUMNUMERICOPTION_H
 #define _QORE_MODULE_ODBC_ENUMNUMERICOPTION_H
 
+namespace odbc {
+
 enum NumericOption {
     ENO_OPTIMAL = 0,
     ENO_STRING,
     ENO_NUMERIC // aka number
 };
+
+} // namespace odbc
 
 #endif // _QORE_MODULE_ODBC_ENUMNUMERICOPTION_H
 

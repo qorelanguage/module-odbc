@@ -33,6 +33,8 @@
 #include <sql.h>
 #include <sqlext.h>
 
+namespace odbc {
+
 struct ODBCResultColumn {
 public:
     //! Column number from 1 onwards.
@@ -58,6 +60,8 @@ public:
     //! Whether the column allows NULL values.
     SQLSMALLINT nullable;
 };
+
+} // namespace odbc
 
 #endif // _QORE_MODULE_ODBC_ODBCRESULTCOLUMN_H
 

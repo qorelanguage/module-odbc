@@ -48,6 +48,8 @@
 
 #include "ODBCStatement.h"
 
+namespace odbc {
+
 class ODBCConnection;
 
 //! A class representing ODBC prepared statement.
@@ -129,6 +131,8 @@ private:
     //! Output row prepared by calling next().
     ReferenceHolder<QoreHashNode> outputRow;
 };
+
+} // namespace odbc
 
 #endif // _QORE_MODULE_ODBC_ODBCPREPAREDSTATEMENT_H
 

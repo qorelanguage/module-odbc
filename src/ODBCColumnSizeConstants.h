@@ -81,6 +81,7 @@ source: https://msdn.microsoft.com/en-us/library/ms716251(v=vs.85).aspx
 
 */
 
+namespace odbc {
 
 //! ColumnSize value for the \c SQL_INTERVAL_YEAR datatype.
 /** value = p, where p is the interval leading precision
@@ -194,6 +195,8 @@ DLLLOCAL const SQLULEN BIGINT_COLSIZE = 19;
 /** 15
  */
 DLLLOCAL const SQLULEN DOUBLE_COLSIZE = 15;
+
+} // namespace odbc
 
 #endif // _QORE_MODULE_ODBC_ODBCCOLUMNSIZECONSTANTS_H
 

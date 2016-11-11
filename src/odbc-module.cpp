@@ -86,7 +86,7 @@ int DBI_ODBC_CAPS =
 
 
 static int odbc_open(Datasource* ds, ExceptionSink* xsink) {
-    ODBCConnection* conn = new ODBCConnection(ds, xsink);
+    odbc::ODBCConnection* conn = new odbc::ODBCConnection(ds, xsink);
     if (*xsink) {
         delete conn;
         return -1;
@@ -97,14 +97,14 @@ static int odbc_open(Datasource* ds, ExceptionSink* xsink) {
 }
 
 static int odbc_close(Datasource* ds) {
-    ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     ds->setPrivateData(0);
     delete conn;
     return 0;
 }
 
 static AbstractQoreNode* odbc_select(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
-    ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
         return 0;
@@ -114,7 +114,7 @@ static AbstractQoreNode* odbc_select(Datasource* ds, const QoreString* qstr, con
 
 #ifdef _QORE_HAS_DBI_SELECT_ROW
 static QoreHashNode* odbc_select_row(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
-    ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
         return 0;
@@ -124,7 +124,7 @@ static QoreHashNode* odbc_select_row(Datasource* ds, const QoreString* qstr, con
 #endif
 
 static AbstractQoreNode* odbc_select_rows(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
-    ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
         return 0;
@@ -133,7 +133,7 @@ static AbstractQoreNode* odbc_select_rows(Datasource* ds, const QoreString* qstr
 }
 
 static AbstractQoreNode* odbc_exec(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
-    ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
         return 0;
@@ -143,7 +143,7 @@ static AbstractQoreNode* odbc_exec(Datasource* ds, const QoreString* qstr, const
 
 #ifdef _QORE_HAS_DBI_EXECRAW
 static AbstractQoreNode* odbc_execRaw(Datasource* ds, const QoreString* qstr, ExceptionSink* xsink) {
-    ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
         return 0;
@@ -157,7 +157,7 @@ static int odbc_begin_transaction(Datasource* ds, ExceptionSink* xsink) {
 }
 
 static int odbc_commit(Datasource* ds, ExceptionSink* xsink) {
-    ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
         return -1;
@@ -166,7 +166,7 @@ static int odbc_commit(Datasource* ds, ExceptionSink* xsink) {
 }
 
 static int odbc_rollback(Datasource* ds, ExceptionSink* xsink) {
-    ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
         return -1;
@@ -175,7 +175,7 @@ static int odbc_rollback(Datasource* ds, ExceptionSink* xsink) {
 }
 
 static AbstractQoreNode* odbc_get_client_version(const Datasource* ds, ExceptionSink* xsink) {
-    ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
         return 0;
@@ -184,7 +184,7 @@ static AbstractQoreNode* odbc_get_client_version(const Datasource* ds, Exception
 }
 
 static AbstractQoreNode* odbc_get_server_version(Datasource* ds, ExceptionSink* xsink) {
-    ODBCConnection* conn = static_cast<ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
         return 0;
@@ -195,7 +195,7 @@ static AbstractQoreNode* odbc_get_server_version(Datasource* ds, ExceptionSink* 
 static int odbc_stmt_prepare(SQLStatement* stmt, const QoreString& str, const QoreListNode* args, ExceptionSink* xsink) {
     assert(!stmt->getPrivateData());
 
-    ODBCPreparedStatement* ps = new ODBCPreparedStatement(stmt->getDatasource(), xsink);
+    odbc::ODBCPreparedStatement* ps = new odbc::ODBCPreparedStatement(stmt->getDatasource(), xsink);
     if (*xsink) {
         delete ps;
         return -1;
@@ -208,7 +208,7 @@ static int odbc_stmt_prepare(SQLStatement* stmt, const QoreString& str, const Qo
 static int odbc_stmt_prepare_raw(SQLStatement* stmt, const QoreString& str, ExceptionSink* xsink) {
     assert(!stmt->getPrivateData());
 
-    ODBCPreparedStatement* ps = new ODBCPreparedStatement(stmt->getDatasource(), xsink);
+    odbc::ODBCPreparedStatement* ps = new odbc::ODBCPreparedStatement(stmt->getDatasource(), xsink);
     if (*xsink) {
         delete ps;
         return -1;
@@ -219,7 +219,7 @@ static int odbc_stmt_prepare_raw(SQLStatement* stmt, const QoreString& str, Exce
 }
 
 static int odbc_stmt_bind(SQLStatement* stmt, const QoreListNode& args, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     return ps->bind(args, xsink);
@@ -231,14 +231,14 @@ static int odbc_stmt_bind_placeholders(SQLStatement* stmt, const QoreListNode& a
 }
 
 static int odbc_stmt_bind_values(SQLStatement* stmt, const QoreListNode& args, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     return ps->bind(args, xsink);
 }
 
 static int odbc_stmt_exec(SQLStatement* stmt, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     return ps->exec(xsink);
@@ -250,63 +250,63 @@ static int odbc_stmt_define(SQLStatement* stmt, ExceptionSink* xsink) {
 }
 
 static int odbc_stmt_affected_rows(SQLStatement* stmt, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     return ps->rowsAffected();
 }
 
 static QoreHashNode* odbc_stmt_get_output(SQLStatement* stmt, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     return ps->getOutputHash(xsink, false);
 }
 
 static QoreHashNode* odbc_stmt_get_output_rows(SQLStatement* stmt, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     return ps->getOutputHash(xsink, false);
 }
 
 static QoreHashNode* odbc_stmt_fetch_row(SQLStatement* stmt, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     return ps->fetchRow(xsink);
 }
 
 static QoreListNode* odbc_stmt_fetch_rows(SQLStatement* stmt, int maxRows, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     return ps->fetchRows(maxRows, xsink);
 }
 
 static QoreHashNode* odbc_stmt_fetch_columns(SQLStatement* stmt, int maxRows, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     return ps->fetchColumns(maxRows, xsink);
 }
 
 static QoreHashNode* odbc_stmt_describe(SQLStatement* stmt, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     return ps->describe(xsink);
 }
 
 static bool odbc_stmt_next(SQLStatement* stmt, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     return ps->next(xsink);
 }
 
 static int odbc_stmt_close(SQLStatement* stmt, ExceptionSink* xsink) {
-    ODBCPreparedStatement* ps = static_cast<ODBCPreparedStatement*>(stmt->getPrivateData());
+    odbc::ODBCPreparedStatement* ps = static_cast<odbc::ODBCPreparedStatement*>(stmt->getPrivateData());
     assert(ps);
 
     delete ps;
@@ -315,7 +315,7 @@ static int odbc_stmt_close(SQLStatement* stmt, ExceptionSink* xsink) {
 }
 
 static int odbc_opt_set(Datasource* ds, const char* opt, const AbstractQoreNode* val, ExceptionSink* xsink) {
-    ODBCConnection* conn = (ODBCConnection*)ds->getPrivateData();
+    odbc::ODBCConnection* conn = (odbc::ODBCConnection*)ds->getPrivateData();
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
         return -1;
@@ -324,7 +324,7 @@ static int odbc_opt_set(Datasource* ds, const char* opt, const AbstractQoreNode*
 }
 
 static AbstractQoreNode* odbc_opt_get(const Datasource* ds, const char* opt) {
-    ODBCConnection* conn = (ODBCConnection*)ds->getPrivateData();
+    odbc::ODBCConnection* conn = (odbc::ODBCConnection*)ds->getPrivateData();
     if (!conn) {
         return 0;
     }

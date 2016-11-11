@@ -48,6 +48,8 @@
 
 class AbstractQoreZoneInfo;
 
+namespace odbc {
+
 //! A class representing an ODBC connection.
 class ODBCConnection {
 public:
@@ -218,6 +220,8 @@ private:
      */
     DLLLOCAL int parseOdbcVersion(const char* str);
 };
+
+} // namespace odbc
 
 #endif // _QORE_MODULE_ODBC_ODBCCONNECTION_H
 

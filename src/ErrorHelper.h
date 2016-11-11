@@ -35,6 +35,10 @@
 
 #include "qore/common.h"
 
+namespace odbc {
+
+namespace intern {
+
 //! Error helper
 class ErrorHelper {
 public:
@@ -79,6 +83,10 @@ private:
     DLLLOCAL ErrorHelper();
     DLLLOCAL ~ErrorHelper();
 };
+
+} // namespace intern
+
+} // namespace odbc
 
 #endif // _QORE_MODULE_ODBC_ERRORHELPER_H
 

@@ -47,6 +47,8 @@
 #include "ParamArrayHolder.h"
 #include "ParamHolder.h"
 
+namespace odbc {
+
 class ODBCConnection;
 
 //! A class representing one ODBC SQL statement.
@@ -231,10 +233,10 @@ private:
     qore_size_t paramCountInSql;
 
     //! Temporary holder for params.
-    ParamHolder paramHolder;
+    intern::ParamHolder paramHolder;
 
     //! Temporary holder for parameter arrays.
-    ParamArrayHolder arrayHolder;
+    intern::ParamArrayHolder arrayHolder;
 
     //! Parameters which will be used in the statement.
     ReferenceHolder<QoreListNode> params;
@@ -1309,7 +1311,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
         }
         default: {
             std::string s("do not know how to handle result value of type '%d'");
-            ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.c_str(), rcol.dataType);
             return 0;
         }
@@ -1322,7 +1324,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
 
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("error occured when getting value of row #%d, index #%d (column #%d)");
-        ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.c_str(), readRows, column-1, column);
     }
 
@@ -1506,5 +1508,7 @@ SQL_INTERVAL_STRUCT ODBCStatement::getMinuteSecondInterval(const DateTimeNode* a
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
 }
+
+} // namespace odbc
 
 #endif // _QORE_MODULE_ODBC_ODBCSTATEMENT_H

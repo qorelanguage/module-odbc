@@ -36,6 +36,7 @@
 #include "ErrorHelper.h"
 #include "ODBCStatement.h"
 
+namespace odbc {
 
 static SQLINTEGER getUTF8CharCount(const char* str) {
     SQLINTEGER len = 0;
@@ -104,7 +105,7 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     ret = SQLDriverConnectW(dbConn, 0, odbcDS, getUTF8CharCount(tempConnStr.getBuffer()), 0, 0, 0, SQL_DRIVER_NOPROMPT);
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("could not connect to the datasource; connection string: '%s'");
-        ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
+        intern::ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
         xsink->raiseException("DBI:ODBC:CONNECTION-ERROR", s.c_str(), tempConnStr.getBuffer());
         return;
     }
@@ -236,7 +237,7 @@ void ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) 
 
 void ODBCConnection::handleDbcError(const char* err, const char* desc, ExceptionSink* xsink) {
     std::string s(desc);
-    ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
+    intern::ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
     xsink->raiseException(err, s.c_str());
 }
 
@@ -350,3 +351,4 @@ int ODBCConnection::parseOdbcVersion(const char* str) {
     return major*1000000 + minor*10000 + sub;
 }
 
+} // namespace odbc
