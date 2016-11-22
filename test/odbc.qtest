@@ -21,10 +21,6 @@ class OdbcTest inherits QUnit::Test {
 
         # Generally compatible types will be here.
         hash Columns = {
-            "c": {
-                "type": "CHAR(128)",
-                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
-            },
             "vc": {
                 "type": "VARCHAR(128)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
@@ -36,10 +32,6 @@ class OdbcTest inherits QUnit::Test {
             "i": {
                 "type": "INTEGER",
                 "values": (2147483647, 0, -1, -2147483648),
-            },
-            "bint": {
-                "type": "BIGINT",
-                "values": (2200100100, -9223372036854775807, 0, 9223372036854775807),
             },
             "decim": {
                 "type": "DECIMAL(5,2)",
@@ -70,11 +62,6 @@ class OdbcTest inherits QUnit::Test {
                 "values": odbc_bind(ODBCT_DATE, (2016-01-11, 1970-01-01, 2020-05-20, 1987-01-30)),
                 "expected": (2016-01-11, 1970-01-01, 2020-05-20, 1987-01-30),
             },
-            "tm": {
-                "type": "TIME",
-                "values": odbc_bind(ODBCT_TIME, (00:00:00Z, 05:23:17Z, 03:59:20Z, 14:15:16Z)),
-                "expected": (0s, 5*60m+23m+17s, 3*60m+59m+20s, 14*60m+15m+16s),
-            },
             "tstamp": {
                 "type": "TIMESTAMP",
                 "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
@@ -85,6 +72,10 @@ class OdbcTest inherits QUnit::Test {
 
         # MySQL-specific types.
         hash MysqlColumns = {
+            "c": {
+                "type": "CHAR(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
             "bin": {
                 "type": "BINARY(64)",
                 "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
@@ -106,6 +97,10 @@ class OdbcTest inherits QUnit::Test {
             "mytext": {
                 "type": "TEXT(128)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
+            "bint": {
+                "type": "BIGINT",
+                "values": (2200100100, -9223372036854775807, 0, 9223372036854775807),
             },
             "tint": {
                 "type": "TINYINT",
@@ -131,6 +126,11 @@ class OdbcTest inherits QUnit::Test {
                 "type": "BIT",
                 "values": (0, 1, 1, 0),
             },*/
+            "tm": {
+                "type": "TIME",
+                "values": odbc_bind(ODBCT_TIME, (00:00:00Z, 05:23:17Z, 03:59:20Z, 14:15:16Z)),
+                "expected": (0s, 5*60m+23m+17s, 3*60m+59m+20s, 14*60m+15m+16s),
+            },
             "dtime": {
                 "type": "DATETIME",
                 "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
@@ -145,6 +145,10 @@ class OdbcTest inherits QUnit::Test {
 
         # PostgreSQL-specific types.
         hash PgsqlColumns = {
+            "pgc": {
+                "type": "CHAR(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
             "pgbin": {
                 "type": "bytea",
                 "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
@@ -157,6 +161,84 @@ class OdbcTest inherits QUnit::Test {
                 "type": "MONEY",
                 "values": (123.45n, 0.0n, 92233720368547758.07n, -92233720368547758.08n),
                 "expected": (123.45, 0.0, 92233720368547758.07, -92233720368547758.08),
+            },
+            "pgbint": {
+                "type": "BIGINT",
+                "values": (2200100100, -9223372036854775807, 0, 9223372036854775807),
+            },
+            "pgtm": {
+                "type": "TIME",
+                "values": odbc_bind(ODBCT_TIME, (00:00:00Z, 05:23:17Z, 03:59:20Z, 14:15:16Z)),
+                "expected": (0s, 5*60m+23m+17s, 3*60m+59m+20s, 14*60m+15m+16s),
+            },
+        };
+
+        # Oracle-specific types.
+        hash OracleColumns = {
+            "orablob": {
+                "type": "BLOB",
+                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+            },
+            "oraraw": {
+                "type": "RAW(64)",
+                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+            },
+            "c": {
+                "type": "CHAR(60)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+                "expected": (
+                    "text                                                        ",
+                    "lorem                                                       ",
+                    "Příliš žluťoučký kůň úpěl ďábelské ódy       ",
+                    "ipsum dolor                                                 "
+                ),
+            },
+            "vc2": {
+                "type": "VARCHAR2(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
+            "nc": {
+                "type": "NCHAR(128)",
+                "values": (
+                    convert_encoding("text", "UTF16"),
+                    convert_encoding("lorem", "UTF16"),
+                    convert_encoding("Příliš žluťoučký kůň úpěl ďábelské ódy", "UTF16"),
+                    convert_encoding("ipsum dolor", "UTF16")
+                ),
+            },
+            "nvc2": {
+                "type": "NVARCHAR2(128)",
+                "values": (
+                    convert_encoding("text", "UTF16"),
+                    convert_encoding("lorem", "UTF16"),
+                    convert_encoding("Příliš žluťoučký kůň úpěl ďábelské ódy", "UTF16"),
+                    convert_encoding("ipsum dolor", "UTF16")
+                ),
+            },
+            "oraclob": {
+                "type": "CLOB",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
+            "oranclob": {
+                "type": "NCLOB",
+                "values": (
+                    convert_encoding("text", "UTF16"),
+                    convert_encoding("lorem", "UTF16"),
+                    convert_encoding("Příliš žluťoučký kůň úpěl ďábelské ódy", "UTF16"),
+                    convert_encoding("ipsum dolor", "UTF16")
+                ),
+            },
+            "numbr": {
+                "type": "NUMBER(38,10)",
+                "values": (-12300000.4567891234n, 0.0n, 999888777666.5554443332n, -999888777666.5554443332n),
+            },
+            "binflt": {
+                "type": "BINARY_FLOAT",
+                "values": (0.00390625, 0.0078125, -0.0078125, 0.0),
+            },
+            "bindbl": {
+                "type": "BINARY_DOUBLE",
+                "values": (1.72, 3.1456789765432, 0.0, -2.7218281828),
             },
         };
     }
@@ -235,7 +317,8 @@ class OdbcTest inherits QUnit::Test {
                 rethrow;
         }
         ds.commit();
-        assertEq(0, ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, text varchar(128))"));
+        any ret = ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, text varchar(128))");
+        assertTrue(ret == 0 || ret.typeCode() == NOTHING);
         ds.commit();
 
         assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (1, 'abcdef123456')"));
@@ -266,7 +349,7 @@ class OdbcTest inherits QUnit::Test {
             push Columns.tstamp.expected, utcTz.date(Columns.tstamp.values[i]);
         }
 
-        string typesTable = tableName + "_types_test";
+        string typesTable = "odbc_types_test";
         try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
 
         bool mysqlDB = False;
@@ -327,7 +410,7 @@ class OdbcTest inherits QUnit::Test {
 
         # Try additional MySQL types.
         if (mysqlDB) {
-            string mysqlTable = tableName + "_mysql_types_test";
+            string mysqlTable = "mysql_types_test";
             try { ds.exec("DROP TABLE " + mysqlTable); } catch (e) {}
             HashIterator mysql(MysqlColumns);
             while (mysql.next()) {
@@ -358,7 +441,7 @@ class OdbcTest inherits QUnit::Test {
 
         # Try additional PostgreSQL types.
         if (pgsqlDB) {
-            string pgsqlTable = tableName + "_pgsql_types_test";
+            string pgsqlTable = "pgsql_types_test";
             try { ds.exec("DROP TABLE " + pgsqlTable); } catch (e) {}
             HashIterator pgsql(PgsqlColumns);
             while (pgsql.next()) {
@@ -370,6 +453,23 @@ class OdbcTest inherits QUnit::Test {
 
                 # Add the type to the typesTest Columns.
                 Columns{pgsql.getKey()} = pgsql.getValue();
+            }
+        }
+
+        # Try additional Oracle types.
+        if (oracleDB) {
+            string oracleTable = "oracle_types_test";
+            try { ds.exec("DROP TABLE " + oracleTable); } catch (e) {}
+            HashIterator oracle(OracleColumns);
+            while (oracle.next()) {
+                try {
+                    ds.exec("CREATE TABLE " + oracleTable + " (" + oracle.getKey() + " " + oracle.getValue().type + ")");
+                }
+                catch (hash ex) { continue; }
+                try { ds.exec("DROP TABLE " + oracleTable); } catch (e) {}
+
+                # Add the type to the typesTest Columns.
+                Columns{oracle.getKey()} = oracle.getValue();
             }
         }
 
@@ -399,7 +499,8 @@ class OdbcTest inherits QUnit::Test {
         ds.commit();
 
         string def = sprintf(" (%s)", foldl $1 + ", " + $2, ColumnNamesAndTypes);
-        assertEq(0, ds.exec("CREATE TABLE " + tableName + def));
+        any ret = ds.exec("CREATE TABLE " + tableName + def);
+        assertTrue(ret == 0 || ret.typeCode() == NOTHING);
         ds.commit();
 
         list arguments = ();
@@ -445,7 +546,8 @@ class OdbcTest inherits QUnit::Test {
         }
         tzDs.commit();
 
-        assertEq(0, tzDs.exec("CREATE TABLE " + tableName + " (id int, t timestamp)"));
+        any ret = tzDs.exec("CREATE TABLE " + tableName + " (id int, t timestamp)");
+        assertTrue(ret == 0 || ret.typeCode() == NOTHING);
         tzDs.commit();
 
         assertEq(1, tzDs.exec("INSERT INTO " + tableName + " (id, t) VALUES (%v, %v)", 1, 2016-01-11T00:00:00Z));
@@ -468,11 +570,13 @@ class OdbcTest inherits QUnit::Test {
                 rethrow;
         }
         ds.commit();
-        assertEq(0, ds.exec("CREATE TABLE " + tableName + " (id int, text varchar(48))"));
+
+        any ret = ds.exec("CREATE TABLE " + tableName + " (id int, txt varchar(48))");
+        assertTrue(ret == 0 || ret.typeCode() == NOTHING);
         ds.commit();
 
         SQLStatement stmt = new SQLStatement(ds);
-        stmt.prepare("INSERT INTO " + tableName + " (id, text) VALUES (%v, %v)");
+        stmt.prepare("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)");
 
         stmt.bindArgs((2, ("text", "abc", "lorem")));
         stmt.exec();
@@ -485,7 +589,7 @@ class OdbcTest inherits QUnit::Test {
         stmt.execArgs( ((6,), "sit") );
         stmt.commit();
 
-        hash h = {"id": (2, 2, 2, 4, 5, 6), "text": ("text", "abc", "lorem", "ipsum", "dolor", "sit")};
+        hash h = {"id": (2, 2, 2, 4, 5, 6), "txt": ("text", "abc", "lorem", "ipsum", "dolor", "sit")};
         assertEq(h, ds.select("SELECT * FROM " + tableName));
     }
 }
