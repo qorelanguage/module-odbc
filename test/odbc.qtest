@@ -62,11 +62,6 @@ class OdbcTest inherits QUnit::Test {
                 "values": odbc_bind(ODBCT_DATE, (2016-01-11, 1970-01-01, 2020-05-20, 1987-01-30)),
                 "expected": (2016-01-11, 1970-01-01, 2020-05-20, 1987-01-30),
             },
-            "tstamp": {
-                "type": "TIMESTAMP",
-                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
-                "expected": (),
-            },
         };
         list ColumnNamesAndTypes;
 
@@ -141,6 +136,11 @@ class OdbcTest inherits QUnit::Test {
                 "values": (2016-01-11, 2012-01-11, 2016-01-30, 1970-01-11),
                 "expected": (2016-00-00, 2012-00-00, 2016-00-00, 1970-00-00),
             },
+            "tstamp": {
+                "type": "TIMESTAMP",
+                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
+                "expected": (),
+            },
         };
 
         # PostgreSQL-specific types.
@@ -170,6 +170,11 @@ class OdbcTest inherits QUnit::Test {
                 "type": "TIME",
                 "values": odbc_bind(ODBCT_TIME, (00:00:00Z, 05:23:17Z, 03:59:20Z, 14:15:16Z)),
                 "expected": (0s, 5*60m+23m+17s, 3*60m+59m+20s, 14*60m+15m+16s),
+            },
+            "pgtstamp": {
+                "type": "TIMESTAMP",
+                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
+                "expected": (),
             },
         };
 
@@ -240,12 +245,90 @@ class OdbcTest inherits QUnit::Test {
                 "type": "BINARY_DOUBLE",
                 "values": (1.72, 3.1456789765432, 0.0, -2.7218281828),
             },
+            "oratstamp": {
+                "type": "TIMESTAMP",
+                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
+                "expected": (),
+            },
+        };
+
+        # MSSQL-specific types.
+        hash MssqlColumns = {
+            "c": {
+                "type": "CHAR(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
+            "bin": {
+                "type": "BINARY(64)",
+                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+                "expected": (),
+            },
+            "vbin": {
+                "type": "VARBINARY(64)",
+                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+            },
+            "msblob": {
+                "type": "BLOB(64)",
+                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+            },
+            "msbool": {
+                "type": "BOOLEAN",
+                "values": (True, False, True, True),
+                "expected": (1, 0, 1, 1),
+            },
+            "mstext": {
+                "type": "TEXT(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
+            "bint": {
+                "type": "BIGINT",
+                "values": (2200100100, -9223372036854775807, 0, 9223372036854775807),
+            },
+            "tint": {
+                "type": "TINYINT",
+                "values": (1, 0, 127, -128),
+            },
+            /*"tintunsig": {
+                "type": "TINYINT UNSIGNED",
+                "values": (1, 0, 127, 255),
+            },*/
+            "mint": {
+                "type": "MEDIUMINT",
+                "values": (1, 0, 8388607, -8388608),
+            },
+            "mintunsig": {
+                "type": "MEDIUMINT UNSIGNED",
+                "values": (1, 0, 127, 16777215),
+            },
+            /*"intunsig": {
+                "type": "INTEGER UNSIGNED",
+                "values": (1, 0, 127, 4294967295),
+            },*/
+            /*"mysqlbit": {
+                "type": "BIT",
+                "values": (0, 1, 1, 0),
+            },*/
+            "tm": {
+                "type": "TIME",
+                "values": odbc_bind(ODBCT_TIME, (00:00:00Z, 05:23:17Z, 03:59:20Z, 14:15:16Z)),
+                "expected": (0s, 5*60m+23m+17s, 3*60m+59m+20s, 14*60m+15m+16s),
+            },
+            "dtime": {
+                "type": "DATETIME",
+                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
+                "expected": (),
+            },
         };
     }
 
     private {
         *Datasource ds;
         const tableName = "odbc_test_table";
+        bool mysqlDB = False;
+        bool pgsqlDB = False;
+        bool oracleDB = False;
+        bool mssqlDB = False;
+        bool sybaseDB = False;
     }
 
     constructor() : QUnit::Test("OdbcTest", "1.0", \ARGV) {
@@ -287,6 +370,14 @@ class OdbcTest inherits QUnit::Test {
         }
     }
 
+    string getVersionString(int version) {
+        int major = version / 1000000;
+        version -= major * 1000000;
+        int minor = version / 10000;
+        version -= minor * 10000;
+        return sprintf("%d.%d.%d", major, minor, version);
+    }
+
     initDatasource() {
         connStr = ENV.QORE_DB_CONNSTR_ODBC;
         if (!connStr) {
@@ -300,7 +391,11 @@ class OdbcTest inherits QUnit::Test {
             exit(1);
         }
         ds.open();
-        printf("ver: %y\n", ds.getServerVersion());
+
+        int serverVer = ds.getServerVersion();
+        int clientVer = ds.getClientVersion();
+        printf("server version: %s (%d)\n", getVersionString(serverVer), serverVer);
+        printf("client version: %s (%d)\n", getVersionString(clientVer), clientVer);
     }
 
     basicTest() {
@@ -317,25 +412,26 @@ class OdbcTest inherits QUnit::Test {
                 rethrow;
         }
         ds.commit();
-        any ret = ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, text varchar(128))");
+
+        any ret = ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, txt varchar(128))");
         assertTrue(ret == 0 || ret.typeCode() == NOTHING);
         ds.commit();
 
-        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (1, 'abcdef123456')"));
+        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (1, 'abcdef123456')"));
         ds.commit();
 
-        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (%v, %v)", 2, "test 789 abc lorem ipsum"));
+        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 2, "test 789 abc lorem ipsum"));
         ds.commit();
 
         assertThrows("DBI:ODBC:BIND-ERROR", "not enough parameters passed for binding",
-            sub() { ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (%v, %v)", 3); });
+            sub() { ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 3); });
         assertThrows("DBI:ODBC:BIND-ERROR", "hash parameter not in correct format for odbc_bind",
-            sub() { ds.exec("INSERT INTO " + tableName + " (id, text) VALUES (%v, %v)", 3, {}); });
+            sub() { ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 3, {}); });
 
         assertThrows("DBI:ODBC:EXEC-ERROR", "error during statement execution", sub() { ds.exec("bla bla bla"); });
 
-        hash results1 = {"id": (1, 2), "text": ("abcdef123456", "test 789 abc lorem ipsum")};
-        list results2 = ({"id": 1, "text": "abcdef123456"}, {"id": 2, "text": "test 789 abc lorem ipsum"});
+        hash results1 = {"id": (1, 2), "txt": ("abcdef123456", "test 789 abc lorem ipsum")};
+        list results2 = ({"id": 1, "txt": "abcdef123456"}, {"id": 2, "txt": "test 789 abc lorem ipsum"});
 
         assertEq(results1, ds.exec("SELECT * FROM " + tableName));
         assertEq(results1, ds.select("SELECT * FROM " + tableName));
@@ -345,18 +441,8 @@ class OdbcTest inherits QUnit::Test {
     }
 
     prepareTypesTest() {
-        for (int i = 0; i < Columns.tstamp.values.size(); i++) {
-            push Columns.tstamp.expected, utcTz.date(Columns.tstamp.values[i]);
-        }
-
         string typesTable = "odbc_types_test";
         try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
-
-        bool mysqlDB = False;
-        bool pgsqlDB = False;
-        bool oracleDB = False;
-        bool mssqlDB = False;
-        bool sybaseDB = False;
 
         # Test if connected to a MySQL database.
         try { # LINESTRING is a MySQL-only datatype.
@@ -436,6 +522,11 @@ class OdbcTest inherits QUnit::Test {
                         push Columns.dtime.expected, utcTz.date(Columns.dtime.values[i]);
                     }
                 }
+                else if (mysql.getKey() == "tstamp") {
+                    for (int i = 0; i < Columns.tstamp.values.size(); i++) {
+                        push Columns.tstamp.expected, utcTz.date(Columns.tstamp.values[i]);
+                    }
+                }
             }
         }
 
@@ -453,6 +544,12 @@ class OdbcTest inherits QUnit::Test {
 
                 # Add the type to the typesTest Columns.
                 Columns{pgsql.getKey()} = pgsql.getValue();
+
+                if (pgsql.getKey() == "pgtstamp") {
+                    for (int i = 0; i < Columns.pgtstamp.values.size(); i++) {
+                        push Columns.pgtstamp.expected, utcTz.date(Columns.pgtstamp.values[i]);
+                    }
+                }
             }
         }
 
@@ -470,6 +567,35 @@ class OdbcTest inherits QUnit::Test {
 
                 # Add the type to the typesTest Columns.
                 Columns{oracle.getKey()} = oracle.getValue();
+
+                if (oracle.getKey() == "oratstamp") {
+                    for (int i = 0; i < Columns.oratstamp.values.size(); i++) {
+                        push Columns.oratstamp.expected, utcTz.date(Columns.oratstamp.values[i]);
+                    }
+                }
+            }
+        }
+
+        # Try additional MSSQL types.
+        if (mssqlDB) {
+            string mssqlTable = "mssql_types_test";
+            try { ds.exec("DROP TABLE " + mssqlTable); } catch (e) {}
+            HashIterator mssql(OracleColumns);
+            while (mssql.next()) {
+                try {
+                    ds.exec("CREATE TABLE " + mssqlTable + " (" + mssql.getKey() + " " + mssql.getValue().type + ")");
+                }
+                catch (hash ex) { continue; }
+                try { ds.exec("DROP TABLE " + mssqlTable); } catch (e) {}
+
+                # Add the type to the typesTest Columns.
+                Columns{mssql.getKey()} = mssql.getValue();
+
+                if (mssql.getKey() == "dtime") {
+                    for (int i = 0; i < Columns.dtime.values.size(); i++) {
+                        push Columns.dtime.expected, utcTz.date(Columns.dtime.values[i]);
+                    }
+                }
             }
         }
 
@@ -546,7 +672,7 @@ class OdbcTest inherits QUnit::Test {
         }
         tzDs.commit();
 
-        any ret = tzDs.exec("CREATE TABLE " + tableName + " (id int, t timestamp)");
+        any ret = tzDs.exec("CREATE TABLE " + tableName + " (id int, t " + (mssqlDB ? "datetime)" : "timestamp)"));
         assertTrue(ret == 0 || ret.typeCode() == NOTHING);
         tzDs.commit();
 
