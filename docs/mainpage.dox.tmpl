@@ -12,9 +12,9 @@
 
     @section odbcintro Introduction to the ODBC Module
 
-    The odbc module provides an ODBC driver to Qore's DBI system, allowing Qore programs to access many different databases using the ODBC interface through the Datasource, DatasourcePool, and SQLStatement classes.
+    The odbc module provides an ODBC driver to Qore's DBI system, allowing Qore programs to access many different databases using the ODBC interface through the \c Datasource, \c DatasourcePool, and \c SQLStatement classes.
 
-    This module is released under the MIT license (see COPYING.txt in the source distribution for more information).
+    This module is released under the MIT license (see LICENSE.txt in the source distribution for more information).
     .
     The module is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the %Qore library was initialized).
 
@@ -46,19 +46,17 @@ Datasource db = new Datasource(SQL::DSODBC, user, pass, dsn, "UTF8");
 
     The driver employs efficient binary bindings for all non-text data types and fully supports multidimensional arrays when selecting and binding by value.
 
-    The Datasource::getServerVersion() method is implemented for this driver and returns an integer giving the major, minor, and sub version numbers in a single integer according to the following formula:
+    The \c Datasource::getServerVersion() method is implemented for this driver and returns an integer giving the major, minor, and sub version numbers in a single integer according to the following formula:
 
     @verbatim
 major_version * 1000000 + minor_version * 10000 + sub_version
     @endverbatim
 
-    (For example: \c 5030025 = <tt>5.3.25</tt>).
+    For example: <tt>5030025 => version 5.3.25</tt>
 
-    The Datasource::getClientVersion() method is implemented the same way as Datasource::getServerVersion() and returns the version of the specific ODBC driver used for a connection.
+    The \c Datasource::getClientVersion() method is implemented the same way as \c Datasource::getServerVersion() with the same return value format, and returns the version of the specific ODBC driver used for a connection.
 
-    The return value is equal to the return value of the getServerVersion() method described above.
-
-    (For example: \c 3010672 = <tt>3.1.672</tt>).
+    For example: <tt>3010672 => version 3.1.672</tt>
 
     Like all Qore components, the ODBC DBI driver is thread-safe.
 
@@ -72,8 +70,8 @@ major_version * 1000000 + minor_version * 10000 + sub_version
 
     Options can be set in the \c Datasource or \c DatasourcePool constructors as in the following examples:
     @code
-    Dataource ds("odbc:user/pass@dsn{numeric-numbers}");
-    DataourcePool dsp("odbc:user/pass@{optimal-numbers,DRIVER=MySQL ODBC 5.3 Unicode Driver,Server=192.168.20.1,Database=omquser}");
+    Datasource ds("odbc:user/pass@dsn{numeric-numbers}");
+    DatasourcePool dsp("odbc:user/pass@{optimal-numbers,DRIVER=MySQL ODBC 5.3 Unicode Driver,Server=192.168.20.1,Database=omquser}");
     @endcode
 
     Options are stored separately for each connection.
@@ -170,7 +168,7 @@ major_version * 1000000 + minor_version * 10000 + sub_version
     |\c SQL_INTERVAL_HOUR_TO_MINUTE|\c date(relative)|direct conversion
     |\c SQL_INTERVAL_HOUR_TO_SECOND|\c date(relative)|direct conversion
     |\c SQL_INTERVAL_MINUTE_TO_SECOND|\c date(relative)|direct conversion
-    |\c SQL_GUID|\c string|format: <tt>x-x-x-x.x.x.x.x.x.x.x</tt>
+    |\c SQL_GUID|\c string|format: <tt>xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</tt> (canonical UUID form)
 
     @section odbcstoredprocs Stored Procedures
 
