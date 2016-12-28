@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 2.8.3)
 
 project(qore-odbc-module)
-set(PROJECT_VERSION "1.0")
+
+set (VERSION_MAJOR 1)
+set (VERSION_MINOR 0)
+set (VERSION_PATCH 0)
+
+set(PROJECT_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
@@ -17,7 +22,7 @@ endif ()
 
 add_definitions(-DUNICODE)
 
-FIND_PACKAGE (Qore REQUIRED)
+FIND_PACKAGE (Qore 0.8.13 REQUIRED)
 FIND_PACKAGE (ODBC REQUIRED)
 
 # Check for C++11.
@@ -54,7 +59,6 @@ if (WIN32 AND MINGW AND MSYS)
 endif (WIN32 AND MINGW AND MSYS)
 
 target_include_directories(${module_name} PUBLIC ${ODBC_INCLUDE_DIR})
-
 target_link_libraries(${module_name} ${ODBC_LIBRARIES})
 
 qore_binary_module(${module_name} ${PROJECT_VERSION})

@@ -181,24 +181,22 @@ begin
     return val * 2;
 end;
 $$ language plodbc;
-   @endcode
+    @endcode
 
-   Example Qore code to call this function:
-   @code
+    Example Qore code to call this function:
+    @code
 any result = db.exec("select int_test(%v)", 11);
 printf("%N\n", result);
-   @endcode
+    @endcode
 
-   Resulting in:
-   @verbatim
+    Resulting in:
+    @verbatim
 hash: (1 member)
   int_test : 22
-   @endverbatim
+    @endverbatim
 
     @section odbcreleasenotes Release Notes
 
     @subsection odbcv1_0 odbc Driver Version 1.0
-
     - initial release
-
 */
