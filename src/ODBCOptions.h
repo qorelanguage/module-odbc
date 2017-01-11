@@ -1,6 +1,6 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  EnumNumericOption.h
+  ODBCOptions.h
 
   Qore ODBC module
 
@@ -25,18 +25,37 @@
   DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _QORE_MODULE_ODBC_ENUMNUMERICOPTION_H
-#define _QORE_MODULE_ODBC_ENUMNUMERICOPTION_H
+#ifndef _QORE_MODULE_ODBC_ODBCOPTIONS_H
+#define _QORE_MODULE_ODBC_ODBCOPTIONS_H
 
 namespace odbc {
 
+//! Option used for deciding how BIGINT parameters will be bound.
+enum BigintOption {
+    EBO_NATIVE = 0, // bind BIGINT parameters as native SQL_BIGINT
+    EBO_STRING // bind BIGINT parameters as strings
+};
+
+//! Option used for deciding how NUMERIC results will be returned.
 enum NumericOption {
     ENO_OPTIMAL = 0,
     ENO_STRING,
     ENO_NUMERIC // aka number
 };
 
+struct ODBCOptions {
+public:
+    ODBCOptions() : bigint(EBO_NATIVE), numeric(ENO_OPTIMAL) {}
+    ODBCOptions(BigintOption bo, NumericOption no) : bigint(bo), numeric(no) {}
+
+    //! Option used for deciding how BIGINT parameters will be bound.
+    BigintOption bigint;
+
+    //! Option used for deciding how NUMERIC results will be returned.
+    NumericOption numeric;
+};
+
 } // namespace odbc
 
-#endif // _QORE_MODULE_ODBC_ENUMNUMERICOPTION_H
+#endif // _QORE_MODULE_ODBC_ODBCOPTIONS_H
 
