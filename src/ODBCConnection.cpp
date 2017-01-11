@@ -48,7 +48,6 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     ds(d),
     serverTz(0),
     connected(false),
-    optNumeric(ENO_OPTIMAL),
     clientVer(0),
     serverVer(0)
 {
@@ -199,15 +198,23 @@ AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink*
 
 int ODBCConnection::setOption(const char* opt, const AbstractQoreNode* val, ExceptionSink* xsink) {
     if (!strcasecmp(opt, DBI_OPT_NUMBER_OPT)) {
-        optNumeric = ENO_OPTIMAL;
+        options.numeric = ENO_OPTIMAL;
         return 0;
     }
     if (!strcasecmp(opt, DBI_OPT_NUMBER_STRING)) {
-        optNumeric = ENO_STRING;
+        options.numeric = ENO_STRING;
         return 0;
     }
     if (!strcasecmp(opt, DBI_OPT_NUMBER_NUMERIC)) {
-        optNumeric = ENO_NUMERIC;
+        options.numeric = ENO_NUMERIC;
+        return 0;
+    }
+    if (!strcasecmp(opt, OPT_BIGINT_NATIVE)) {
+        options.bigint = EBO_NATIVE;
+        return 0;
+    }
+    if (!strcasecmp(opt, OPT_BIGINT_STRING)) {
+        options.bigint = EBO_STRING;
         return 0;
     }
 
@@ -215,15 +222,23 @@ int ODBCConnection::setOption(const char* opt, const AbstractQoreNode* val, Exce
 }
 
 AbstractQoreNode* ODBCConnection::getOption(const char* opt) {
-    assert(optNumeric == ENO_OPTIMAL || optNumeric == ENO_STRING);
+    assert(options.numeric == ENO_OPTIMAL || options.numeric == ENO_STRING || options.numeric == ENO_NUMERIC);
+    assert(options.bigint == EBO_NATIVE || options.bigint == EBO_STRING);
+
     if (!strcasecmp(opt, DBI_OPT_NUMBER_OPT))
-        return get_bool_node(optNumeric == ENO_OPTIMAL);
+        return get_bool_node(options.numeric == ENO_OPTIMAL);
 
     if (!strcasecmp(opt, DBI_OPT_NUMBER_STRING))
-        return get_bool_node(optNumeric == ENO_STRING);
+        return get_bool_node(options.numeric == ENO_STRING);
 
     if (!strcasecmp(opt, DBI_OPT_NUMBER_NUMERIC))
-        return get_bool_node(optNumeric == ENO_NUMERIC);
+        return get_bool_node(options.numeric == ENO_NUMERIC);
+
+    if (!strcasecmp(opt, OPT_BIGINT_NATIVE))
+        return get_bool_node(options.bigint == EBO_NATIVE);
+
+    if (!strcasecmp(opt, OPT_BIGINT_STRING))
+        return get_bool_node(options.bigint == EBO_STRING);
 
     return 0;
 }
@@ -244,19 +259,27 @@ void ODBCConnection::handleDbcError(const char* err, const char* desc, Exception
 int ODBCConnection::parseOptions(ExceptionSink* xsink) {
     ConstHashIterator hi(ds->getConnectOptions());
     while (hi.next()) {
-        if (strcmp("optimal-numbers", hi.getKey()) == 0) {
-            optNumeric = ENO_OPTIMAL;
+        if (strcmp(DBI_OPT_NUMBER_OPT, hi.getKey()) == 0) {
+            options.numeric = ENO_OPTIMAL;
             continue;
         }
-        if (strcmp("string-numbers", hi.getKey()) == 0) {
-            optNumeric = ENO_STRING;
+        if (strcmp(DBI_OPT_NUMBER_STRING, hi.getKey()) == 0) {
+            options.numeric = ENO_STRING;
             continue;
         }
-        if (strcmp("numeric-numbers", hi.getKey()) == 0) {
-            optNumeric = ENO_NUMERIC;
+        if (strcmp(DBI_OPT_NUMBER_NUMERIC, hi.getKey()) == 0) {
+            options.numeric = ENO_NUMERIC;
             continue;
         }
-        if (strcmp("qore-timezone", hi.getKey()) == 0) {
+        if (strcmp(OPT_BIGINT_NATIVE, hi.getKey()) == 0) {
+            options.bigint = EBO_NATIVE;
+            continue;
+        }
+        if (strcmp(OPT_BIGINT_STRING, hi.getKey()) == 0) {
+            options.bigint = EBO_STRING;
+            continue;
+        }
+        if (strcmp(OPT_QORE_TIMEZONE, hi.getKey()) == 0) {
             const AbstractQoreNode* val = hi.getValue();
             if (val->getType() != NT_STRING) {
                 xsink->raiseException("DBI:ODBC:OPTION-ERROR", "non-string value passed for the 'qore-timezone' option");
@@ -290,13 +313,17 @@ int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsin
             continue;
 
         // Skip module-specific (non-ODBC) options.
-        if (strcmp("optimal-numbers", hi.getKey()) == 0)
+        if (strcmp(DBI_OPT_NUMBER_OPT, hi.getKey()) == 0)
             continue;
-        if (strcmp("string-numbers", hi.getKey()) == 0)
+        if (strcmp(DBI_OPT_NUMBER_STRING, hi.getKey()) == 0)
             continue;
-        if (strcmp("numeric-numbers", hi.getKey()) == 0)
+        if (strcmp(DBI_OPT_NUMBER_NUMERIC, hi.getKey()) == 0)
             continue;
-        if (strcmp("qore-timezone", hi.getKey()) == 0)
+        if (strcmp(OPT_BIGINT_NATIVE, hi.getKey()) == 0)
+            continue;
+        if (strcmp(OPT_BIGINT_STRING, hi.getKey()) == 0)
+            continue;
+        if (strcmp(OPT_QORE_TIMEZONE, hi.getKey()) == 0)
             continue;
 
         // Append options to the connection string.

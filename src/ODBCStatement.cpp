@@ -43,7 +43,7 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
     conn(c),
     serverEnc(0),
     serverTz(conn->getServerTimezone()),
-    optNumeric(conn->getNumericOption()),
+    options(conn->getOptions()),
     affectedRowCount(0),
     readRows(0),
     paramCountInSql(0),
@@ -62,7 +62,7 @@ ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     conn(static_cast<ODBCConnection*>(ds->getPrivateData())),
     serverEnc(0),
     serverTz(conn->getServerTimezone()),
-    optNumeric(conn->getNumericOption()),
+    options(conn->getOptions()),
     affectedRowCount(0),
     readRows(0),
     paramCountInSql(0),
@@ -712,9 +712,20 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
                 break;
             }
             case NT_INT: {
-                const int64* ival = &(reinterpret_cast<const QoreBigIntNode*>(arg)->val);
-                ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_SBIGINT,
-                    SQL_BIGINT, BIGINT_COLSIZE, 0, const_cast<int64*>(ival), sizeof(int64), 0);
+                if (options.bigint == EBO_NATIVE) {
+                    const int64* ival = &(reinterpret_cast<const QoreBigIntNode*>(arg)->val);
+                    ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_SBIGINT,
+                        SQL_BIGINT, BIGINT_COLSIZE, 0, const_cast<int64*>(ival), sizeof(int64), 0);
+                }
+                else if (options.bigint == EBO_STRING) {
+                    QoreStringValueHelper vh(arg, QCS_USASCII, xsink);
+                    if (*xsink)
+                        return -1;
+                    qore_size_t len = vh->strlen();
+                    SQLLEN* indPtr = paramHolder.addLength(len);
+                    char* cstr = paramHolder.addChars(vh.giveBuffer());
+                    ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, cstr, len, indPtr);
+                }
                 break;
             }
             case NT_FLOAT: {
@@ -1020,11 +1031,21 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
             break;
         }
         case NT_INT: {
-            int64* array;
-            if (createArrayFromIntList(lst, array, indArray, xsink))
-                return -1;
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_SBIGINT,
-                SQL_BIGINT, BIGINT_COLSIZE, 0, array, sizeof(int64), indArray);
+            if (options.bigint == EBO_NATIVE) {
+                int64* array;
+                if (createArrayFromIntList(lst, array, indArray, xsink))
+                    return -1;
+                ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_SBIGINT,
+                    SQL_BIGINT, BIGINT_COLSIZE, 0, array, sizeof(int64), indArray);
+            }
+            else if (options.bigint == EBO_STRING) {
+                char* array;
+                qore_size_t maxlen;
+                if (createStrArrayFromIntList(lst, array, indArray, maxlen, xsink))
+                    return -1;
+                ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_CHAR,
+                    SQL_CHAR, maxlen, 0, array, maxlen, indArray);
+            }
             break;
         }
         case NT_FLOAT: {
@@ -1143,11 +1164,23 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
             break;
         }
         case NT_INT: {
-            int64* array = createArrayFromInt(reinterpret_cast<const QoreBigIntNode*>(arg), xsink);
-            if (*xsink || !array)
-                return -1;
-            ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_SBIGINT,
-                SQL_BIGINT, BIGINT_COLSIZE, 0, array, sizeof(int64), 0);
+            if (options.bigint == EBO_NATIVE) {
+                int64* array = createArrayFromInt(reinterpret_cast<const QoreBigIntNode*>(arg), xsink);
+                if (*xsink || !array)
+                    return -1;
+                ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_SBIGINT,
+                    SQL_BIGINT, BIGINT_COLSIZE, 0, array, sizeof(int64), 0);
+            }
+            else if (options.bigint == EBO_STRING) {
+                qore_size_t len;
+                char* array = createStrArrayFromInt(reinterpret_cast<const QoreBigIntNode*>(arg), len, xsink);
+                if (*xsink || !array)
+                    return -1;
+                SQLLEN* indArray = createIndArray(len, xsink);
+                if (*xsink || !indArray)
+                    return -1;
+                ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, array, len, indArray);
+            }
             break;
         }
         case NT_FLOAT: {
@@ -2561,6 +2594,49 @@ int ODBCStatement::createArrayFromIntList(const QoreListNode* arg, int64*& array
     return 0;
 }
 
+int ODBCStatement::createStrArrayFromIntList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink) {
+    char** stringArray = arrayHolder.addCharArray(xsink);
+    if (!stringArray)
+        return -1;
+    indArray = arrayHolder.addIndArray(xsink);
+    if (!indArray)
+        return -1;
+
+    maxlen = 0;
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    for (qore_size_t i = 0; i < arraySize; i++) {
+        const QoreBigIntNode* n = reinterpret_cast<const QoreBigIntNode*>(arg->retrieve_entry(i));
+        if (!n) {
+            indArray[i] = SQL_NULL_DATA;
+            continue;
+        }
+
+        QoreStringValueHelper vh(n, QCS_USASCII, xsink);
+        if (*xsink)
+            return -1;
+        qore_size_t len = vh->strlen();
+        stringArray[i] = vh.giveBuffer();
+        indArray[i] = len;
+        if (len > maxlen)
+            maxlen = len;
+    }
+
+    // We have to create one big array and put all the strings in it one after another.
+    array = paramHolder.addChars(new (std::nothrow) char[arraySize * maxlen]);
+    if (!array) {
+        xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*maxlen);
+        return -1;
+    }
+    for (qore_size_t i = 0; i < arraySize; i++) {
+        if (indArray[i] == 0 || indArray[i] == SQL_NULL_DATA) {
+            array[i*maxlen] = '\0';
+            continue;
+        }
+        memcpy((array + i*maxlen), stringArray[i], indArray[i]);
+    }
+    return 0;
+}
+
 int ODBCStatement::createArrayFromFloatList(const QoreListNode* arg, double*& array, SQLLEN*& indArray, ExceptionSink* xsink) {
     array = arrayHolder.addFloatArray(xsink);
     if (!array)
@@ -2675,6 +2751,24 @@ int64* ODBCStatement::createArrayFromInt(const QoreBigIntNode* arg, ExceptionSin
     qore_size_t arraySize = arrayHolder.getArraySize();
     for (qore_size_t i = 0; i < arraySize; i++)
         array[i] = val;
+    return array;
+}
+
+char* ODBCStatement::createStrArrayFromInt(const QoreBigIntNode* arg, qore_size_t& len, ExceptionSink* xsink) {
+    QoreStringValueHelper vh(arg, QCS_USASCII, xsink);
+    if (*xsink)
+        return 0;
+    len = vh->strlen();
+    qore_size_t arraySize = arrayHolder.getArraySize();
+    char* val = paramHolder.addChars(vh.giveBuffer());
+    char* array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
+    if (!array) {
+        xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*len);
+        return 0;
+    }
+    for (qore_size_t i = 0; i < arraySize; i++)
+        memcpy((array + i*len), val, len);
+
     return array;
 }
 

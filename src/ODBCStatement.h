@@ -41,8 +41,8 @@
 
 #include <qore/Qore.h>
 
-#include "EnumNumericOption.h"
 #include "ErrorHelper.h"
+#include "ODBCOptions.h"
 #include "ODBCResultColumn.h"
 #include "ParamArrayHolder.h"
 #include "ParamHolder.h"
@@ -220,8 +220,8 @@ private:
     //! Server timezone used for the date/time input and output parameters.
     const AbstractQoreZoneInfo* serverTz;
 
-    //! Option used for deciding how NUMERIC results will be returned.
-    NumericOption optNumeric;
+    //! Options regarding parameters and results.
+    ODBCOptions options;
 
     //! Count of rows affected by the executed UPDATE, INSERT or DELETE statements.
     SQLLEN affectedRowCount;
@@ -686,6 +686,17 @@ private:
      */
     DLLLOCAL int createArrayFromIntList(const QoreListNode* arg, int64*& array, SQLLEN*& indArray, ExceptionSink* xsink);
 
+    //! Create a new char array filled with stringified int values from the passed Qore list.
+    /** @param arg list of Qore ints used to fill the array
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
+        @param maxlen maximum length in bytes of the strings will be written here
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int createStrArrayFromIntList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+
     //! Create a double array filled with Qore floats from the passed Qore list.
     /** @param arg list of Qore floats used to fill the array
         @param array pointer to the created array will be written here (do not delete)
@@ -754,6 +765,15 @@ private:
         @return pointer to the created array (do not delete) or 0 in case of error
      */
     DLLLOCAL int64* createArrayFromInt(const QoreBigIntNode* arg, ExceptionSink* xsink);
+
+    //! Create a new char array filled with the passed stringified int.
+    /** @param arg int used to fill the array
+        @param len size in bytes of the string will be written here
+        @param xsink exception sink
+
+        @return pointer to the created array (do not delete) or 0 in case of error
+     */
+    DLLLOCAL char* createStrArrayFromInt(const QoreBigIntNode* arg, qore_size_t& len, ExceptionSink* xsink);
 
     //! Create a double array filled with the passed Qore float value.
     /** @param arg Qore float used for initializing the array values
@@ -1068,7 +1088,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             char val[128];
             ret = SQLGetData(stmt, column, SQL_C_CHAR, val, 128, &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                if (optNumeric == ENO_OPTIMAL) {
+                if (options.numeric == ENO_OPTIMAL) {
                     char* dot = strchr(val, '.');
                     if (!dot) {
                         errno = 0;
@@ -1082,7 +1102,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
                         return new QoreBigIntNode(strtoll(val, 0, 10));
                     return new QoreNumberNode(val);
                 }
-                else if (optNumeric == ENO_STRING) {
+                else if (options.numeric == ENO_STRING) {
                     return new QoreStringNode(val, QCS_UTF8);
                 }
                 else {

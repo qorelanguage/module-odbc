@@ -44,9 +44,13 @@
 #include "qore/QoreBigIntNode.h"
 #include "qore/QoreListNode.h"
 
-#include "EnumNumericOption.h"
+#include "ODBCOptions.h"
 
 class AbstractQoreZoneInfo;
+
+#define OPT_BIGINT_NATIVE "bigint-native"    //!< BIGINT values bound as native BIGINT type
+#define OPT_BIGINT_STRING "bigint-string"    //!< BIGINT values bound as strings
+#define OPT_QORE_TIMEZONE "qore-timezone"    //!< timezone used for the connection
 
 namespace odbc {
 
@@ -139,8 +143,8 @@ public:
      */
     DLLLOCAL AbstractQoreNode* getOption(const char* opt);
 
-    //! Get the current value of the numeric option of the connection.
-    DLLLOCAL NumericOption getNumericOption() const { return optNumeric; }
+    //! Get the current options of the connection.
+    DLLLOCAL ODBCOptions getOptions() const { return options; }
 
     //! Return ODBC driver (client) version.
     /** @return version in the form: major*1000000 + minor*10000 + sub
@@ -182,8 +186,8 @@ private:
     //! Whether an ODBC connection has been opened.
     bool connected;
 
-    //! Option used for deciding how NUMERIC results will be returned.
-    NumericOption optNumeric;
+    //! Options regarding parameters and results.
+    ODBCOptions options;
 
     //! Version of the used ODBC DB driver.
     int clientVer;

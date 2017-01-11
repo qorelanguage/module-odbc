@@ -25,6 +25,8 @@
   DEALINGS IN THE SOFTWARE.
 */
 
+#include <memory>
+
 #include <sql.h>
 #include <sqlext.h>
 
@@ -86,20 +88,17 @@ int DBI_ODBC_CAPS =
 
 
 static int odbc_open(Datasource* ds, ExceptionSink* xsink) {
-    odbc::ODBCConnection* conn = new odbc::ODBCConnection(ds, xsink);
-    if (*xsink) {
-        delete conn;
+    std::unique_ptr<odbc::ODBCConnection> conn(new odbc::ODBCConnection(ds, xsink));
+    if (*xsink)
         return -1;
-    }
 
-    ds->setPrivateData((void*)conn);
+    ds->setPrivateData((void*)conn.release());
     return 0;
 }
 
 static int odbc_close(Datasource* ds) {
-    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
+    std::unique_ptr<odbc::ODBCConnection> conn(static_cast<odbc::ODBCConnection*>(ds->getPrivateData()));
     ds->setPrivateData(0);
-    delete conn;
     return 0;
 }
 
