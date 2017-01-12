@@ -181,7 +181,7 @@ private:
     SQLHENV env;
 
     //! ODBC connection handle.
-    SQLHDBC dbConn;
+    SQLHDBC dbc;
 
     //! Whether an ODBC connection has been opened.
     bool connected;
@@ -194,6 +194,8 @@ private:
 
     //! Version of the connected DBMS.
     int serverVer;
+
+    DLLLOCAL void disconnect();
 
     //! Extract ODBC diagnostic and raise a Qore exception.
     /** @param err error "code"

@@ -47,6 +47,8 @@ static SQLINTEGER getUTF8CharCount(const char* str) {
 ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     ds(d),
     serverTz(0),
+    dbc(SQL_NULL_HDBC),
+    env(SQL_NULL_HENV),
     connected(false),
     clientVer(0),
     serverVer(0)
@@ -73,17 +75,17 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     SQLSetEnvAttr(env, SQL_ATTR_ODBC_VERSION, (void*) SQL_OV_ODBC3, 0);
 
     // Allocate a connection handle.
-    ret = SQLAllocHandle(SQL_HANDLE_DBC, env, &dbConn);
+    ret = SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
     if (!SQL_SUCCEEDED(ret)) { // error
         xsink->raiseException("DBI:ODBC:CONNECTION-HANDLE-ERROR", "could not allocate a connection handle");
         return;
     }
 
     // Set connection attributes.
-    SQLSetConnectAttr(dbConn, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, SQL_IS_UINTEGER);
-    SQLSetConnectAttr(dbConn, SQL_ATTR_QUIET_MODE, 0, SQL_IS_POINTER);
-    SQLSetConnectAttr(dbConn, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
-    SQLSetConnectAttr(dbConn, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
+    SQLSetConnectAttr(dbc, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, SQL_IS_UINTEGER);
+    SQLSetConnectAttr(dbc, SQL_ATTR_QUIET_MODE, 0, SQL_IS_POINTER);
+    SQLSetConnectAttr(dbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
+    SQLSetConnectAttr(dbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
 
     // Create ODBC connection string.
     QoreString tempConnStr(QCS_UTF8);
@@ -101,10 +103,10 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     SQLWCHAR* odbcDS = reinterpret_cast<SQLWCHAR*>(const_cast<char*>(connStr->getBuffer()));
 
     // Connect.
-    ret = SQLDriverConnectW(dbConn, 0, odbcDS, getUTF8CharCount(tempConnStr.getBuffer()), 0, 0, 0, SQL_DRIVER_NOPROMPT);
+    ret = SQLDriverConnectW(dbc, 0, odbcDS, getUTF8CharCount(tempConnStr.getBuffer()), 0, 0, 0, SQL_DRIVER_NOPROMPT);
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("could not connect to the datasource; connection string: '%s'");
-        intern::ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
+        intern::ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbc, s);
         xsink->raiseException("DBI:ODBC:CONNECTION-ERROR", s.c_str(), tempConnStr.getBuffer());
         return;
     }
@@ -113,35 +115,30 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     // Get DBMS (server) version.
     char verStr[128]; // Will contain ver in the form "01.02.0034"
     SQLSMALLINT unused;
-    ret = SQLGetInfoA(dbConn, SQL_DBMS_VER, verStr, 128, &unused);
+    ret = SQLGetInfoA(dbc, SQL_DBMS_VER, verStr, 128, &unused);
     if (SQL_SUCCEEDED(ret)) {
         serverVer = parseOdbcVersion(verStr);
     }
 
     // Get ODBC DB driver version.
-    ret = SQLGetInfoA(dbConn, SQL_DRIVER_VER, verStr, 128, &unused);
+    ret = SQLGetInfoA(dbc, SQL_DRIVER_VER, verStr, 128, &unused);
     if (SQL_SUCCEEDED(ret)) {
         clientVer = parseOdbcVersion(verStr);
     }
 }
 
 ODBCConnection::~ODBCConnection() {
-    while (connected) {
-        SQLRETURN ret = SQLDisconnect(dbConn);
-        if (SQL_SUCCEEDED(ret))
-            break;
-        qore_usleep(50*1000); // Sleep in intervals of 50 ms until disconnected.
-    }
+    disconnect();
 
     // Free up allocated handles.
-    if (dbConn != SQL_NULL_HDBC)
-        SQLFreeHandle(SQL_HANDLE_DBC, dbConn);
+    if (dbc != SQL_NULL_HDBC)
+        SQLFreeHandle(SQL_HANDLE_DBC, dbc);
     if (env != SQL_NULL_HENV)
         SQLFreeHandle(SQL_HANDLE_ENV, env);
 }
 
 int ODBCConnection::commit(ExceptionSink* xsink) {
-    SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, dbConn, SQL_COMMIT);
+    SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, dbc, SQL_COMMIT);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleDbcError("DBI:ODBC:COMMIT-ERROR", "could not commit the transaction", xsink);
         return -1;
@@ -150,7 +147,7 @@ int ODBCConnection::commit(ExceptionSink* xsink) {
 }
 
 int ODBCConnection::rollback(ExceptionSink* xsink) {
-    SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, dbConn, SQL_ROLLBACK);
+    SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, dbc, SQL_ROLLBACK);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleDbcError("DBI:ODBC:ROLLBACK-ERROR", "could not rollback the transaction", xsink);
         return -1;
@@ -250,15 +247,39 @@ AbstractQoreNode* ODBCConnection::getOption(const char* opt) {
 }
 
 void ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) {
-    SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, dbConn, &stmt);
+    SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, dbc, &stmt);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleDbcError("DBI:ODBC:STATEMENT-ALLOC-ERROR", "could not allocate a statement handle", xsink);
     }
 }
 
+void ODBCConnection::disconnect() {
+    while (connected) {
+        SQLRETURN ret = SQLDisconnect(dbc);
+        if (SQL_SUCCEEDED(ret)) {
+            connected = false;
+        }
+        else {
+            char state[7];
+            memset(state, 0, sizeof(state));
+            intern::ErrorHelper::extractState(SQL_HANDLE_DBC, dbc, state);
+            if (strncmp(state, "08003", 5) == 0) // Connection not open
+                connected = false;
+            else if (strncmp(state, "HY000", 5) == 0) // General error
+                connected = false;
+            else if (strncmp(state, "HYT01", 5) == 0) // Connection timeout expired
+                connected = false;
+            else if (strncmp(state, "HY117", 5) == 0) // Connection is suspended due to unknown transaction state. Only disconnect and read-only functions are allowed.
+                connected = false;
+            else
+                qore_usleep(50*1000); // Sleep in intervals of 50 ms until disconnected.
+        }
+    }
+}
+
 void ODBCConnection::handleDbcError(const char* err, const char* desc, ExceptionSink* xsink) {
     std::string s(desc);
-    intern::ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbConn, s);
+    intern::ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbc, s);
     xsink->raiseException(err, s.c_str());
 }
 
