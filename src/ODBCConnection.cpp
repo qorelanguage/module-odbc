@@ -175,9 +175,12 @@ QoreHashNode* ODBCConnection::selectRow(const QoreString* qstr, const QoreListNo
 }
 
 AbstractQoreNode* ODBCConnection::exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
+    //fprintf(stderr, "ODBCConnection::exec called: '%s'\n", qstr->c_str());
     ODBCStatement res(this, xsink);
-    if (res.exec(qstr, args, xsink))
+    if (res.exec(qstr, args, xsink)) {
+        //fprintf(stderr, "exec failed\n");
         return 0;
+    }
 
     if (res.hasResultData())
         return res.getOutputHash(xsink, false);
@@ -186,9 +189,12 @@ AbstractQoreNode* ODBCConnection::exec(const QoreString* qstr, const QoreListNod
 }
 
 AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink* xsink) {
+    //fprintf(stderr, "ODBCConnection::execRaw called: '%s'\n", qstr->c_str());
     ODBCStatement res(this, xsink);
-    if (res.exec(qstr, xsink))
+    if (res.exec(qstr, xsink)) {
+        //fprintf(stderr, "execRaw failed\n");
         return 0;
+    }
 
     if (res.hasResultData())
         return res.getOutputHash(xsink, false);

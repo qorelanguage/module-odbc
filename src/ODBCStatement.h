@@ -70,6 +70,8 @@ public:
     DLLLOCAL ODBCStatement& operator=(const ODBCStatement& s) = delete;
 
     //! Return how many rows were affected by the executed statement.
+    /** @return count of affected rows; -1 in case the number is not available
+     */
     DLLLOCAL int rowsAffected() const { return affectedRowCount; }
 
     //! Return if there are any results available.

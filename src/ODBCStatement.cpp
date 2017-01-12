@@ -83,9 +83,11 @@ ODBCStatement::~ODBCStatement() {
 }
 
 bool ODBCStatement::hasResultData() {
-    SQLSMALLINT columns;
-    SQLNumResultCols(stmt, &columns);
-    return columns != 0;
+    SQLSMALLINT columns = 0;
+    SQLRETURN ret = SQLNumResultCols(stmt, &columns);
+    if (!SQL_SUCCEEDED(ret)) // error
+        return false;
+    return columns > 0;
 }
 
 QoreHashNode* ODBCStatement::describe(ExceptionSink* xsink) {
@@ -457,13 +459,12 @@ int ODBCStatement::execIntern(const char* str, SQLINTEGER textLen, ExceptionSink
     }
 
     // Get count of affected rows.
-    SQLLEN len = -1;
+    SQLLEN len;
     ret = SQLRowCount(stmt, &len);
-    if (!SQL_SUCCEEDED(ret) || len == -1) { // error
+    if (SQL_SUCCEEDED(ret))
+        affectedRowCount = len;
+    else  // error
         affectedRowCount = -1;
-        return -1;
-    }
-    affectedRowCount = len;
 
     return 0;
 }

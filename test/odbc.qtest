@@ -286,7 +286,7 @@ class OdbcTest inherits QUnit::Test {
             },
             "tint": {
                 "type": "TINYINT",
-                "values": (1, 0, 127, -128),
+                "values": (1, 0, 255, 128),
             },
             /*"tintunsig": {
                 "type": "TINYINT UNSIGNED",
@@ -414,7 +414,7 @@ class OdbcTest inherits QUnit::Test {
         ds.commit();
 
         any ret = ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, txt varchar(128))");
-        assertTrue(ret == 0 || ret.typeCode() == NOTHING);
+        assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);
         ds.commit();
 
         assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (1, 'abcdef123456')"));
@@ -493,6 +493,12 @@ class OdbcTest inherits QUnit::Test {
         catch (hash ex) {
             sybaseDB = False;
         }
+
+        printf("MySQL DB: %s\n", mysqlDB ? "True" : "False");
+        printf("PostgreSQL DB: %s\n", pgsqlDB ? "True" : "False");
+        printf("Oracle DB: %s\n", oracleDB ? "True" : "False");
+        printf("MSSQL DB: %s\n", mssqlDB ? "True" : "False");
+        printf("Sybase DB: %s\n", sybaseDB ? "True" : "False");
 
         # Try additional MySQL types.
         if (mysqlDB) {
@@ -580,7 +586,7 @@ class OdbcTest inherits QUnit::Test {
         if (mssqlDB) {
             string mssqlTable = "mssql_types_test";
             try { ds.exec("DROP TABLE " + mssqlTable); } catch (e) {}
-            HashIterator mssql(OracleColumns);
+            HashIterator mssql(MssqlColumns);
             while (mssql.next()) {
                 try {
                     ds.exec("CREATE TABLE " + mssqlTable + " (" + mssql.getKey() + " " + mssql.getValue().type + ")");
@@ -626,7 +632,7 @@ class OdbcTest inherits QUnit::Test {
 
         string def = sprintf(" (%s)", foldl $1 + ", " + $2, ColumnNamesAndTypes);
         any ret = ds.exec("CREATE TABLE " + tableName + def);
-        assertTrue(ret == 0 || ret.typeCode() == NOTHING);
+        assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);
         ds.commit();
 
         list arguments = ();
@@ -673,7 +679,7 @@ class OdbcTest inherits QUnit::Test {
         tzDs.commit();
 
         any ret = tzDs.exec("CREATE TABLE " + tableName + " (id int, t " + (mssqlDB ? "datetime)" : "timestamp)"));
-        assertTrue(ret == 0 || ret.typeCode() == NOTHING);
+        assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);
         tzDs.commit();
 
         assertEq(1, tzDs.exec("INSERT INTO " + tableName + " (id, t) VALUES (%v, %v)", 1, 2016-01-11T00:00:00Z));
@@ -698,7 +704,7 @@ class OdbcTest inherits QUnit::Test {
         ds.commit();
 
         any ret = ds.exec("CREATE TABLE " + tableName + " (id int, txt varchar(48))");
-        assertTrue(ret == 0 || ret.typeCode() == NOTHING);
+        assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);
         ds.commit();
 
         SQLStatement stmt = new SQLStatement(ds);
