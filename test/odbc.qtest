@@ -65,7 +65,7 @@ class OdbcTest inherits QUnit::Test {
         };
         list ColumnNamesAndTypes;
 
-        # MySQL-specific types.
+        # MySQL-specific types. http://dev.mysql.com/doc/refman/5.7/en/data-types.html
         hash MysqlColumns = {
             "c": {
                 "type": "CHAR(128)",
@@ -143,7 +143,7 @@ class OdbcTest inherits QUnit::Test {
             },
         };
 
-        # PostgreSQL-specific types.
+        # PostgreSQL-specific types. https://www.postgresql.org/docs/9.5/static/datatype.html
         hash PgsqlColumns = {
             "pgc": {
                 "type": "CHAR(128)",
@@ -178,7 +178,7 @@ class OdbcTest inherits QUnit::Test {
             },
         };
 
-        # Oracle-specific types.
+        # Oracle-specific types. https://docs.oracle.com/cd/B28359_01/server.111/b28318/datatype.htm#CNCPT012
         hash OracleColumns = {
             "orablob": {
                 "type": "BLOB",
@@ -252,7 +252,7 @@ class OdbcTest inherits QUnit::Test {
             },
         };
 
-        # MSSQL-specific types.
+        # MSSQL-specific types. https://msdn.microsoft.com/en-us/library/ms187752.aspx
         hash MssqlColumns = {
             "c": {
                 "type": "CHAR(128)",
@@ -288,22 +288,6 @@ class OdbcTest inherits QUnit::Test {
                 "type": "TINYINT",
                 "values": (1, 0, 255, 128),
             },
-            /*"tintunsig": {
-                "type": "TINYINT UNSIGNED",
-                "values": (1, 0, 127, 255),
-            },*/
-            "mint": {
-                "type": "MEDIUMINT",
-                "values": (1, 0, 8388607, -8388608),
-            },
-            "mintunsig": {
-                "type": "MEDIUMINT UNSIGNED",
-                "values": (1, 0, 127, 16777215),
-            },
-            /*"intunsig": {
-                "type": "INTEGER UNSIGNED",
-                "values": (1, 0, 127, 4294967295),
-            },*/
             /*"mysqlbit": {
                 "type": "BIT",
                 "values": (0, 1, 1, 0),
@@ -354,6 +338,8 @@ class OdbcTest inherits QUnit::Test {
             printf("Exception happened during datasource initialization:\n%s: %s\n", ex.err, ex.desc);
             exit(1);
         }
+
+        prepareDBSpecificInit();
     }
 
     globalTearDown() {
@@ -398,49 +384,7 @@ class OdbcTest inherits QUnit::Test {
         printf("client version: %s (%d)\n", getVersionString(clientVer), clientVer);
     }
 
-    basicTest() {
-        {
-            Datasource test = new Datasource("odbc", "abc", "xyz");
-            assertThrows("DBI:ODBC:CONNECTION-ERROR", sub() { test.open(); });
-        }
-
-        try {
-            ds.exec("DROP TABLE " + tableName);
-        }
-        catch (hash ex) {
-            if (ex.err != "DBI:ODBC:EXEC-ERROR")
-                rethrow;
-        }
-        ds.commit();
-
-        any ret = ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, txt varchar(128))");
-        assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);
-        ds.commit();
-
-        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (1, 'abcdef123456')"));
-        ds.commit();
-
-        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 2, "test 789 abc lorem ipsum"));
-        ds.commit();
-
-        assertThrows("DBI:ODBC:BIND-ERROR", "not enough parameters passed for binding",
-            sub() { ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 3); });
-        assertThrows("DBI:ODBC:BIND-ERROR", "hash parameter not in correct format for odbc_bind",
-            sub() { ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 3, {}); });
-
-        assertThrows("DBI:ODBC:EXEC-ERROR", "error during statement execution", sub() { ds.exec("bla bla bla"); });
-
-        hash results1 = {"id": (1, 2), "txt": ("abcdef123456", "test 789 abc lorem ipsum")};
-        list results2 = ({"id": 1, "txt": "abcdef123456"}, {"id": 2, "txt": "test 789 abc lorem ipsum"});
-
-        assertEq(results1, ds.exec("SELECT * FROM " + tableName));
-        assertEq(results1, ds.select("SELECT * FROM " + tableName));
-        assertEq(results2, ds.selectRows("SELECT * FROM " + tableName));
-        ds.exec("DROP TABLE " + tableName);
-        ds.commit();
-    }
-
-    prepareTypesTest() {
+    prepareDBSpecificInit() {
         string typesTable = "odbc_types_test";
         try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
 
@@ -580,6 +524,8 @@ class OdbcTest inherits QUnit::Test {
                     }
                 }
             }
+            Columns.sint.expected = map number($1), Columns.sint.values;
+            Columns.i.expected = map number($1), Columns.i.values;
         }
 
         # Try additional MSSQL types.
@@ -611,8 +557,76 @@ class OdbcTest inherits QUnit::Test {
         }
     }
 
+    hash hashLowercaseKeys(hash h) {
+        hash nh;
+        foreach hash item in (h.pairIterator()) {
+            nh{item.key.lwr()} = item.value;
+        }
+        return nh;
+    }
+
+    list hashListLowercaseKeys(list lst) {
+        for (int i = 0; i < lst.size(); i++) {
+            lst[i] = hashLowercaseKeys(lst[i]);
+        }
+        return lst;
+    }
+
+    basicTest() {
+        {
+            Datasource test = new Datasource("odbc", "abc", "xyz");
+            assertThrows("DBI:ODBC:CONNECTION-ERROR", sub() { test.open(); });
+        }
+
+        try {
+            ds.exec("DROP TABLE " + tableName);
+        }
+        catch (hash ex) {
+            if (ex.err != "DBI:ODBC:EXEC-ERROR")
+                rethrow;
+        }
+        ds.commit();
+
+        any ret = ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, txt varchar(128))");
+        assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);
+        ds.commit();
+
+        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (1, 'abcdef123456')"));
+        ds.commit();
+
+        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 2, "test 789 abc lorem ipsum"));
+        ds.commit();
+
+        assertThrows("DBI:ODBC:BIND-ERROR", "not enough parameters passed for binding",
+            sub() { ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 3); });
+        assertThrows("DBI:ODBC:BIND-ERROR", "hash parameter not in correct format for odbc_bind",
+            sub() { ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 3, {}); });
+
+        assertThrows("DBI:ODBC:EXEC-ERROR", "error during statement execution", sub() { ds.exec("bla bla bla"); });
+
+        hash results1 = {"id": (1, 2), "txt": ("abcdef123456", "test 789 abc lorem ipsum")};
+        list results2 = ({"id": 1, "txt": "abcdef123456"}, {"id": 2, "txt": "test 789 abc lorem ipsum"});
+
+        ret = ds.exec("SELECT * FROM " + tableName);
+        if (oracleDB)
+            ret = hashLowercaseKeys(ret);
+        assertEq(results1, ret);
+
+        ret = ds.select("SELECT * FROM " + tableName);
+        if (oracleDB)
+            ret = hashLowercaseKeys(ret);
+        assertEq(results1, ret);
+
+        ret = ds.selectRows("SELECT * FROM " + tableName);
+        if (oracleDB)
+            ret = hashListLowercaseKeys(ret);
+        assertEq(results2, ret);
+
+        ds.exec("DROP TABLE " + tableName);
+        ds.commit();
+    }
+
     typesTest() {
-        prepareTypesTest();
         printf("\n**************************\n");
         printf("The following columns and their types are tested in the 'types test':\n");
         foreach string col in (ColumnNamesAndTypes.iterator()) {
@@ -659,7 +673,11 @@ class OdbcTest inherits QUnit::Test {
                 results{key} = results{key}.values;
         }
 
-        assertEq(results, ds.exec("SELECT * FROM " + tableName));
+        ret = ds.exec("SELECT * FROM " + tableName);
+        if (oracleDB)
+            ret = hashLowercaseKeys(ret);
+        assertEq(results, ret);
+
         ds.exec("DROP TABLE " + tableName);
         ds.commit();
     }
@@ -688,7 +706,11 @@ class OdbcTest inherits QUnit::Test {
         tzDs.commit();
 
         hash h = {"id": (1, 2), "t": (2016-01-11T09:00:00+09:00, 2016-01-11T09:00:00+09:00)};
-        assertEq(h, tzDs.select("SELECT * FROM " + tableName));
+
+        ret = tzDs.select("SELECT * FROM " + tableName);
+        if (oracleDB)
+            ret = hashLowercaseKeys(ret);
+        assertEq(h, ret);
 
         tzDs.close();
     }
@@ -722,6 +744,12 @@ class OdbcTest inherits QUnit::Test {
         stmt.commit();
 
         hash h = {"id": (2, 2, 2, 4, 5, 6), "txt": ("text", "abc", "lorem", "ipsum", "dolor", "sit")};
-        assertEq(h, ds.select("SELECT * FROM " + tableName));
+        if (oracleDB)
+            h.id = (2n, 2n, 2n, 4n, 5n, 6n);
+
+        ret = ds.select("SELECT * FROM " + tableName);
+        if (oracleDB)
+            ret = hashLowercaseKeys(ret);
+        assertEq(h, ret);
     }
 }
