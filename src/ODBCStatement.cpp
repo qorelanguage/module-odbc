@@ -40,6 +40,7 @@ namespace odbc {
 ///////////////////////////
 
 ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
+    stmt(SQL_NULL_HSTMT),
     conn(c),
     serverEnc(0),
     serverTz(conn->getServerTimezone()),
@@ -54,11 +55,13 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
         serverEnc = QEM.findCreate(dbEnc);
 
     conn->allocStatementHandle(stmt, xsink);
-    if (*xsink)
+    if (*xsink) {
         return;
+    }
 }
 
 ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
+    stmt(SQL_NULL_HSTMT),
     conn(static_cast<ODBCConnection*>(ds->getPrivateData())),
     serverEnc(0),
     serverTz(conn->getServerTimezone()),
@@ -73,13 +76,16 @@ ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
         serverEnc = QEM.findCreate(dbEnc);
 
     conn->allocStatementHandle(stmt, xsink);
-    if (*xsink)
+    if (*xsink) {
         return;
+    }
 }
 
 ODBCStatement::~ODBCStatement() {
-    SQLCloseCursor(stmt);
-    SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+    if (stmt == SQL_NULL_HSTMT) {
+        SQLCloseCursor(stmt);
+        SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+    }
 }
 
 bool ODBCStatement::hasResultData() {
