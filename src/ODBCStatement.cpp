@@ -1101,13 +1101,14 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
 }
 
 int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink) {
+    SQLLEN* indArray;
     SQLRETURN ret;
 
     if (!arg || is_null(arg) || is_nothing(arg)) { // Bind NULL argument.
         char* array = arrayHolder.getNullArray(xsink);
         if (!array)
             return -1;
-        SQLLEN* indArray = arrayHolder.getNullIndArray(xsink);
+        indArray = arrayHolder.getNullIndArray(xsink);
         if (!indArray)
             return -1;
 
@@ -1125,11 +1126,8 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
     switch (ntype) {
         case NT_STRING: {
             qore_size_t len;
-            char* array = createArrayFromString(reinterpret_cast<const QoreStringNode*>(arg), len, xsink);
-            if (*xsink || !array)
-                return -1;
-            SQLLEN* indArray = createIndArray(len, xsink);
-            if (*xsink || !indArray)
+            char* array;
+            if (createArrayFromString(reinterpret_cast<const QoreStringNode*>(arg), array, indArray, len, xsink))
                 return -1;
             if (serverEnc) {
                 ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
@@ -1143,11 +1141,8 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
         }
         case NT_NUMBER: {
             qore_size_t len;
-            char* array = createArrayFromNumber(reinterpret_cast<const QoreNumberNode*>(arg), len, xsink);
-            if (*xsink || !array)
-                return -1;
-            SQLLEN* indArray = createIndArray(len, xsink);
-            if (*xsink || !indArray)
+            char* array;
+            if (createArrayFromNumber(reinterpret_cast<const QoreNumberNode*>(arg), array, indArray, len, xsink))
                 return -1;
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, array, len, indArray);
             break;
@@ -1155,15 +1150,15 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
         case NT_DATE: {
             const DateTimeNode* date = reinterpret_cast<const DateTimeNode*>(arg);
             if (date->isAbsolute()) {
-                TIMESTAMP_STRUCT* array = createArrayFromAbsoluteDate(date, xsink);
-                if (*xsink || !array)
+                TIMESTAMP_STRUCT* array;
+                if (createArrayFromAbsoluteDate(date, array, xsink))
                     return -1;
                 ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP,
                         SQL_TYPE_TIMESTAMP, TYPE_TIMESTAMP_COLSIZE, 9, array, sizeof(TIMESTAMP_STRUCT), 0);
             }
             else {
-                SQL_INTERVAL_STRUCT* array = createArrayFromRelativeDate(date, xsink);
-                if (*xsink || !array)
+                SQL_INTERVAL_STRUCT* array;
+                if (createArrayFromRelativeDate(date, array, xsink))
                     return -1;
                 ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
                         SQL_INTERVAL_DAY_TO_SECOND, INT_DAYSECOND_COLSIZE, 9, array, sizeof(SQL_INTERVAL_STRUCT), 0);
@@ -1172,35 +1167,32 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
         }
         case NT_INT: {
             if (options.bigint == EBO_NATIVE) {
-                int64* array = createArrayFromInt(reinterpret_cast<const QoreBigIntNode*>(arg), xsink);
-                if (*xsink || !array)
+                int64* array;
+                if (createArrayFromInt(reinterpret_cast<const QoreBigIntNode*>(arg), array, xsink))
                     return -1;
                 ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_SBIGINT,
                     SQL_BIGINT, BIGINT_COLSIZE, 0, array, sizeof(int64), 0);
             }
             else if (options.bigint == EBO_STRING) {
                 qore_size_t len;
-                char* array = createStrArrayFromInt(reinterpret_cast<const QoreBigIntNode*>(arg), len, xsink);
-                if (*xsink || !array)
-                    return -1;
-                SQLLEN* indArray = createIndArray(len, xsink);
-                if (*xsink || !indArray)
+                char* array;
+                if (createStrArrayFromInt(reinterpret_cast<const QoreBigIntNode*>(arg), array, indArray, len, xsink))
                     return -1;
                 ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, array, len, indArray);
             }
             break;
         }
         case NT_FLOAT: {
-            double* array = createArrayFromFloat(reinterpret_cast<const QoreFloatNode*>(arg), xsink);
-            if (*xsink || !array)
+            double* array;
+            if (createArrayFromFloat(reinterpret_cast<const QoreFloatNode*>(arg), array, xsink))
                 return -1;
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_DOUBLE,
                 SQL_DOUBLE, DOUBLE_COLSIZE, 0, array, sizeof(double), 0);
             break;
         }
         case NT_BOOLEAN: {
-            int8_t* array = createArrayFromBool(reinterpret_cast<const QoreBoolNode*>(arg), xsink);
-            if (*xsink || !array)
+            int8_t* array;
+            if (createArrayFromBool(reinterpret_cast<const QoreBoolNode*>(arg), array, xsink))
                 return -1;
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_STINYINT,
                 SQL_TINYINT, 3, 0, array, sizeof(int8_t), 0);
@@ -1208,11 +1200,8 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
         }
         case NT_BINARY: {
             qore_size_t len;
-            void* array = createArrayFromBinary(reinterpret_cast<const BinaryNode*>(arg), len, xsink);
-            if (*xsink || !array)
-                return -1;
-            SQLLEN* indArray = createIndArray(len, xsink);
-            if (*xsink || !indArray)
+            void* array;
+            if (createArrayFromBinary(reinterpret_cast<const BinaryNode*>(arg), array, indArray, len, xsink))
                 return -1;
             ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_BINARY,
                     SQL_BINARY, len, 0, array, len, indArray);
@@ -2666,128 +2655,149 @@ int ODBCStatement::createArrayFromFloatList(const QoreListNode* arg, double*& ar
     return 0;
 }
 
-char* ODBCStatement::createArrayFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromString(const QoreStringNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink) {
+    indArray = arrayHolder.addIndArray(xsink);
+    if (!indArray)
+        return -1;
     qore_size_t arraySize = arrayHolder.getArraySize();
     char* val = paramHolder.addChars(getCharsFromString(arg, len, xsink));
     if (!val)
-        return 0;
-    char* array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
+        return -1;
+    array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
     if (!array) {
         xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*len);
-        return 0;
+        return -1;
     }
-    for (qore_size_t i = 0; i < arraySize; i++)
+    for (qore_size_t i = 0; i < arraySize; i++) {
         memcpy((array + i*len), val, len);
+        indArray[i] = len;
+    }
 
-    return array;
+    return 0;
 }
 
-char* ODBCStatement::createArrayFromNumber(const QoreNumberNode* arg, qore_size_t& len, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromNumber(const QoreNumberNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink) {
+    indArray = arrayHolder.addIndArray(xsink);
+    if (!indArray)
+        return -1;
     QoreStringValueHelper vh(arg, QCS_USASCII, xsink);
     if (*xsink)
-        return 0;
+        return -1;
     len = vh->strlen();
     qore_size_t arraySize = arrayHolder.getArraySize();
     char* val = paramHolder.addChars(vh.giveBuffer());
-    char* array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
+    array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
     if (!array) {
         xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*len);
-        return 0;
+        return -1;
     }
-    for (qore_size_t i = 0; i < arraySize; i++)
+    for (qore_size_t i = 0; i < arraySize; i++) {
         memcpy((array + i*len), val, len);
+        indArray[i] = len;
+    }
 
-    return array;
+    return 0;
 }
 
-void* ODBCStatement::createArrayFromBinary(const BinaryNode* arg, qore_size_t& len, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromBinary(const BinaryNode* arg, void*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink) {
+    indArray = arrayHolder.addIndArray(xsink);
+    if (!indArray)
+        return -1;
     len = arg->size();
     qore_size_t arraySize = arrayHolder.getArraySize();
     void* val = const_cast<void*>(arg->getPtr());
-    char* array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
-    if (!array) {
+    char* charArray = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
+    if (!charArray) {
         xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*len);
-        return 0;
+        return -1;
     }
-    for (qore_size_t i = 0; i < arraySize; i++)
-        memcpy((array + i*len), val, len);
+    array = static_cast<void*>(charArray);
+    for (qore_size_t i = 0; i < arraySize; i++) {
+        memcpy((charArray + i*len), val, len);
+        indArray[i] = len;
+    }
 
-    return static_cast<void*>(array);
+    return 0;
 }
 
-TIMESTAMP_STRUCT* ODBCStatement::createArrayFromAbsoluteDate(const DateTimeNode* arg, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromAbsoluteDate(const DateTimeNode* arg, TIMESTAMP_STRUCT*& array, ExceptionSink* xsink) {
     assert(arg->isAbsolute());
     TIMESTAMP_STRUCT val = getTimestampFromDate(arg);
-    TIMESTAMP_STRUCT* array = arrayHolder.addTimestampArray(xsink);
+    array = arrayHolder.addTimestampArray(xsink);
     if (!array)
-        return 0;
+        return -1;
     qore_size_t arraySize = arrayHolder.getArraySize();
     for (qore_size_t i = 0; i < arraySize; i++)
         array[i] = val;
-    return array;
+    return 0;
 }
 
-SQL_INTERVAL_STRUCT* ODBCStatement::createArrayFromRelativeDate(const DateTimeNode* arg, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromRelativeDate(const DateTimeNode* arg, SQL_INTERVAL_STRUCT*& array, ExceptionSink* xsink) {
     assert(arg->isRelative());
     SQL_INTERVAL_STRUCT val = getIntervalFromDate(arg);
-    SQL_INTERVAL_STRUCT* array = arrayHolder.addIntervalArray(xsink);
+    array = arrayHolder.addIntervalArray(xsink);
     if (!array)
-        return 0;
+        return -1;
     qore_size_t arraySize = arrayHolder.getArraySize();
     for (qore_size_t i = 0; i < arraySize; i++)
         array[i] = val;
-    return array;
+    return 0;
 }
 
-int8_t* ODBCStatement::createArrayFromBool(const QoreBoolNode* arg, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromBool(const QoreBoolNode* arg, int8_t*& array, ExceptionSink* xsink) {
     bool val = arg->getValue();
-    int8_t* array = arrayHolder.addTinyintArray(xsink);
+    array = arrayHolder.addTinyintArray(xsink);
     if (!array)
-        return 0;
+        return -1;
     qore_size_t arraySize = arrayHolder.getArraySize();
     for (qore_size_t i = 0; i < arraySize; i++)
         array[i] = val;
-    return array;
+    return 0;
 }
 
-int64* ODBCStatement::createArrayFromInt(const QoreBigIntNode* arg, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromInt(const QoreBigIntNode* arg, int64*& array, ExceptionSink* xsink) {
     int64 val = arg->val;
-    int64* array = arrayHolder.addIntArray(xsink);
+    array = arrayHolder.addIntArray(xsink);
     if (!array)
-        return 0;
+        return -1;
     qore_size_t arraySize = arrayHolder.getArraySize();
     for (qore_size_t i = 0; i < arraySize; i++)
         array[i] = val;
-    return array;
+    return 0;
 }
 
-char* ODBCStatement::createStrArrayFromInt(const QoreBigIntNode* arg, qore_size_t& len, ExceptionSink* xsink) {
+int ODBCStatement::createStrArrayFromInt(const QoreBigIntNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink) {
+    indArray = arrayHolder.addIndArray(xsink);
+    if (!indArray)
+        return -1;
     QoreStringValueHelper vh(arg, QCS_USASCII, xsink);
     if (*xsink)
-        return 0;
+        return -1;
     len = vh->strlen();
     qore_size_t arraySize = arrayHolder.getArraySize();
     char* val = paramHolder.addChars(vh.giveBuffer());
-    char* array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
+    array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
     if (!array) {
         xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*len);
-        return 0;
+        return -1;
     }
-    for (qore_size_t i = 0; i < arraySize; i++)
+    for (qore_size_t i = 0; i < arraySize; i++) {
         memcpy((array + i*len), val, len);
+        indArray[i] = len;
+    }
 
-    return array;
+    return 0;
 }
 
-double* ODBCStatement::createArrayFromFloat(const QoreFloatNode* arg, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromFloat(const QoreFloatNode* arg, double*& array, ExceptionSink* xsink) {
     double val = arg->f;
-    double* array = arrayHolder.addFloatArray(xsink);
+    array = arrayHolder.addFloatArray(xsink);
     if (!array)
-        return 0;
+        return -1;
     qore_size_t arraySize = arrayHolder.getArraySize();
     for (qore_size_t i = 0; i < arraySize; i++)
         array[i] = val;
-    return array;
+    return 0;
 }
 
 SQLLEN* ODBCStatement::createIndArray(SQLLEN indicator, ExceptionSink* xsink) {

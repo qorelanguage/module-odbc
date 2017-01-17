@@ -711,79 +711,92 @@ private:
 
     //! Create a new char array filled with the passed string value.
     /** @param arg string used to fill the array
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param len size in bytes of the string will be written here
         @param xsink exception sink
 
-        @return pointer to the created array (do not delete) or 0 in case of error
+        @return 0 for OK, -1 for error
      */
-    DLLLOCAL char* createArrayFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromString(const QoreStringNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink);
 
     //! Create a new char array filled with the passed stringified number.
     /** @param arg number used to fill the array
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param len size in bytes of the string will be written here
         @param xsink exception sink
 
-        @return pointer to the created array (do not delete) or 0 in case of error
+        @return 0 for OK, -1 for error
      */
-    DLLLOCAL char* createArrayFromNumber(const QoreNumberNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromNumber(const QoreNumberNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink);
 
     //! Create a new void array filled with the passed binary's value.
     /** @param arg binary whose value will be used to fill the array
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param len size in bytes of the binary value
         @param xsink exception sink
 
-        @return pointer to the created array (do not delete) or 0 in case of error
+        @return 0 for OK, -1 for error
      */
-    DLLLOCAL void* createArrayFromBinary(const BinaryNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromBinary(const BinaryNode* arg, void*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink);
 
     //! Create an array of ODBC timestamps initialized with the passed Qore date.
     /** @param arg date used for initializing the timestamps
+        @param array pointer to the created array will be written here (do not delete)
         @param xsink exception sink
 
-        @return pointer to the created array (do not delete) or 0 in case of error
+        @return 0 for OK, -1 for error
      */
-    DLLLOCAL TIMESTAMP_STRUCT* createArrayFromAbsoluteDate(const DateTimeNode* arg, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromAbsoluteDate(const DateTimeNode* arg, TIMESTAMP_STRUCT*& array, ExceptionSink* xsink);
 
     //! Create an array of ODBC interval structures initialized with the passed Qore date.
     /** @param arg date used for initializing the interval structures
+        @param array pointer to the created array will be written here (do not delete)
         @param xsink exception sink
 
-        @return pointer to the created array (do not delete) or 0 in case of error
+        @return 0 for OK, -1 for error
      */
-    DLLLOCAL SQL_INTERVAL_STRUCT* createArrayFromRelativeDate(const DateTimeNode* arg, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromRelativeDate(const DateTimeNode* arg, SQL_INTERVAL_STRUCT*& array, ExceptionSink* xsink);
 
     //! Create a bool array filled with the passed Qore bool value.
     /** @param arg Qore bool used for initializing the array values
+        @param array pointer to the created array will be written here (do not delete)
         @param xsink exception sink
 
-        @return pointer to the created array (do not delete) or 0 in case of error
+        @return 0 for OK, -1 for error
      */
-    DLLLOCAL int8_t* createArrayFromBool(const QoreBoolNode* arg, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromBool(const QoreBoolNode* arg, int8_t*& array, ExceptionSink* xsink);
 
     //! Create an int64 array filled with the passed Qore int value.
     /** @param arg Qore int used for initializing the array values
+        @param array pointer to the created array will be written here (do not delete)
         @param xsink exception sink
 
-        @return pointer to the created array (do not delete) or 0 in case of error
+        @return 0 for OK, -1 for error
      */
-    DLLLOCAL int64* createArrayFromInt(const QoreBigIntNode* arg, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromInt(const QoreBigIntNode* arg, int64*& array, ExceptionSink* xsink);
 
     //! Create a new char array filled with the passed stringified int.
     /** @param arg int used to fill the array
+        @param array pointer to the created array will be written here (do not delete)
+        @param indArray pointer to an accompanying indicator array will be written here (do not delete)
         @param len size in bytes of the string will be written here
         @param xsink exception sink
 
-        @return pointer to the created array (do not delete) or 0 in case of error
+        @return 0 for OK, -1 for error
      */
-    DLLLOCAL char* createStrArrayFromInt(const QoreBigIntNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL int createStrArrayFromInt(const QoreBigIntNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink);
 
     //! Create a double array filled with the passed Qore float value.
     /** @param arg Qore float used for initializing the array values
+        @param array pointer to the created array will be written here (do not delete)
         @param xsink exception sink
 
-        @return pointer to the created array (do not delete) or 0 in case of error
+        @return 0 for OK, -1 for error
      */
-    DLLLOCAL double* createArrayFromFloat(const QoreFloatNode* arg, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromFloat(const QoreFloatNode* arg, double*& array, ExceptionSink* xsink);
 
     //! Create a new indicator array filled with the passed indicator value.
     /** @param indicator value used to fill the array
