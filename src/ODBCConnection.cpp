@@ -50,6 +50,8 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     dbc(SQL_NULL_HDBC),
     env(SQL_NULL_HENV),
     connected(false),
+    isDead(false),
+    activeTransaction(false),
     clientVer(0),
     serverVer(0)
 {
@@ -138,25 +140,54 @@ ODBCConnection::~ODBCConnection() {
 }
 
 int ODBCConnection::commit(ExceptionSink* xsink) {
+    if (isDead) {
+        deadConnectionError(xsink);
+        return -1;
+    }
+
     SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, dbc, SQL_COMMIT);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleDbcError("DBI:ODBC:COMMIT-ERROR", "could not commit the transaction", xsink);
         return -1;
     }
+    activeTransaction = false;
     return 0;
 }
 
 int ODBCConnection::rollback(ExceptionSink* xsink) {
+    if (isDead) {
+        deadConnectionError(xsink);
+        return -1;
+    }
+
     SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, dbc, SQL_ROLLBACK);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleDbcError("DBI:ODBC:ROLLBACK-ERROR", "could not rollback the transaction", xsink);
         return -1;
     }
+    activeTransaction = false;
     return 0;
+}
+
+AbstractQoreNode* ODBCConnection::select(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
+    ODBCStatement res(this, xsink);
+    if (*xsink)
+        return 0;
+
+    if (res.exec(qstr, args, xsink))
+        return 0;
+
+    if (res.hasResultData())
+        return res.getOutputHash(xsink, false);
+
+    return new QoreBigIntNode(res.rowsAffected());
 }
 
 QoreListNode* ODBCConnection::selectRows(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCStatement res(this, xsink);
+    if (*xsink)
+        return 0;
+
     if (res.exec(qstr, args, xsink))
         return 0;
 
@@ -165,6 +196,9 @@ QoreListNode* ODBCConnection::selectRows(const QoreString* qstr, const QoreListN
 
 QoreHashNode* ODBCConnection::selectRow(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCStatement res(this, xsink);
+    if (*xsink)
+        return 0;
+
     if (res.exec(qstr, args, xsink))
         return 0;
 
@@ -174,10 +208,14 @@ QoreHashNode* ODBCConnection::selectRow(const QoreString* qstr, const QoreListNo
 AbstractQoreNode* ODBCConnection::exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     //fprintf(stderr, "ODBCConnection::exec called: '%s'\n", qstr->c_str());
     ODBCStatement res(this, xsink);
+    if (*xsink)
+        return 0;
+
     if (res.exec(qstr, args, xsink)) {
         //fprintf(stderr, "exec failed\n");
         return 0;
     }
+    activeTransaction = true;
 
     if (res.hasResultData())
         return res.getOutputHash(xsink, false);
@@ -188,10 +226,14 @@ AbstractQoreNode* ODBCConnection::exec(const QoreString* qstr, const QoreListNod
 AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink* xsink) {
     //fprintf(stderr, "ODBCConnection::execRaw called: '%s'\n", qstr->c_str());
     ODBCStatement res(this, xsink);
+    if (*xsink)
+        return 0;
+
     if (res.exec(qstr, xsink)) {
         //fprintf(stderr, "execRaw failed\n");
         return 0;
     }
+    activeTransaction = true;
 
     if (res.hasResultData())
         return res.getOutputHash(xsink, false);
@@ -247,6 +289,15 @@ AbstractQoreNode* ODBCConnection::getOption(const char* opt) {
 }
 
 void ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) {
+    checkIfConnectionDead(xsink);
+    if (*xsink)
+        return;
+
+    if (isDead) {
+        deadConnectionError(xsink);
+        return;
+    }
+
     SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, dbc, &stmt);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleDbcError("DBI:ODBC:STATEMENT-ALLOC-ERROR", "could not allocate a statement handle", xsink);
@@ -263,24 +314,57 @@ void ODBCConnection::disconnect() {
             char state[7];
             memset(state, 0, sizeof(state));
             intern::ErrorHelper::extractState(SQL_HANDLE_DBC, dbc, state);
-            if (strncmp(state, "08003", 5) == 0) // Connection not open
+            //fprintf(stderr, "state: %s\n", state);
+            if (strncmp(state, "08003", 5) == 0) { // Connection not open
                 connected = false;
-            else if (strncmp(state, "HY000", 5) == 0) // General error
+            }
+            else if (strncmp(state, "HY000", 5) == 0) { // General error
                 connected = false;
-            else if (strncmp(state, "HYT01", 5) == 0) // Connection timeout expired
+            }
+            else if (strncmp(state, "HYT01", 5) == 0) { // Connection timeout expired
                 connected = false;
-            else if (strncmp(state, "HY117", 5) == 0) // Connection is suspended due to unknown transaction state. Only disconnect and read-only functions are allowed.
+            }
+            else if (strncmp(state, "HY117", 5) == 0) { // Connection is suspended due to unknown transaction state. Only disconnect and read-only functions are allowed.
                 connected = false;
-            else
+            }
+            else if (strncmp(state, "25000", 5) == 0) { // Transaction still active.
+                if (!activeTransaction) {
+                    if (isDead)
+                        isDead = false;
+                    rollback(0);
+                }
+            }
+            else {
                 qore_usleep(50*1000); // Sleep in intervals of 50 ms until disconnected.
+            }
         }
     }
 }
 
+void ODBCConnection::checkIfConnectionDead(ExceptionSink* xsink) {
+    SQLULEN deadAttr = 0;
+    SQLRETURN ret = SQLGetConnectAttr(dbc, SQL_ATTR_CONNECTION_DEAD, reinterpret_cast<SQLPOINTER>(&deadAttr), sizeof(deadAttr), 0);
+    if (SQL_SUCCEEDED(ret)) {
+        if (deadAttr == SQL_CD_TRUE) // Connection is dead.
+            isDead = true;
+    }
+    else { // error
+        handleDbcError("DBI:ODBC:CONNECTION-ERROR", "could not find out if connection is alive", xsink);
+    }
+}
+
 void ODBCConnection::handleDbcError(const char* err, const char* desc, ExceptionSink* xsink) {
+    if (!xsink)
+        return;
     std::string s(desc);
     intern::ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbc, s);
     xsink->raiseException(err, s.c_str());
+}
+
+void ODBCConnection::deadConnectionError(ExceptionSink* xsink) {
+    if (!xsink)
+        return;
+    xsink->raiseException("DBI:ODBC:CONNECTION-DEAD-ERROR", "the connection is dead; create a new one");
 }
 
 int ODBCConnection::parseOptions(ExceptionSink* xsink) {

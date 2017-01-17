@@ -86,6 +86,15 @@ public:
      */
     DLLLOCAL int rollback(ExceptionSink* xsink);
 
+    //! Select from the database.
+    /** @param qstr Qore-style SQL statement
+        @param args SQL parameters
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL AbstractQoreNode* select(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink);
+
     //! Select multiple rows from the database.
     /** @param qstr Qore-style SQL statement
         @param args SQL parameters
@@ -186,6 +195,12 @@ private:
     //! Whether an ODBC connection has been opened.
     bool connected;
 
+    //! Whether the ODBC connection is dead.
+    bool isDead;
+
+    //! Whether a transaction is active.
+    bool activeTransaction;
+
     //! Options regarding parameters and results.
     ODBCOptions options;
 
@@ -195,14 +210,24 @@ private:
     //! Version of the connected DBMS.
     int serverVer;
 
+    //! Disconnect the connection.
     DLLLOCAL void disconnect();
+
+    //! Check if connection is dead.
+    /** Checks if the ODBC connection is dead and optionally modifies isDead variable.
+        @param xsink exception sink
+     */
+    DLLLOCAL void checkIfConnectionDead(ExceptionSink* xsink);
 
     //! Extract ODBC diagnostic and raise a Qore exception.
     /** @param err error "code"
         @param desc error description
         @param xsink exception sink
      */
-    DLLLOCAL void handleDbcError(const char* err, const char* desc, ExceptionSink *xsink);
+    DLLLOCAL void handleDbcError(const char* err, const char* desc, ExceptionSink* xsink);
+
+    //! Throw a CONNECTION-DEAD-ERROR exception via xsink.
+    DLLLOCAL void deadConnectionError(ExceptionSink* xsink);
 
     //! Parse options passed through Datasource.
     /** @param xsink exception sink

@@ -108,7 +108,7 @@ static AbstractQoreNode* odbc_select(Datasource* ds, const QoreString* qstr, con
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
         return 0;
     }
-    return conn->exec(qstr, args, xsink);
+    return conn->select(qstr, args, xsink);
 }
 
 #ifdef _QORE_HAS_DBI_SELECT_ROW
@@ -339,7 +339,7 @@ QoreStringNode *odbc_module_init() {
     qore_dbi_method_list methods;
     methods.add(QDBI_METHOD_OPEN, odbc_open);
     methods.add(QDBI_METHOD_CLOSE, odbc_close);
-    methods.add(QDBI_METHOD_SELECT, odbc_exec);
+    methods.add(QDBI_METHOD_SELECT, odbc_select);
 #ifdef _QORE_HAS_DBI_SELECT_ROW
     methods.add(QDBI_METHOD_SELECT_ROW, odbc_select_row);
 #endif
