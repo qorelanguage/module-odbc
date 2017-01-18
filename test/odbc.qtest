@@ -21,10 +21,6 @@ class OdbcTest inherits QUnit::Test {
 
         # Generally compatible types will be here.
         hash Columns = {
-            "vc": {
-                "type": "VARCHAR(128)",
-                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
-            },
             "sint": {
                 "type": "SMALLINT",
                 "values": (1, 0, 32767, -32768),
@@ -67,16 +63,20 @@ class OdbcTest inherits QUnit::Test {
 
         # MySQL-specific types. http://dev.mysql.com/doc/refman/5.7/en/data-types.html
         hash MysqlColumns = {
-            "c": {
+            "myvc": {
+                "type": "VARCHAR(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
+            "myc": {
                 "type": "CHAR(128)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
             },
-            "bin": {
+            "mybin": {
                 "type": "BINARY(64)",
                 "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
                 "expected": (),
             },
-            "vbin": {
+            "myvbin": {
                 "type": "VARBINARY(64)",
                 "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
             },
@@ -93,11 +93,11 @@ class OdbcTest inherits QUnit::Test {
                 "type": "TEXT(128)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
             },
-            "bint": {
+            "mybint": {
                 "type": "BIGINT",
                 "values": (2200100100, -9223372036854775807, 0, 9223372036854775807),
             },
-            "tint": {
+            "mytint": {
                 "type": "TINYINT",
                 "values": (1, 0, 127, -128),
             },
@@ -105,11 +105,11 @@ class OdbcTest inherits QUnit::Test {
                 "type": "TINYINT UNSIGNED",
                 "values": (1, 0, 127, 255),
             },*/
-            "mint": {
+            "mymint": {
                 "type": "MEDIUMINT",
                 "values": (1, 0, 8388607, -8388608),
             },
-            "mintunsig": {
+            "mymintunsig": {
                 "type": "MEDIUMINT UNSIGNED",
                 "values": (1, 0, 127, 16777215),
             },
@@ -121,22 +121,22 @@ class OdbcTest inherits QUnit::Test {
                 "type": "BIT",
                 "values": (0, 1, 1, 0),
             },*/
-            "tm": {
+            "mytm": {
                 "type": "TIME",
                 "values": odbc_bind(ODBCT_TIME, (00:00:00Z, 05:23:17Z, 03:59:20Z, 14:15:16Z)),
                 "expected": (0s, 5*60m+23m+17s, 3*60m+59m+20s, 14*60m+15m+16s),
             },
-            "dtime": {
+            "mydtime": {
                 "type": "DATETIME",
                 "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
                 "expected": (),
             },
-            "yr": {
+            "myyr": {
                 "type": "YEAR",
                 "values": (2016-01-11, 2012-01-11, 2016-01-30, 1970-01-11),
                 "expected": (2016-00-00, 2012-00-00, 2016-00-00, 1970-00-00),
             },
-            "tstamp": {
+            "mytstamp": {
                 "type": "TIMESTAMP",
                 "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
                 "expected": (),
@@ -145,6 +145,10 @@ class OdbcTest inherits QUnit::Test {
 
         # PostgreSQL-specific types. https://www.postgresql.org/docs/9.5/static/datatype.html
         hash PgsqlColumns = {
+            "pgvc": {
+                "type": "VARCHAR(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+            },
             "pgc": {
                 "type": "CHAR(128)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
@@ -182,47 +186,18 @@ class OdbcTest inherits QUnit::Test {
         hash OracleColumns = {
             "orablob": {
                 "type": "BLOB",
-                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+                "values": (<bead>, binary(), <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+                "expected": (<bead>, NULL, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
             },
             "oraraw": {
                 "type": "RAW(64)",
-                "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
-            },
-            "c": {
-                "type": "CHAR(60)",
-                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
-                "expected": (
-                    "text                                                        ",
-                    "lorem                                                       ",
-                    "Příliš žluťoučký kůň úpěl ďábelské ódy       ",
-                    "ipsum dolor                                                 "
-                ),
-            },
-            "vc2": {
-                "type": "VARCHAR2(128)",
-                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
-            },
-            "nc": {
-                "type": "NCHAR(128)",
-                "values": (
-                    convert_encoding("text", "UTF16"),
-                    convert_encoding("lorem", "UTF16"),
-                    convert_encoding("Příliš žluťoučký kůň úpěl ďábelské ódy", "UTF16"),
-                    convert_encoding("ipsum dolor", "UTF16")
-                ),
-            },
-            "nvc2": {
-                "type": "NVARCHAR2(128)",
-                "values": (
-                    convert_encoding("text", "UTF16"),
-                    convert_encoding("lorem", "UTF16"),
-                    convert_encoding("Příliš žluťoučký kůň úpěl ďábelské ódy", "UTF16"),
-                    convert_encoding("ipsum dolor", "UTF16")
-                ),
+                "values": (<bead>, binary(), <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+                "expected": (<bead>, NULL, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
             },
             "oraclob": {
                 "type": "CLOB",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+                "expected": ("text", "lorem", "Prilis zlutoucky kun upel dabelske ody", "ipsum dolor"),
             },
             "oranclob": {
                 "type": "NCLOB",
@@ -233,15 +208,59 @@ class OdbcTest inherits QUnit::Test {
                     convert_encoding("ipsum dolor", "UTF16")
                 ),
             },
-            "numbr": {
+            "orac": {
+                "type": "CHAR(60)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+                "expected": (
+                    "text                                                        ",
+                    "lorem                                                       ",
+                    "Prilis zlutoucky kun upel dabelske ody       ",
+                    "ipsum dolor                                                 "
+                ),
+            },
+            "oravc": {
+                "type": "VARCHAR(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+                "expected": ("text", "lorem", "Prilis zlutoucky kun upel dabelske ody", "ipsum dolor"),
+            },
+            "oravc2": {
+                "type": "VARCHAR2(128)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+                "expected": ("text", "lorem", "Prilis zlutoucky kun upel dabelske ody", "ipsum dolor"),
+            },
+            "oranc": {
+                "type": "NCHAR(40)",
+                "values": (
+                    convert_encoding("text", "UTF16"),
+                    convert_encoding("lorem", "UTF16"),
+                    convert_encoding("Příliš žluťoučký kůň úpěl ďábelské ódy", "UTF16"),
+                    convert_encoding("ipsum dolor", "UTF16")
+                ),
+                "expected": (
+                    convert_encoding("text                                    ", "UTF16"),
+                    convert_encoding("lorem                                   ", "UTF16"),
+                    convert_encoding("Příliš žluťoučký kůň úpěl ďábelské ódy  ", "UTF16"),
+                    convert_encoding("ipsum dolor                             ", "UTF16")
+                ),
+            },
+            "oranvc2": {
+                "type": "NVARCHAR2(64)",
+                "values": (
+                    convert_encoding("text", "UTF16"),
+                    convert_encoding("lorem", "UTF16"),
+                    convert_encoding("Příliš žluťoučký kůň úpěl ďábelské ódy", "UTF16"),
+                    convert_encoding("ipsum dolor", "UTF16")
+                ),
+            },
+            "oranumbr": {
                 "type": "NUMBER(38,10)",
                 "values": (-12300000.4567891234n, 0.0n, 999888777666.5554443332n, -999888777666.5554443332n),
             },
-            "binflt": {
+            "orabinflt": {
                 "type": "BINARY_FLOAT",
                 "values": (0.00390625, 0.0078125, -0.0078125, 0.0),
             },
-            "bindbl": {
+            "orabindbl": {
                 "type": "BINARY_DOUBLE",
                 "values": (1.72, 3.1456789765432, 0.0, -2.7218281828),
             },
@@ -254,16 +273,32 @@ class OdbcTest inherits QUnit::Test {
 
         # MSSQL-specific types. https://msdn.microsoft.com/en-us/library/ms187752.aspx
         hash MssqlColumns = {
-            "c": {
-                "type": "CHAR(128)",
+            "msvc": {
+                "type": "VARCHAR(64)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+                "expected": (
+                    "text                                                            ",
+                    "lorem                                                           ",
+                    "Příliš žluťoučký kůň úpěl ďábelské ódy           ",
+                    "ipsum dolor                                                     "
+                ),
             },
-            "bin": {
+            "msc": {
+                "type": "CHAR(64)",
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+                "expected": (
+                    "text                                                            ",
+                    "lorem                                                           ",
+                    "Příliš žluťoučký kůň úpěl ďábelské ódy           ",
+                    "ipsum dolor                                                     "
+                ),
+            },
+            "msbin": {
                 "type": "BINARY(64)",
                 "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
                 "expected": (),
             },
-            "vbin": {
+            "msvbin": {
                 "type": "VARBINARY(64)",
                 "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
             },
@@ -280,24 +315,24 @@ class OdbcTest inherits QUnit::Test {
                 "type": "TEXT(128)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
             },
-            "bint": {
+            "msbint": {
                 "type": "BIGINT",
                 "values": (2200100100, -9223372036854775807, 0, 9223372036854775807),
             },
-            "tint": {
+            "mstint": {
                 "type": "TINYINT",
                 "values": (1, 0, 255, 128),
             },
-            /*"mysqlbit": {
+            /*"msbit": {
                 "type": "BIT",
                 "values": (0, 1, 1, 0),
             },*/
-            "tm": {
+            "mstm": {
                 "type": "TIME",
                 "values": odbc_bind(ODBCT_TIME, (00:00:00Z, 05:23:17Z, 03:59:20Z, 14:15:16Z)),
                 "expected": (0s, 5*60m+23m+17s, 3*60m+59m+20s, 14*60m+15m+16s),
             },
-            "dtime": {
+            "msdtime": {
                 "type": "DATETIME",
                 "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
                 "expected": (),
@@ -438,6 +473,11 @@ class OdbcTest inherits QUnit::Test {
             sybaseDB = False;
         }
 
+        if (oracleDB)
+            mysqlDB = False;
+        if (sybaseDB)
+            mssqlDB = False;
+
         printf("MySQL DB: %s\n", mysqlDB ? "True" : "False");
         printf("PostgreSQL DB: %s\n", pgsqlDB ? "True" : "False");
         printf("Oracle DB: %s\n", oracleDB ? "True" : "False");
@@ -459,22 +499,22 @@ class OdbcTest inherits QUnit::Test {
                 # Add the type to the typesTest Columns.
                 Columns{mysql.getKey()} = mysql.getValue();
 
-                if (mysql.getKey() == "bin") {
-                    for (int i = 0; i < Columns.bin.values.size(); i++) {
-                        push Columns.bin.expected, Columns.bin.values[i];
-                        reference exp = \Columns.bin.expected[i];
+                if (mysql.getKey() == "mybin") {
+                    for (int i = 0; i < Columns.mybin.values.size(); i++) {
+                        push Columns.mybin.expected, Columns.mybin.values[i];
+                        reference exp = \Columns.mybin.expected[i];
                         for (int j = exp.size(); j < 64; j++)
                             exp += <00>;
                     }
                 }
-                else if (mysql.getKey() == "dtime") {
-                    for (int i = 0; i < Columns.dtime.values.size(); i++) {
-                        push Columns.dtime.expected, utcTz.date(Columns.dtime.values[i]);
+                else if (mysql.getKey() == "mydtime") {
+                    for (int i = 0; i < Columns.mydtime.values.size(); i++) {
+                        push Columns.mydtime.expected, utcTz.date(Columns.mydtime.values[i]);
                     }
                 }
-                else if (mysql.getKey() == "tstamp") {
-                    for (int i = 0; i < Columns.tstamp.values.size(); i++) {
-                        push Columns.tstamp.expected, utcTz.date(Columns.tstamp.values[i]);
+                else if (mysql.getKey() == "mytstamp") {
+                    for (int i = 0; i < Columns.mytstamp.values.size(); i++) {
+                        push Columns.mytstamp.expected, utcTz.date(Columns.mytstamp.values[i]);
                     }
                 }
             }
@@ -543,9 +583,9 @@ class OdbcTest inherits QUnit::Test {
                 # Add the type to the typesTest Columns.
                 Columns{mssql.getKey()} = mssql.getValue();
 
-                if (mssql.getKey() == "dtime") {
-                    for (int i = 0; i < Columns.dtime.values.size(); i++) {
-                        push Columns.dtime.expected, utcTz.date(Columns.dtime.values[i]);
+                if (mssql.getKey() == "msdtime") {
+                    for (int i = 0; i < Columns.msdtime.values.size(); i++) {
+                        push Columns.msdtime.expected, utcTz.date(Columns.msdtime.values[i]);
                     }
                 }
             }
