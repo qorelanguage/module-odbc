@@ -189,8 +189,8 @@ class OdbcTest inherits QUnit::Test {
                 "values": (<bead>, binary(), <beadaabbccdd>, <1122aabb3344ccdd55667788>),
                 "expected": (<bead>, NULL, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
             },
-            "oraraw": {
-                "type": "RAW(64)",
+            "oralongraw": {
+                "type": "LONG RAW(64)",
                 "values": (<bead>, binary(), <beadaabbccdd>, <1122aabb3344ccdd55667788>),
                 "expected": (<bead>, NULL, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
             },
@@ -327,7 +327,7 @@ class OdbcTest inherits QUnit::Test {
                 "type": "BIT",
                 "values": (0, 1, 1, 0),
             },*/
-            "mstm": {
+            /*"mstm": {
                 "type": "TIME",
                 "values": odbc_bind(ODBCT_TIME, (00:00:00Z, 05:23:17Z, 03:59:20Z, 14:15:16Z)),
                 "expected": (0s, 5*60m+23m+17s, 3*60m+59m+20s, 14*60m+15m+16s),
@@ -336,7 +336,7 @@ class OdbcTest inherits QUnit::Test {
                 "type": "DATETIME",
                 "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
                 "expected": (),
-            },
+            },*/
         };
     }
 
