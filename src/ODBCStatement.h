@@ -1016,7 +1016,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
         case SQL_LONGVARCHAR: {
             char buffer[512];
             buffer[0] = '\0';
-            SimpleRefHolder<QoreStringNode> str(new QoreStringNode("", serverEnc));
+            SimpleRefHolder<QoreStringNode> str(new QoreStringNode("", serverEnc ? serverEnc : QCS_DEFAULT));
             while (true) {
                 ret = SQLGetData(stmt, column, SQL_C_CHAR, buffer, 512, &indicator);
                 if (ret == SQL_NO_DATA) // No (more) data.
