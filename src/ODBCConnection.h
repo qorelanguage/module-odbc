@@ -28,6 +28,8 @@
 #ifndef _QORE_MODULE_ODBC_ODBCCONNECTION_H
 #define _QORE_MODULE_ODBC_ODBCCONNECTION_H
 
+#include <memory>
+
 #include <sql.h>
 #include <sqlext.h>
 
@@ -48,10 +50,6 @@
 
 class AbstractQoreZoneInfo;
 
-#define OPT_BIGINT_NATIVE "bigint-native"    //!< BIGINT values bound as native BIGINT type
-#define OPT_BIGINT_STRING "bigint-string"    //!< BIGINT values bound as strings
-#define OPT_QORE_TIMEZONE "qore-timezone"    //!< timezone used for the connection
-
 namespace odbc {
 
 //! A class representing an ODBC connection.
@@ -71,6 +69,16 @@ public:
 
     //! Disabled assignment operator.
     DLLLOCAL ODBCConnection& operator=(const ODBCConnection& c) = delete;
+
+    //! Connect to the server.
+    /** @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int connect(ExceptionSink* xsink);
+
+    //! Disconnect the connection.
+    DLLLOCAL void disconnect();
 
     //! Commit an ODBC transaction.
     /** @param xsink exception sink
@@ -133,8 +141,10 @@ public:
     //! Allocate an ODBC statement handle.
     /** @param stmt ODBC statement handle
         @param xsink exception sink
+
+        @return 0 for OK, -1 for error
      */
-    DLLLOCAL void allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink);
+    DLLLOCAL int allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink);
 
     //! Set an option for the connection.
     /** @param opt option name
@@ -192,6 +202,12 @@ private:
     //! ODBC connection handle.
     SQLHDBC dbc;
 
+    //! Connection string.
+    QoreString connStr;
+
+    //! UTF-16 connection string.
+    std::unique_ptr<QoreString> connStrUTF16;
+
     //! Whether an ODBC connection has been opened.
     bool connected;
 
@@ -210,8 +226,30 @@ private:
     //! Version of the connected DBMS.
     int serverVer;
 
-    //! Disconnect the connection.
-    DLLLOCAL void disconnect();
+    //! Initialize environment.
+    /** @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int envInit(ExceptionSink* xsink);
+
+    //! Parse options passed through Datasource.
+    /** @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int parseOptions(ExceptionSink* xsink);
+
+    //! Prepare ODBC connection string and save it to the passed string.
+    /** @param str connection string
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int prepareConnectionString(ExceptionSink* xsink);
+
+    // Get DBMS (server) and ODBC DB driver (client) versions.
+    DLLLOCAL void getVersions();
 
     //! Check if connection is dead.
     /** Checks if the ODBC connection is dead and optionally modifies isDead variable.
@@ -228,21 +266,6 @@ private:
 
     //! Throw a CONNECTION-DEAD-ERROR exception via xsink.
     DLLLOCAL void deadConnectionError(ExceptionSink* xsink);
-
-    //! Parse options passed through Datasource.
-    /** @param xsink exception sink
-
-        @return 0 for OK, -1 for error
-     */
-    DLLLOCAL int parseOptions(ExceptionSink* xsink);
-
-    //! Prepare ODBC connection string and save it to the passed string.
-    /** @param str connection string
-        @param xsink exception sink
-
-        @return 0 for OK, -1 for error
-     */
-    DLLLOCAL int prepareConnectionString(QoreString& str, ExceptionSink* xsink);
 
     //! Parse ODBC version string.
     /** @param str version string

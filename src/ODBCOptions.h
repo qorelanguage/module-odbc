@@ -28,6 +28,10 @@
 #ifndef _QORE_MODULE_ODBC_ODBCOPTIONS_H
 #define _QORE_MODULE_ODBC_ODBCOPTIONS_H
 
+#define OPT_BIGINT_NATIVE "bigint-native"    //!< BIGINT values bound as native BIGINT type
+#define OPT_BIGINT_STRING "bigint-string"    //!< BIGINT values bound as strings
+#define OPT_QORE_TIMEZONE "qore-timezone"    //!< timezone used for the connection
+
 namespace odbc {
 
 //! Option used for deciding how BIGINT parameters will be bound.

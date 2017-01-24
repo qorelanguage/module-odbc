@@ -34,14 +34,12 @@ namespace odbc {
 
 ODBCPreparedStatement::ODBCPreparedStatement(ODBCConnection* c, ExceptionSink* xsink) :
     ODBCStatement(c, xsink),
-    bindArgs(xsink),
     outputRow(xsink)
 {
 }
 
 ODBCPreparedStatement::ODBCPreparedStatement(Datasource* ds, ExceptionSink* xsink) :
     ODBCStatement(ds, xsink),
-    bindArgs(xsink),
     outputRow(xsink)
 {
 }
@@ -50,6 +48,9 @@ ODBCPreparedStatement::~ODBCPreparedStatement() {
 }
 
 int ODBCPreparedStatement::prepare(const QoreString& qstr, const QoreListNode* args, ExceptionSink* xsink) {
+    command = qstr;
+
+    // Convert string to required character encoding.
     std::unique_ptr<QoreString> str(qstr.convertEncoding(QCS_UTF8, xsink));
     if (!str.get())
         return -1;
@@ -119,6 +120,33 @@ bool ODBCPreparedStatement::next(ExceptionSink* xsink) {
     if (status == EGRIS_OK)
         return true;
     return false;
+}
+
+int ODBCPreparedStatement::resetAfterLostConnection(ExceptionSink* xsink) {
+    // We need an empty xsink for the preparing and binding functions.
+    ExceptionSink xs;
+
+    // Prepare the statement.
+    if (prepare(command, *bindArgs, &xs)) {
+        xsink->assimilate(xs);
+        return -1;
+    }
+
+    // Re-bind parameters.
+    if (hasArrays(*bindArgs)) {
+        if (bindInternArray(*bindArgs, &xs)) {
+            xsink->assimilate(xs);
+            return -1;
+        }
+    }
+    else {
+        if (bindIntern(*bindArgs, &xs)) {
+            xsink->assimilate(xs);
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 } // namespace odbc

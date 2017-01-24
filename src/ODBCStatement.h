@@ -41,7 +41,7 @@
 
 #include <qore/Qore.h>
 
-#include "ErrorHelper.h"
+#include "ODBCErrorHelper.h"
 #include "ODBCOptions.h"
 #include "ODBCResultColumn.h"
 #include "ParamArrayHolder.h"
@@ -61,7 +61,7 @@ public:
     DLLLOCAL ODBCStatement(Datasource* ds, ExceptionSink* xsink);
 
     //! Destructor.
-    DLLLOCAL ~ODBCStatement();
+    DLLLOCAL virtual ~ODBCStatement();
 
     //! Disabled copy constructor.
     DLLLOCAL ODBCStatement(const ODBCStatement& s) = delete;
@@ -129,6 +129,12 @@ protected:
     //! ODBC statement handle.
     SQLHSTMT stmt;
 
+    //! Copy of the original command.
+    QoreString command;
+
+    //! Arguments bound to the statement.
+    ReferenceHolder<QoreListNode> bindArgs;
+
     //! Possible states when running getRowIntern() method.
     enum GetRowInternStatus {
         EGRIS_OK = 0,
@@ -142,6 +148,13 @@ protected:
         @param xsink exception sink
      */
     DLLLOCAL void handleStmtError(const char* err, const char* desc, ExceptionSink *xsink);
+
+    //! Reset after lost connection.
+    /** param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL virtual int resetAfterLostConnection(ExceptionSink* xsink);
 
     //! Execute a parsed statement with bound paramaters.
     /** @param str SQL statement
@@ -245,6 +258,9 @@ private:
 
     //! Result columns metadata.
     std::vector<ODBCResultColumn> resColumns;
+
+    //! Free ODBC statement handle associated with this statement.
+    void freeStatementHandle();
 
     //! Populate column hash.
     /** @param h column hash
@@ -1346,7 +1362,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
         }
         default: {
             std::string s("do not know how to handle result value of type '%d'");
-            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.c_str(), rcol.dataType);
             return 0;
         }
@@ -1359,7 +1375,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
 
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("error occured when getting value of row #%d, index #%d (column #%d)");
-        intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.c_str(), readRows, column-1, column);
     }
 

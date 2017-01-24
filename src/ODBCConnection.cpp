@@ -27,13 +27,10 @@
 
 #include "ODBCConnection.h"
 
-#include <cstdio>
-#include <memory>
-
 #include "qore/QoreLib.h"
 #include "qore/DBI.h"
 
-#include "ErrorHelper.h"
+#include "ODBCErrorHelper.h"
 #include "ODBCStatement.h"
 
 namespace odbc {
@@ -49,6 +46,7 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     serverTz(0),
     dbc(SQL_NULL_HDBC),
     env(SQL_NULL_HENV),
+    connStr(QCS_UTF8),
     connected(false),
     isDead(false),
     activeTransaction(false),
@@ -65,68 +63,20 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
         serverTz = d.getZone();
     }
 
-    SQLRETURN ret;
-    // Allocate an environment handle.
-    ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
-    if (!SQL_SUCCEEDED(ret)) { // error
-        xsink->raiseException("DBI:ODBC:ENV-HANDLE-ERROR", "could not allocate an environment handle");
-        return;
-    }
-
-    // Use ODBC version 3.
-    SQLSetEnvAttr(env, SQL_ATTR_ODBC_VERSION, (void*) SQL_OV_ODBC3, 0);
-
-    // Allocate a connection handle.
-    ret = SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
-    if (!SQL_SUCCEEDED(ret)) { // error
-        xsink->raiseException("DBI:ODBC:CONNECTION-HANDLE-ERROR", "could not allocate a connection handle");
-        return;
-    }
-
-    // Set connection attributes.
-    SQLSetConnectAttr(dbc, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, SQL_IS_UINTEGER);
-    SQLSetConnectAttr(dbc, SQL_ATTR_QUIET_MODE, 0, SQL_IS_POINTER);
-    SQLSetConnectAttr(dbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
-    SQLSetConnectAttr(dbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
-
-    // Create ODBC connection string.
-    QoreString tempConnStr(QCS_UTF8);
-    if(prepareConnectionString(tempConnStr, xsink))
+    // Initialize environment.
+    if (envInit(xsink))
         return;
 
-#ifdef WORDS_BIGENDIAN
-    std::unique_ptr<QoreString> connStr(tempConnStr.convertEncoding(QCS_UTF16BE, xsink));
-#else
-    std::unique_ptr<QoreString> connStr(tempConnStr.convertEncoding(QCS_UTF16LE, xsink));
-#endif
-    if (*xsink || !connStr)
+    // Prepare ODBC connection string.
+    if(prepareConnectionString(xsink))
         return;
-
-    SQLWCHAR* odbcDS = reinterpret_cast<SQLWCHAR*>(const_cast<char*>(connStr->getBuffer()));
 
     // Connect.
-    ret = SQLDriverConnectW(dbc, 0, odbcDS, getUTF8CharCount(tempConnStr.getBuffer()), 0, 0, 0, SQL_DRIVER_NOPROMPT);
-    if (!SQL_SUCCEEDED(ret)) { // error
-        std::string s("could not connect to the datasource; connection string: '%s'");
-        intern::ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbc, s);
-        xsink->raiseException("DBI:ODBC:CONNECTION-ERROR", s.c_str(), tempConnStr.getBuffer());
+    if (connect(xsink))
         return;
-    }
-    connected = true;
 
-    // Get DBMS (server) version.
-    char verStr[128]; // Will contain ver in the form "01.02.0034"
-    SQLSMALLINT unused;
-    ret = SQLGetInfoA(dbc, SQL_DBMS_VER, verStr, 128, &unused);
-    if (SQL_SUCCEEDED(ret)) {
-        serverVer = parseOdbcVersion(verStr);
-    }
-
-    // Get ODBC DB driver version.
-    ret = SQLGetInfoA(dbc, SQL_DRIVER_VER, verStr, 128, &unused);
-    if (SQL_SUCCEEDED(ret)) {
-        clientVer = parseOdbcVersion(verStr);
-    }
+    // Get DBMS (server) and ODBC DB driver (client) versions.
+    getVersions();
 }
 
 ODBCConnection::~ODBCConnection() {
@@ -137,6 +87,81 @@ ODBCConnection::~ODBCConnection() {
         SQLFreeHandle(SQL_HANDLE_DBC, dbc);
     if (env != SQL_NULL_HENV)
         SQLFreeHandle(SQL_HANDLE_ENV, env);
+}
+
+int ODBCConnection::connect(ExceptionSink* xsink) {
+    SQLRETURN ret;
+
+    // Free up allocated handle.
+    if (dbc != SQL_NULL_HDBC) {
+        SQLFreeHandle(SQL_HANDLE_DBC, dbc);
+        dbc = SQL_NULL_HDBC;
+    }
+
+    // Allocate a connection handle.
+    ret = SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
+    if (!SQL_SUCCEEDED(ret)) { // error
+        xsink->raiseException("DBI:ODBC:CONNECTION-HANDLE-ERROR", "could not allocate a connection handle");
+        return -1;
+    }
+
+    // Set connection attributes.
+    SQLSetConnectAttr(dbc, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, SQL_IS_UINTEGER);
+    SQLSetConnectAttr(dbc, SQL_ATTR_QUIET_MODE, 0, SQL_IS_POINTER);
+    SQLSetConnectAttr(dbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
+    SQLSetConnectAttr(dbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
+
+    // Get connection string.
+    SQLWCHAR* odbcDS = reinterpret_cast<SQLWCHAR*>(const_cast<char*>(connStrUTF16->getBuffer()));
+
+    // Connect.
+    ret = SQLDriverConnectW(dbc, 0, odbcDS, getUTF8CharCount(connStr.getBuffer()), 0, 0, 0, SQL_DRIVER_NOPROMPT);
+    if (!SQL_SUCCEEDED(ret)) { // error
+        std::string s("could not connect to the datasource; connection string: '%s'");
+        ODBCErrorHelper::extractDiag(SQL_HANDLE_DBC, dbc, s);
+        xsink->raiseException("DBI:ODBC:CONNECTION-ERROR", s.c_str(), connStr.getBuffer());
+        return -1;
+    }
+    connected = true;
+
+    return 0;
+}
+
+void ODBCConnection::disconnect() {
+    while (connected) {
+        SQLRETURN ret = SQLDisconnect(dbc);
+        if (SQL_SUCCEEDED(ret)) {
+            connected = false;
+        }
+        else {
+            char state[7];
+            memset(state, 0, sizeof(state));
+            ODBCErrorHelper::extractState(SQL_HANDLE_DBC, dbc, state);
+            //fprintf(stderr, "state: %s\n", state);
+            if (strncmp(state, "08003", 5) == 0) { // Connection not open.
+                connected = false;
+            }
+            else if (strncmp(state, "HY000", 5) == 0) { // General error.
+                connected = false;
+            }
+            else if (strncmp(state, "HYT01", 5) == 0) { // Connection timeout expired.
+                connected = false;
+            }
+            else if (strncmp(state, "HY117", 5) == 0) { // Connection is suspended due to unknown transaction state. Only disconnect and read-only functions are allowed.
+                connected = false;
+            }
+            else if (strncmp(state, "25000", 5) == 0) { // Transaction still active.
+                if (!activeTransaction) {
+                    if (isDead)
+                        isDead = false;
+                    rollback(0);
+                }
+            }
+            else {
+                qore_usleep(50*1000); // Sleep in intervals of 50 ms until disconnected.
+            }
+        }
+    }
 }
 
 int ODBCConnection::commit(ExceptionSink* xsink) {
@@ -288,83 +313,38 @@ AbstractQoreNode* ODBCConnection::getOption(const char* opt) {
     return 0;
 }
 
-void ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) {
+int ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) {
     checkIfConnectionDead(xsink);
     if (*xsink)
-        return;
+        return -1;
 
     if (isDead) {
         deadConnectionError(xsink);
-        return;
+        return -1;
     }
 
     SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, dbc, &stmt);
     if (!SQL_SUCCEEDED(ret)) { // error
         handleDbcError("DBI:ODBC:STATEMENT-ALLOC-ERROR", "could not allocate a statement handle", xsink);
+        return -1;
     }
+
+    return 0;
 }
 
-void ODBCConnection::disconnect() {
-    while (connected) {
-        SQLRETURN ret = SQLDisconnect(dbc);
-        if (SQL_SUCCEEDED(ret)) {
-            connected = false;
-        }
-        else {
-            char state[7];
-            memset(state, 0, sizeof(state));
-            intern::ErrorHelper::extractState(SQL_HANDLE_DBC, dbc, state);
-            //fprintf(stderr, "state: %s\n", state);
-            if (strncmp(state, "08003", 5) == 0) { // Connection not open
-                connected = false;
-            }
-            else if (strncmp(state, "HY000", 5) == 0) { // General error
-                connected = false;
-            }
-            else if (strncmp(state, "HYT01", 5) == 0) { // Connection timeout expired
-                connected = false;
-            }
-            else if (strncmp(state, "HY117", 5) == 0) { // Connection is suspended due to unknown transaction state. Only disconnect and read-only functions are allowed.
-                connected = false;
-            }
-            else if (strncmp(state, "25000", 5) == 0) { // Transaction still active.
-                if (!activeTransaction) {
-                    if (isDead)
-                        isDead = false;
-                    rollback(0);
-                }
-            }
-            else {
-                qore_usleep(50*1000); // Sleep in intervals of 50 ms until disconnected.
-            }
-        }
+int ODBCConnection::envInit(ExceptionSink* xsink) {
+    SQLRETURN ret;
+    // Allocate an environment handle.
+    ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
+    if (!SQL_SUCCEEDED(ret)) { // error
+        xsink->raiseException("DBI:ODBC:ENV-HANDLE-ERROR", "could not allocate an environment handle");
+        return -1;
     }
-}
 
-void ODBCConnection::checkIfConnectionDead(ExceptionSink* xsink) {
-    SQLULEN deadAttr = 0;
-    SQLRETURN ret = SQLGetConnectAttr(dbc, SQL_ATTR_CONNECTION_DEAD, reinterpret_cast<SQLPOINTER>(&deadAttr), sizeof(deadAttr), 0);
-    if (SQL_SUCCEEDED(ret)) {
-        if (deadAttr == SQL_CD_TRUE) // Connection is dead.
-            isDead = true;
-    }
-    else { // error
-        handleDbcError("DBI:ODBC:CONNECTION-ERROR", "could not find out if connection is alive", xsink);
-    }
-}
+    // Use ODBC version 3.
+    SQLSetEnvAttr(env, SQL_ATTR_ODBC_VERSION, (void*) SQL_OV_ODBC3, 0);
 
-void ODBCConnection::handleDbcError(const char* err, const char* desc, ExceptionSink* xsink) {
-    if (!xsink)
-        return;
-    std::string s(desc);
-    intern::ErrorHelper::extractDiag(SQL_HANDLE_DBC, dbc, s);
-    xsink->raiseException(err, s.c_str());
-}
-
-void ODBCConnection::deadConnectionError(ExceptionSink* xsink) {
-    if (!xsink)
-        return;
-    xsink->raiseException("DBI:ODBC:CONNECTION-DEAD-ERROR", "the connection is dead; create a new one");
+    return 0;
 }
 
 int ODBCConnection::parseOptions(ExceptionSink* xsink) {
@@ -407,15 +387,15 @@ int ODBCConnection::parseOptions(ExceptionSink* xsink) {
     return 0;
 }
 
-int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsink) {
+int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
     if (ds->getDBName() && strlen(ds->getDBName()) > 0)
-        str.sprintf("DSN=%s;", ds->getDBName());
+        connStr.sprintf("DSN=%s;", ds->getDBName());
 
     if (ds->getUsername())
-        str.sprintf("UID=%s;", ds->getUsername());
+        connStr.sprintf("UID=%s;", ds->getUsername());
 
     if (ds->getPassword())
-        str.sprintf("PWD=%s;", ds->getPassword());
+        connStr.sprintf("PWD=%s;", ds->getPassword());
 
     ConstHashIterator hi(ds->getConnectOptions());
     while (hi.next()) {
@@ -448,10 +428,10 @@ int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsin
                 std::unique_ptr<QoreString> key(hi.getKeyString());
                 key->tolwr();
                 if (key->equal("driver")) {
-                    str.sprintf("%s={%s};", hi.getKey(), tstr->getBuffer());
+                    connStr.sprintf("%s={%s};", hi.getKey(), tstr->getBuffer());
                 }
                 else {
-                    str.sprintf("%s=%s;", hi.getKey(), tstr->getBuffer());
+                    connStr.sprintf("%s=%s;", hi.getKey(), tstr->getBuffer());
                 }
                 break;
             }
@@ -459,12 +439,12 @@ int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsin
             case NT_FLOAT:
             case NT_NUMBER: {
                 QoreStringValueHelper vh(val);
-                str.sprintf("%s=%s;", hi.getKey(), vh->getBuffer());
+                connStr.sprintf("%s=%s;", hi.getKey(), vh->getBuffer());
                 break;
             }
             case NT_BOOLEAN: {
                 bool b = reinterpret_cast<const QoreBoolNode*>(val)->getValue();
-                str.sprintf("%s=%s;", hi.getKey(), b ? "1" : "0");
+                connStr.sprintf("%s=%s;", hi.getKey(), b ? "1" : "0");
                 break;
             }
             default: {
@@ -474,7 +454,61 @@ int ODBCConnection::prepareConnectionString(QoreString& str, ExceptionSink* xsin
         } //  switch
     } // while
 
+    // Create final UTF-16 connection string.
+#ifdef WORDS_BIGENDIAN
+    std::unique_ptr<QoreString> utf16Str(connStr.convertEncoding(QCS_UTF16BE, xsink));
+#else
+    std::unique_ptr<QoreString> utf16Str(connStr.convertEncoding(QCS_UTF16LE, xsink));
+#endif
+    if (*xsink || !utf16Str)
+        return -1;
+
+    connStrUTF16 = std::move(utf16Str);
     return 0;
+}
+
+void ODBCConnection::getVersions() {
+    SQLRETURN ret;
+
+    // Get DBMS (server) version.
+    char verStr[128]; // Will contain ver in the form "01.02.0034"
+    SQLSMALLINT unused;
+    ret = SQLGetInfoA(dbc, SQL_DBMS_VER, verStr, 128, &unused);
+    if (SQL_SUCCEEDED(ret)) {
+        serverVer = parseOdbcVersion(verStr);
+    }
+
+    // Get ODBC DB driver version.
+    ret = SQLGetInfoA(dbc, SQL_DRIVER_VER, verStr, 128, &unused);
+    if (SQL_SUCCEEDED(ret)) {
+        clientVer = parseOdbcVersion(verStr);
+    }
+}
+
+void ODBCConnection::checkIfConnectionDead(ExceptionSink* xsink) {
+    SQLULEN deadAttr = 0;
+    SQLRETURN ret = SQLGetConnectAttr(dbc, SQL_ATTR_CONNECTION_DEAD, reinterpret_cast<SQLPOINTER>(&deadAttr), sizeof(deadAttr), 0);
+    if (SQL_SUCCEEDED(ret)) {
+        if (deadAttr == SQL_CD_TRUE) // Connection is dead.
+            isDead = true;
+    }
+    else { // error
+        handleDbcError("DBI:ODBC:CONNECTION-ERROR", "could not find out if connection is alive", xsink);
+    }
+}
+
+void ODBCConnection::handleDbcError(const char* err, const char* desc, ExceptionSink* xsink) {
+    if (!xsink)
+        return;
+    std::string s(desc);
+    ODBCErrorHelper::extractDiag(SQL_HANDLE_DBC, dbc, s);
+    xsink->raiseException(err, s.c_str());
+}
+
+void ODBCConnection::deadConnectionError(ExceptionSink* xsink) {
+    if (!xsink)
+        return;
+    xsink->raiseException("DBI:ODBC:CONNECTION-DEAD-ERROR", "the connection is dead; create a new one");
 }
 
 // Version string is in the form "INT.INT.INT".

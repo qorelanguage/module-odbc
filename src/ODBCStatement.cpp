@@ -41,6 +41,7 @@ namespace odbc {
 
 ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
     stmt(SQL_NULL_HSTMT),
+    bindArgs(xsink),
     conn(c),
     serverEnc(0),
     serverTz(conn->getServerTimezone()),
@@ -54,14 +55,13 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
     if (dbEnc)
         serverEnc = QEM.findCreate(dbEnc);
 
-    conn->allocStatementHandle(stmt, xsink);
-    if (*xsink) {
+    if (conn->allocStatementHandle(stmt, xsink))
         return;
-    }
 }
 
 ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     stmt(SQL_NULL_HSTMT),
+    bindArgs(xsink),
     conn(static_cast<ODBCConnection*>(ds->getPrivateData())),
     serverEnc(0),
     serverTz(conn->getServerTimezone()),
@@ -75,17 +75,12 @@ ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     if (dbEnc)
         serverEnc = QEM.findCreate(dbEnc);
 
-    conn->allocStatementHandle(stmt, xsink);
-    if (*xsink) {
+    if (conn->allocStatementHandle(stmt, xsink))
         return;
-    }
 }
 
 ODBCStatement::~ODBCStatement() {
-    if (stmt == SQL_NULL_HSTMT) {
-        SQLCloseCursor(stmt);
-        SQLFreeHandle(SQL_HANDLE_STMT, stmt);
-    }
+    freeStatementHandle();
 }
 
 bool ODBCStatement::hasResultData() {
@@ -286,6 +281,14 @@ QoreHashNode* ODBCStatement::describe(ExceptionSink* xsink) {
     return h.release();
 }
 
+void ODBCStatement::freeStatementHandle() {
+    if (stmt != SQL_NULL_HSTMT) {
+        SQLCloseCursor(stmt);
+        SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+        stmt = SQL_NULL_HSTMT;
+    }
+}
+
 void ODBCStatement::populateColumnHash(QoreHashNode& h, std::vector<QoreListNode*>& columns) {
     int columnCount = resColumns.size();
     columns.resize(columnCount);
@@ -315,7 +318,7 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashI
         }
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("error occured when fetching row #%d");
-            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), readRows);
             return 0;
         }
@@ -393,6 +396,8 @@ QoreHashNode* ODBCStatement::getSingleRow(ExceptionSink* xsink) {
 }
 
 int ODBCStatement::exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
+    command = qstr;
+
     // Convert string to required character encoding.
     std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_UTF8, xsink));
     if (!str.get())
@@ -423,6 +428,8 @@ int ODBCStatement::exec(const QoreString* qstr, const QoreListNode* args, Except
 }
 
 int ODBCStatement::exec(const QoreString* qstr, ExceptionSink* xsink) {
+    command = qstr;
+
     // Convert string to required character encoding.
     std::unique_ptr<QoreString> str(qstr->convertEncoding(QCS_UTF8, xsink));
     if (!str.get())
@@ -448,8 +455,38 @@ int ODBCStatement::exec(const QoreString* qstr, ExceptionSink* xsink) {
 
 void ODBCStatement::handleStmtError(const char* err, const char* desc, ExceptionSink* xsink) {
     std::string s(desc);
-    intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+    ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
     xsink->raiseException(err, s.c_str());
+}
+
+int ODBCStatement::resetAfterLostConnection(ExceptionSink* xsink) {
+    // Convert string to required character encoding.
+    std::unique_ptr<QoreString> str(command.convertEncoding(QCS_UTF8, xsink));
+    if (!str.get())
+        return -1;
+
+    // Re-parse command and arguments.
+    if (parse(str.get(), *bindArgs, xsink))
+        return -1;
+
+    // We need an empty xsink for the binding functions.
+    ExceptionSink xs;
+
+    // Re-bind parameters.
+    if (hasArrays(*bindArgs)) {
+        if (bindInternArray(*params, &xs)) {
+            xsink->assimilate(xs);
+            return -1;
+        }
+    }
+    else {
+        if (bindIntern(*params, &xs)) {
+            xsink->assimilate(xs);
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 int ODBCStatement::execIntern(const char* str, SQLINTEGER textLen, ExceptionSink* xsink) {
@@ -458,10 +495,64 @@ int ODBCStatement::execIntern(const char* str, SQLINTEGER textLen, ExceptionSink
         ret = SQLExecDirectW(stmt, reinterpret_cast<SQLWCHAR*>(const_cast<char*>(str)), textLen);
     else
         ret = SQLExecute(stmt);
+
     if (!SQL_SUCCEEDED(ret)) { // error
-        handleStmtError("DBI:ODBC:EXEC-ERROR", "error during statement execution", xsink);
-        affectedRowCount = -1;
-        return -1;
+        char state[7];
+        memset(state, 0, sizeof(state));
+        ODBCErrorHelper::extractState(SQL_HANDLE_STMT, stmt, state);
+        if (strncmp(state, "08S01", 5) == 0) { // 08S01 == Communication link failure (aka lost connection).
+            if (conn->getDatasource()->activeTransaction())
+                xsink->raiseException("DBI:ODBC:TRANSACTION-ERROR", "connection to database server lost while in a transaction; transaction has been lost");
+
+            // Free current statement handle since the associated connection handle has to be also freed.
+            freeStatementHandle();
+
+            // Disconnect first.
+            conn->disconnect();
+
+            // Then try to reconnect.
+            if (conn->connect(xsink)) {
+                // Reconnect failed. Marking connection as closed.
+                // The following call will close any open statements and then the datasource.
+                conn->getDatasource()->connectionAborted();
+                return -1;
+            }
+
+            // Don't execute again if the connection was aborted while in a transaction.
+            if (conn->getDatasource()->activeTransaction())
+                return -1;
+
+            // Allocate new statement handle.
+            if (conn->allocStatementHandle(stmt, xsink))
+                return -1;
+
+            // Reset and prepare everything before re-execution.
+            if (resetAfterLostConnection(xsink))
+                return -1;
+
+#ifdef DEBUG
+            // Otherwise show the exception on stdout in debug mode.
+            //xsink->handleExceptions();
+#endif
+            // Clear any exceptions that have been ignored.
+            xsink->clear();
+
+            // Re-execute.
+            if (str)
+                ret = SQLExecDirectW(stmt, reinterpret_cast<SQLWCHAR*>(const_cast<char*>(str)), textLen);
+            else
+                ret = SQLExecute(stmt);
+            if (!SQL_SUCCEEDED(ret)) { // error
+                handleStmtError("DBI:ODBC:EXEC-ERROR", "error during statement execution", xsink);
+                affectedRowCount = -1;
+                return -1;
+            }
+        }
+        else { // Exec failed but for some other reason than lost connection.
+            handleStmtError("DBI:ODBC:EXEC-ERROR", "error during statement execution", xsink);
+            affectedRowCount = -1;
+            return -1;
+        }
     }
 
     // Get count of affected rows.
@@ -587,7 +678,7 @@ QoreHashNode* ODBCStatement::getRowIntern(GetRowInternStatus& status, ExceptionS
     }
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("error occured when fetching row #%d");
-        intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("DBI:ODBC:FETCH-ERROR", s.c_str(), readRows);
         status = EGRIS_ERROR;
         return 0;
@@ -668,7 +759,7 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
             ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 0, 0, 0, 0, len);
             if (!SQL_SUCCEEDED(ret)) { // error
                 std::string s("failed binding NULL parameter with index %d (column %d)");
-                intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+                ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
                 xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), i, i+1);
                 return -1;
             }
@@ -843,7 +934,7 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
 
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("failed binding parameter with index %d (column #%d) of type '%s'");
-            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), i, i+1, arg->getTypeName());
             return -1;
         }
@@ -954,7 +1045,7 @@ int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
             &col.colSize, &col.decimalDigits, &col.nullable);
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("error occured when fetching result column metadata with index #%d (column #%d)");
-            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i, i+1);
             return -1;
         }
@@ -962,7 +1053,7 @@ int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
         ret = SQLColAttributeA(stmt, i+1, SQL_DESC_OCTET_LENGTH, 0, 0, 0, &col.byteSize);
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("error occured when fetching result column metadata with index #%d (column #%d)");
-            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:COLUMN-METADATA-ERROR", s.c_str(), i, i+1);
             return -1;
         }
@@ -1092,7 +1183,7 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
 
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("failed binding parameter array with index #%d (column #%d)");
-        intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column);
         return -1;
     }
@@ -1115,7 +1206,7 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
         ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_BINARY, SQL_BINARY, 0, 0, array, 0, indArray);
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("failed binding NULL single value parameter with index #%d (column #%d)");
-            intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+            ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
             xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column);
             return -1;
         }
@@ -1216,7 +1307,7 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
 
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("failed binding parameter array with index #%d (column #%d) of type '%s'");
-        intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column, arg->getTypeName());
         return -1;
     }
@@ -1301,7 +1392,7 @@ int ODBCStatement::bindParamArrayBindHash(int column, const QoreHashNode* h, Exc
 
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("failed binding parameter array with index #%d (column #%d)");
-        intern::ErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
+        ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("DBI:ODBC:BIND-ERROR", s.c_str(), column-1, column);
         return -1;
     }

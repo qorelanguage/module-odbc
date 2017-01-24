@@ -1,6 +1,6 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  ErrorHelper.h
+  ODBCErrorHelper.h
 
   Qore ODBC module
 
@@ -25,8 +25,8 @@
   DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _QORE_MODULE_ODBC_ERRORHELPER_H
-#define _QORE_MODULE_ODBC_ERRORHELPER_H
+#ifndef _QORE_MODULE_ODBC_ODBCERRORHELPER_H
+#define _QORE_MODULE_ODBC_ODBCERRORHELPER_H
 
 #include <string>
 
@@ -37,10 +37,8 @@
 
 namespace odbc {
 
-namespace intern {
-
-//! Error helper
-class ErrorHelper {
+//! ODBC error helper
+class ODBCErrorHelper {
 public:
     //! Extract ODBC diagnostic records and output them to a stringstream.
     /** @param handleType type of the ODBC handle
@@ -80,13 +78,11 @@ public:
     }
 
 private:
-    DLLLOCAL ErrorHelper();
-    DLLLOCAL ~ErrorHelper();
+    DLLLOCAL ODBCErrorHelper();
+    DLLLOCAL ~ODBCErrorHelper();
 };
-
-} // namespace intern
 
 } // namespace odbc
 
-#endif // _QORE_MODULE_ODBC_ERRORHELPER_H
+#endif // _QORE_MODULE_ODBC_ODBCERRORHELPER_H
 

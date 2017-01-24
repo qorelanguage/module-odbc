@@ -62,7 +62,7 @@ public:
     DLLLOCAL ODBCPreparedStatement(Datasource* ds, ExceptionSink* xsink);
 
     //! Destructor.
-    DLLLOCAL ~ODBCPreparedStatement();
+    DLLLOCAL virtual ~ODBCPreparedStatement();
 
     //! Disabled copy constructor.
     DLLLOCAL ODBCPreparedStatement(const ODBCStatement& s) = delete;
@@ -124,10 +124,15 @@ public:
      */
     DLLLOCAL bool next(ExceptionSink* xsink);
 
-private:
-    //! Arguments bound to the statement.
-    ReferenceHolder<QoreListNode> bindArgs;
+protected:
+    //! Reset after lost connection.
+    /** param xsink exception sink
 
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL virtual int resetAfterLostConnection(ExceptionSink* xsink);
+
+private:
     //! Output row prepared by calling next().
     ReferenceHolder<QoreHashNode> outputRow;
 };
