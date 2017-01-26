@@ -29,6 +29,7 @@
 #define _QORE_MODULE_ODBC_ODBCSTATEMENT_H
 
 #include <cerrno>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -1159,7 +1160,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             TIMESTAMP_STRUCT val;
             ret = SQLGetData(stmt, column, SQL_C_TYPE_TIMESTAMP, &val, sizeof(TIMESTAMP_STRUCT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return DateTimeNode::makeAbsolute(serverTz, val.year, val.month, val.day, val.hour, val.minute, val.second, val.fraction/1000000);
+                return DateTimeNode::makeAbsolute(serverTz, val.year, val.month, val.day, val.hour, val.minute, val.second, val.fraction/1000);
             }
             break;
         }
@@ -1262,7 +1263,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 assert(val.interval_type == SQL_IS_SECOND);
                 SimpleRefHolder<DateTimeNode> d(new DateTimeNode(0, 0, 0, 0, 0, val.intval.day_second.second,
-                    val.intval.day_second.fraction/1000000, true));
+                    val.intval.day_second.fraction/1000, true));
                 if (val.interval_sign == SQL_TRUE)
                     d = d->unaryMinus();
                 return d.release();
@@ -1301,7 +1302,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 assert(val.interval_type == SQL_IS_DAY_TO_SECOND);
                 SimpleRefHolder<DateTimeNode> d(new DateTimeNode(0, 0, val.intval.day_second.day, val.intval.day_second.hour,
-                    val.intval.day_second.minute, val.intval.day_second.second, val.intval.day_second.fraction/1000000, true));
+                    val.intval.day_second.minute, val.intval.day_second.second, val.intval.day_second.fraction/1000, true));
                 if (val.interval_sign == SQL_TRUE)
                     d = d->unaryMinus();
                 return d.release();
@@ -1327,7 +1328,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 assert(val.interval_type == SQL_IS_HOUR_TO_SECOND);
                 SimpleRefHolder<DateTimeNode> d(new DateTimeNode(0, 0, 0, val.intval.day_second.hour, val.intval.day_second.minute,
-                    val.intval.day_second.second, val.intval.day_second.fraction/1000000, true));
+                    val.intval.day_second.second, val.intval.day_second.fraction/1000, true));
                 if (val.interval_sign == SQL_TRUE)
                     d = d->unaryMinus();
                 return d.release();
@@ -1340,7 +1341,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 assert(val.interval_type == SQL_IS_MINUTE_TO_SECOND);
                 SimpleRefHolder<DateTimeNode> d(new DateTimeNode(0, 0, 0, 0, val.intval.day_second.minute,
-                    val.intval.day_second.second, val.intval.day_second.fraction/1000000, true));
+                    val.intval.day_second.second, val.intval.day_second.fraction/1000, true));
                 if (val.interval_sign == SQL_TRUE)
                     d = d->unaryMinus();
                 return d.release();
@@ -1407,7 +1408,15 @@ TIMESTAMP_STRUCT ODBCStatement::getTimestampFromDate(const DateTimeNode* arg) {
     t.hour = info.hour;
     t.minute = info.minute;
     t.second = info.second;
-    t.fraction = info.us * 1000;
+    if (options.frPrec >= 6) { // 6-9
+        t.fraction = info.us * 1000;
+    }
+    else { // 1-5
+        int n = pow(10, 6-options.frPrec);
+        t.fraction = info.us / n;
+        t.fraction *= n * 1000;
+    }
+
     return t;
 }
 
@@ -1488,6 +1497,15 @@ SQL_INTERVAL_STRUCT ODBCStatement::getSecondInterval(const DateTimeNode* arg) {
     SQL_INTERVAL_STRUCT i;
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
     i.intval.day_second.second = abs(arg->getSecond());
+    if (options.frPrec >= 6) { // 6-9
+        i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
+    }
+    else { // 1-5
+        int n = pow(10, 6-options.frPrec);
+        i.intval.day_second.fraction = abs(arg->getMicrosecond()) / n;
+        i.intval.day_second.fraction *= n * 1000;
+    }
+
     i.interval_type = SQL_IS_SECOND;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1521,7 +1539,15 @@ SQL_INTERVAL_STRUCT ODBCStatement::getDaySecondInterval(const DateTimeNode* arg)
     i.intval.day_second.hour = abs(arg->getHour());
     i.intval.day_second.minute = abs(arg->getMinute());
     i.intval.day_second.second = abs(arg->getSecond());
-    i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
+    if (options.frPrec >= 6) { // 6-9
+        i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
+    }
+    else { // 1-5
+        int n = pow(10, 6-options.frPrec);
+        i.intval.day_second.fraction = abs(arg->getMicrosecond()) / n;
+        i.intval.day_second.fraction *= n * 1000;
+    }
+
     i.interval_type = SQL_IS_DAY_TO_SECOND;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1543,7 +1569,15 @@ SQL_INTERVAL_STRUCT ODBCStatement::getHourSecondInterval(const DateTimeNode* arg
     i.intval.day_second.hour = abs(arg->getHour());
     i.intval.day_second.minute = abs(arg->getMinute());
     i.intval.day_second.second = abs(arg->getSecond());
-    i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
+    if (options.frPrec >= 6) { // 6-9
+        i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
+    }
+    else { // 1-5
+        int n = pow(10, 6-options.frPrec);
+        i.intval.day_second.fraction = abs(arg->getMicrosecond()) / n;
+        i.intval.day_second.fraction *= n * 1000;
+    }
+
     i.interval_type = SQL_IS_HOUR_TO_SECOND;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;
@@ -1554,7 +1588,15 @@ SQL_INTERVAL_STRUCT ODBCStatement::getMinuteSecondInterval(const DateTimeNode* a
     memset(&i, 0, sizeof(SQL_INTERVAL_STRUCT));
     i.intval.day_second.minute = abs(arg->getMinute());
     i.intval.day_second.second = abs(arg->getSecond());
-    i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
+    if (options.frPrec >= 6) { // 6-9
+        i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
+    }
+    else { // 1-5
+        int n = pow(10, 6-options.frPrec);
+        i.intval.day_second.fraction = abs(arg->getMicrosecond()) / n;
+        i.intval.day_second.fraction *= n * 1000;
+    }
+
     i.interval_type = SQL_IS_MINUTE_TO_SECOND;
     i.interval_sign = arg->getRelativeSeconds() >= 0 ? SQL_FALSE : SQL_TRUE;
     return i;

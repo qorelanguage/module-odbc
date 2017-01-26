@@ -44,8 +44,8 @@ static SQLINTEGER getUTF8CharCount(const char* str) {
 ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     ds(d),
     serverTz(0),
-    dbc(SQL_NULL_HDBC),
     env(SQL_NULL_HENV),
+    dbc(SQL_NULL_HDBC),
     connStr(QCS_UTF8),
     connected(false),
     isDead(false),
@@ -287,6 +287,54 @@ int ODBCConnection::setOption(const char* opt, const AbstractQoreNode* val, Exce
         options.bigint = EBO_STRING;
         return 0;
     }
+    if (!strcasecmp(opt, OPT_FRAC_PRECISION)) {
+        if (val) {
+            if (val->getType() == NT_INT) {
+                const QoreBigIntNode* in = reinterpret_cast<const QoreBigIntNode*>(val);
+                if (in->val <= 0 || in->val > 9) {
+                    xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+                    return -1;
+                }
+                options.frPrec = in->val;
+            }
+            else if (val->getType() == NT_STRING) {
+                const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
+                TempEncodingHelper tstr(str, QCS_UTF8, xsink);
+                if (*xsink)
+                    return -1;
+                errno = 0;
+                long int num = strtol(tstr->getBuffer(), 0, 10);
+                if (num <= 0 || num > 9) {
+                    xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+                    return -1;
+                }
+                options.frPrec = num;
+            }
+            else {
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+                return -1;
+            }
+        }
+        else {
+            xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+            return -1;
+        }
+    }
+    if (!strcasecmp(opt, OPT_QORE_TIMEZONE)) {
+        if (val && val->getType() == NT_STRING) {
+            const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
+            TempEncodingHelper tzName(str, QCS_UTF8, xsink);
+            if (*xsink)
+                return -1;
+            serverTz = find_create_timezone(tzName->getBuffer(), xsink);
+            if (*xsink)
+                return -1;
+        }
+        else {
+            xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires a name of a timezone (e.g. \"Europe/Prague\") or a time offset string (e.g. \"+02:00\")", OPT_QORE_TIMEZONE);
+            return -1;
+        }
+    }
 
     return 0;
 }
@@ -309,6 +357,22 @@ AbstractQoreNode* ODBCConnection::getOption(const char* opt) {
 
     if (!strcasecmp(opt, OPT_BIGINT_STRING))
         return get_bool_node(options.bigint == EBO_STRING);
+
+    if (!strcasecmp(opt, OPT_FRAC_PRECISION))
+        return new QoreBigIntNode(static_cast<int64>(options.frPrec));
+
+    if (!strcasecmp(opt, OPT_QORE_TIMEZONE)) {
+        if (serverTz) {
+            DateTime x(static_cast<int64>(360000));
+            x.setZone(serverTz);
+            qore_tm info;
+            x.getInfo(info);
+            return new QoreStringNode(info.regionName());
+        }
+        else {
+            return new QoreStringNode("UTC");
+        }
+    }
 
     return 0;
 }
@@ -350,30 +414,65 @@ int ODBCConnection::envInit(ExceptionSink* xsink) {
 int ODBCConnection::parseOptions(ExceptionSink* xsink) {
     ConstHashIterator hi(ds->getConnectOptions());
     while (hi.next()) {
-        if (strcmp(DBI_OPT_NUMBER_OPT, hi.getKey()) == 0) {
+        if (!strcasecmp(DBI_OPT_NUMBER_OPT, hi.getKey())) {
             options.numeric = ENO_OPTIMAL;
             continue;
         }
-        if (strcmp(DBI_OPT_NUMBER_STRING, hi.getKey()) == 0) {
+        if (!strcasecmp(DBI_OPT_NUMBER_STRING, hi.getKey())) {
             options.numeric = ENO_STRING;
             continue;
         }
-        if (strcmp(DBI_OPT_NUMBER_NUMERIC, hi.getKey()) == 0) {
+        if (!strcasecmp(DBI_OPT_NUMBER_NUMERIC, hi.getKey())) {
             options.numeric = ENO_NUMERIC;
             continue;
         }
-        if (strcmp(OPT_BIGINT_NATIVE, hi.getKey()) == 0) {
+        if (!strcasecmp(OPT_BIGINT_NATIVE, hi.getKey())) {
             options.bigint = EBO_NATIVE;
             continue;
         }
-        if (strcmp(OPT_BIGINT_STRING, hi.getKey()) == 0) {
+        if (!strcasecmp(OPT_BIGINT_STRING, hi.getKey())) {
             options.bigint = EBO_STRING;
             continue;
         }
-        if (strcmp(OPT_QORE_TIMEZONE, hi.getKey()) == 0) {
+        if (!strcasecmp(OPT_FRAC_PRECISION, hi.getKey())) {
+            const AbstractQoreNode* val = hi.getValue();
+            if (val) {
+                if (val->getType() == NT_INT) {
+                    const QoreBigIntNode* in = reinterpret_cast<const QoreBigIntNode*>(val);
+                    if (in->val <= 0 || in->val > 9) {
+                        xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+                        return -1;
+                    }
+                    options.frPrec = in->val;
+                }
+                else if (val->getType() == NT_STRING) {
+                    const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
+                    TempEncodingHelper tstr(str, QCS_UTF8, xsink);
+                    if (*xsink)
+                        return -1;
+                    errno = 0;
+                    long int num = strtol(tstr->getBuffer(), 0, 10);
+                    if (num <= 0 || num > 9) {
+                        xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+                        return -1;
+                    }
+                    options.frPrec = num;
+                }
+                else {
+                    xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+                    return -1;
+                }
+            }
+            else {
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+                return -1;
+            }
+            continue;
+        }
+        if (!strcasecmp(OPT_QORE_TIMEZONE, hi.getKey())) {
             const AbstractQoreNode* val = hi.getValue();
             if (val->getType() != NT_STRING) {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "non-string value passed for the 'qore-timezone' option");
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "non-string value passed for the '%s' option", OPT_QORE_TIMEZONE);
                 return -1;
             }
             const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
@@ -404,17 +503,19 @@ int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
             continue;
 
         // Skip module-specific (non-ODBC) options.
-        if (strcmp(DBI_OPT_NUMBER_OPT, hi.getKey()) == 0)
+        if (!strcasecmp(DBI_OPT_NUMBER_OPT, hi.getKey()))
             continue;
-        if (strcmp(DBI_OPT_NUMBER_STRING, hi.getKey()) == 0)
+        if (!strcasecmp(DBI_OPT_NUMBER_STRING, hi.getKey()))
             continue;
-        if (strcmp(DBI_OPT_NUMBER_NUMERIC, hi.getKey()) == 0)
+        if (!strcasecmp(DBI_OPT_NUMBER_NUMERIC, hi.getKey()))
             continue;
-        if (strcmp(OPT_BIGINT_NATIVE, hi.getKey()) == 0)
+        if (!strcasecmp(OPT_BIGINT_NATIVE, hi.getKey()))
             continue;
-        if (strcmp(OPT_BIGINT_STRING, hi.getKey()) == 0)
+        if (!strcasecmp(OPT_BIGINT_STRING, hi.getKey()))
             continue;
-        if (strcmp(OPT_QORE_TIMEZONE, hi.getKey()) == 0)
+        if (!strcasecmp(OPT_FRAC_PRECISION, hi.getKey()))
+            continue;
+        if (!strcasecmp(OPT_QORE_TIMEZONE, hi.getKey()))
             continue;
 
         // Append options to the connection string.

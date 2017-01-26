@@ -28,9 +28,10 @@
 #ifndef _QORE_MODULE_ODBC_ODBCOPTIONS_H
 #define _QORE_MODULE_ODBC_ODBCOPTIONS_H
 
-#define OPT_BIGINT_NATIVE "bigint-native"    //!< BIGINT values bound as native BIGINT type
-#define OPT_BIGINT_STRING "bigint-string"    //!< BIGINT values bound as strings
-#define OPT_QORE_TIMEZONE "qore-timezone"    //!< timezone used for the connection
+#define OPT_BIGINT_NATIVE "bigint-native"            //!< BIGINT values bound as native BIGINT type
+#define OPT_BIGINT_STRING "bigint-string"            //!< BIGINT values bound as strings
+#define OPT_QORE_TIMEZONE "qore-timezone"            //!< timezone used for the connection
+#define OPT_FRAC_PRECISION "fractional-precision"    //!< fractional seconds precision
 
 namespace odbc {
 
@@ -49,14 +50,17 @@ enum NumericOption {
 
 struct ODBCOptions {
 public:
-    ODBCOptions() : bigint(EBO_NATIVE), numeric(ENO_OPTIMAL) {}
-    ODBCOptions(BigintOption bo, NumericOption no) : bigint(bo), numeric(no) {}
+    ODBCOptions() : bigint(EBO_NATIVE), numeric(ENO_OPTIMAL), frPrec(9) {}
+    ODBCOptions(BigintOption bo, NumericOption no, SQLSMALLINT fp) : bigint(bo), numeric(no), frPrec(fp) {}
 
     //! Option used for deciding how BIGINT parameters will be bound.
     BigintOption bigint;
 
     //! Option used for deciding how NUMERIC results will be returned.
     NumericOption numeric;
+
+    //! Fractional seconds precision (1-9).
+    SQLSMALLINT frPrec;
 };
 
 } // namespace odbc

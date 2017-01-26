@@ -31,6 +31,8 @@
 #include <sql.h>
 #include <sqlext.h>
 
+#include "ODBCOptions.h"
+
 /*
 
 Interval Data Type Precision
@@ -119,12 +121,11 @@ DLLLOCAL const SQLULEN INT_HOUR_COLSIZE = 10;
  */
 DLLLOCAL const SQLULEN INT_MINUTE_COLSIZE = 10;
 
-//! ColumnSize value for the \c SQL_INTERVAL_SECOND datatype.
-/** seconds precision = 9
-    value = p (if s=0) or p+s+1 (if s>0), where p is the interval leading precision and s is the seconds precision
-    leading field (second) values: -2147483647 .. 2147483647 ==> 10+9+1 ==> 20
+//! Base ColumnSize value for the \c SQL_INTERVAL_SECOND datatype.
+/** value = p (if s=0) or p+s+1 (if s>0), where p is the interval leading precision and s is the seconds precision
+    leading field (second) values: -2147483647 .. 2147483647 ==> 10+s+1 ==> 11+s
  */
-DLLLOCAL const SQLULEN INT_SECOND_COLSIZE = 20;
+DLLLOCAL const SQLULEN INT_SECOND_COLSIZE_BASE = 11;
 
 //! ColumnSize value for the \c SQL_INTERVAL_DAY_TO_HOUR datatype.
 /** value = 3+p, where p is the interval leading precision
@@ -138,12 +139,11 @@ DLLLOCAL const SQLULEN INT_DAYHOUR_COLSIZE = 13;
  */
 DLLLOCAL const SQLULEN INT_DAYMINUTE_COLSIZE = 16;
 
-//! ColumnSize value for the \c SQL_INTERVAL_DAY_TO_SECOND datatype.
-/** seconds precision = 9
-    value = 9+p (if s=0) or 10+p+s (if s>0), where p is the interval leading precision and s is the seconds precision
-    leading field (day) values: -2147483647 .. 2147483647 ==> 10+10+9 ==> 29
+//! Base ColumnSize value for the \c SQL_INTERVAL_DAY_TO_SECOND datatype.
+/** value = 9+p (if s=0) or 10+p+s (if s>0), where p is the interval leading precision and s is the seconds precision
+    leading field (day) values: -2147483647 .. 2147483647 ==> 10+10+s ==> 20+s
  */
-DLLLOCAL const SQLULEN INT_DAYSECOND_COLSIZE = 29;
+DLLLOCAL const SQLULEN INT_DAYSECOND_COLSIZE_BASE = 20;
 
 //! ColumnSize value for the \c SQL_INTERVAL_HOUR_TO_MINUTE datatype.
 /** value = 3+p, where p is the interval leading precision
@@ -151,39 +151,37 @@ DLLLOCAL const SQLULEN INT_DAYSECOND_COLSIZE = 29;
  */
 DLLLOCAL const SQLULEN INT_HOURMINUTE_COLSIZE = 13;
 
-//! ColumnSize value for the \c SQL_INTERVAL_HOUR_TO_SECOND datatype.
-/** seconds precision = 9
-    value = 6+p (if s=0) or 7+p+s (if s>0), where p is the interval leading precision and s is the seconds precision
-    leading field (hour) values: -2147483647 .. 2147483647 ==> 7+10+9 ==> 26
+//! Base ColumnSize value for the \c SQL_INTERVAL_HOUR_TO_SECOND datatype.
+/** value = 6+p (if s=0) or 7+p+s (if s>0), where p is the interval leading precision and s is the seconds precision
+    leading field (hour) values: -2147483647 .. 2147483647 ==> 7+10+s ==> 17
  */
-DLLLOCAL const SQLULEN INT_HOURSECOND_COLSIZE = 26;
+DLLLOCAL const SQLULEN INT_HOURSECOND_COLSIZE_BASE = 17;
 
-//! ColumnSize value for the \c SQL_INTERVAL_MINUTE_TO_SECOND datatype.
-/** seconds precision = 9
-    value = 3+p (if s=0) or 4+p+s (if s>0), where p is the interval leading precision and s is the seconds precision
-    leading field (minute) values: -2147483647 .. 2147483647 ==> 4+10+9 ==> 23
+//! Base ColumnSize value for the \c SQL_INTERVAL_MINUTE_TO_SECOND datatype.
+/** value = 3+p (if s=0) or 4+p+s (if s>0), where p is the interval leading precision and s is the seconds precision
+    leading field (minute) values: -2147483647 .. 2147483647 ==> 4+10+s ==> 14
  */
-DLLLOCAL const SQLULEN INT_MINUTESECOND_COLSIZE = 23;
+DLLLOCAL const SQLULEN INT_MINUTESECOND_COLSIZE_BASE = 14;
 
 //! ColumnSize value for the \c SQL_TYPE_DATE datatype.
 /** 10 (the number of characters in the yyyy-mm-dd format)
  */
-DLLLOCAL const SQLULEN TYPE_DATE_COLSIZE = 10;
+DLLLOCAL const SQLULEN DATE_COLSIZE = 10;
 
 //! ColumnSize value for the \c SQL_TYPE_TIME datatype.
 /** 8 (the number of characters in the hh-mm-ss format),
     or 9 + s (the number of characters in the hh:mm:ss[.fff...] format, where s is the seconds precision)
     seconds precision here is 0 ==> 8
  */
-DLLLOCAL const SQLULEN TYPE_TIME_COLSIZE = 8;
+DLLLOCAL const SQLULEN TIME_COLSIZE = 8;
 
-//! ColumnSize value for the \c SQL_TYPE_TIMESTAMP datatype.
+//! Base ColumnSize value for the \c SQL_TYPE_TIMESTAMP datatype.
 /** 16 (the number of characters in the yyyy-mm-dd hh:mm format),
     19 (the number of characters in the yyyy-mm-dd hh:mm:ss format)
     or 20 + s (the number of characters in the yyyy-mm-dd hh:mm:ss[.fff...] format, where s is the seconds precision)
-    seconds precision here is 9 ==> 20+9 ==> 29
+    ==> 20+s
  */
-DLLLOCAL const SQLULEN TYPE_TIMESTAMP_COLSIZE = 29;
+DLLLOCAL const SQLULEN TIMESTAMP_COLSIZE_BASE = 20;
 
 //! ColumnSize value for the \c SQL_BIGINT datatype.
 /** 19 (if signed) or 20 (if unsigned)
@@ -195,6 +193,37 @@ DLLLOCAL const SQLULEN BIGINT_COLSIZE = 19;
 /** 15
  */
 DLLLOCAL const SQLULEN DOUBLE_COLSIZE = 15;
+
+
+//! Get ColumnSize value for the \c SQL_INTERVAL_SECOND datatype.
+/** @param opts ODBC connection options
+    @return ColumnSize value
+ */
+DLLLOCAL SQLULEN getIntSecondColsize(ODBCOptions& opts) { return INT_SECOND_COLSIZE_BASE + opts.frPrec; }
+
+//! Get ColumnSize value for the \c SQL_INTERVAL_DAY_TO_SECOND datatype.
+/** @param opts ODBC connection options
+    @return ColumnSize value
+ */
+DLLLOCAL SQLULEN getIntDaySecondColsize(ODBCOptions& opts) { return INT_DAYSECOND_COLSIZE_BASE + opts.frPrec; }
+
+//! Get ColumnSize value for the \c SQL_INTERVAL_HOUR_TO_SECOND datatype.
+/** @param opts ODBC connection options
+    @return ColumnSize value
+ */
+DLLLOCAL SQLULEN getIntHourSecondColsize(ODBCOptions& opts) { return INT_HOURSECOND_COLSIZE_BASE + opts.frPrec; }
+
+//! Get ColumnSize value for the \c SQL_INTERVAL_MINUTE_TO_SECOND datatype.
+/** @param opts ODBC connection options
+    @return ColumnSize value
+ */
+DLLLOCAL SQLULEN getIntMinuteSecondColsize(ODBCOptions& opts) { return INT_MINUTESECOND_COLSIZE_BASE + opts.frPrec; }
+
+//! Get ColumnSize value for the \c SQL_TYPE_TIMESTAMP datatype.
+/** @param opts ODBC connection options
+    @return ColumnSize value
+ */
+DLLLOCAL SQLULEN getTimestampColsize(ODBCOptions& opts) { return TIMESTAMP_COLSIZE_BASE + opts.frPrec; }
 
 } // namespace odbc
 
