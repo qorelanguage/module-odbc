@@ -189,6 +189,26 @@ DLLLOCAL const SQLULEN TIMESTAMP_COLSIZE_BASE = 20;
  */
 DLLLOCAL const SQLULEN BIGINT_COLSIZE = 19;
 
+//! ColumnSize value for the \c SQL_INTEGER datatype.
+/** 10
+ */
+DLLLOCAL const SQLULEN INTEGER_COLSIZE = 10;
+
+//! ColumnSize value for the \c SQL_SMALLINT datatype.
+/** 5
+ */
+DLLLOCAL const SQLULEN SMALLINT_COLSIZE = 5;
+
+//! ColumnSize value for the \c SQL_TINYINT datatype.
+/** 5
+ */
+DLLLOCAL const SQLULEN TINYINT_COLSIZE = 3;
+
+//! ColumnSize value for the \c SQL_REAL datatype.
+/** 15
+ */
+DLLLOCAL const SQLULEN REAL_COLSIZE = 7;
+
 //! ColumnSize value for the \c SQL_DOUBLE datatype.
 /** 15
  */

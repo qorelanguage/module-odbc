@@ -36,53 +36,74 @@
  */
 //@{
 namespace Qore::odbc;
-//! Defines a bind for the ODBC's \c DATE type.
-const ODBCT_DATE = SQL_TYPE_DATE;
+//! Defines a bind for the ODBC's \c SQL_C_SLONG type.
+const ODBCT_SLONG = SQL_C_SLONG;
 
-//! Defines a bind for the ODBC's \c TIME type.
-const ODBCT_TIME = SQL_TYPE_TIME;
+//! Defines a bind for the ODBC's \c SQL_C_ULONG type.
+const ODBCT_ULONG = SQL_C_ULONG;
 
-//! Defines a bind for the ODBC's \c TIMESTAMP type.
-const ODBCT_TIMESTAMP = SQL_TYPE_TIMESTAMP;
+//! Defines a bind for the ODBC's \c SQL_C_SSHORT type.
+const ODBCT_SSHORT = SQL_C_SSHORT;
 
-//! Defines a bind for the ODBC's \c INTERVAL_YEAR type.
-const ODBCT_INT_YEAR = SQL_INTERVAL_YEAR;
+//! Defines a bind for the ODBC's \c SQL_C_USHORT type.
+const ODBCT_USHORT = SQL_C_USHORT;
 
-//! Defines a bind for the ODBC's \c INTERVAL_MONTH type.
-const ODBCT_INT_MONTH = SQL_INTERVAL_MONTH;
+//! Defines a bind for the ODBC's \c SQL_C_STINYINT type.
+const ODBCT_STINYINT = SQL_C_STINYINT;
 
-//! Defines a bind for the ODBC's \c INTERVAL_YEAR_TO_MONTH type.
-const ODBCT_INT_YEARMONTH = SQL_INTERVAL_YEAR_TO_MONTH;
+//! Defines a bind for the ODBC's \c SQL_C_UTINYINT type.
+const ODBCT_UTINYINT = SQL_C_UTINYINT;
 
-//! Defines a bind for the ODBC's \c INTERVAL_DAY type.
-const ODBCT_INT_DAY = SQL_INTERVAL_DAY;
+//! Defines a bind for the ODBC's \c SQL_C_FLOAT type.
+const ODBCT_FLOAT = SQL_C_FLOAT;
 
-//! Defines a bind for the ODBC's \c INTERVAL_HOUR type.
-const ODBCT_INT_HOUR = SQL_INTERVAL_HOUR;
+//! Defines a bind for the ODBC's \c SQL_C_TYPE_DATE type.
+const ODBCT_DATE = SQL_C_TYPE_DATE;
 
-//! Defines a bind for the ODBC's \c INTERVAL_ type.
-const ODBCT_INT_MINUTE = SQL_INTERVAL_MINUTE;
+//! Defines a bind for the ODBC's \c SQL_C_TYPE_TIME type.
+const ODBCT_TIME = SQL_C_TYPE_TIME;
 
-//! Defines a bind for the ODBC's \c INTERVAL_SECOND type.
-const ODBCT_INT_SECOND = SQL_INTERVAL_SECOND;
+//! Defines a bind for the ODBC's \c SQL_C_TYPE_TIMESTAMP type.
+const ODBCT_TIMESTAMP = SQL_C_TYPE_TIMESTAMP;
 
-//! Defines a bind for the ODBC's \c INTERVAL_DAY_TO_HOUR type.
-const ODBCT_INT_DAYHOUR = SQL_INTERVAL_DAY_TO_HOUR;
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_YEAR type.
+const ODBCT_INT_YEAR = SQL_C_INTERVAL_YEAR;
 
-//! Defines a bind for the ODBC's \c INTERVAL_DAY_TO_MINUTE type.
-const ODBCT_INT_DAYMINUTE = SQL_INTERVAL_DAY_TO_MINUTE;
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_MONTH type.
+const ODBCT_INT_MONTH = SQL_C_INTERVAL_MONTH;
 
-//! Defines a bind for the ODBC's \c INTERVAL_DAY_TO_SECOND type.
-const ODBCT_INT_DAYSECOND = SQL_INTERVAL_DAY_TO_SECOND;
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_YEAR_TO_MONTH type.
+const ODBCT_INT_YEARMONTH = SQL_C_INTERVAL_YEAR_TO_MONTH;
 
-//! Defines a bind for the ODBC's \c INTERVAL_HOUR_TO_MINUTE type.
-const ODBCT_INT_HOURMINUTE = SQL_INTERVAL_HOUR_TO_MINUTE;
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_DAY type.
+const ODBCT_INT_DAY = SQL_C_INTERVAL_DAY;
 
-//! Defines a bind for the ODBC's \c INTERVAL_HOUR_TO_SECOND type.
-const ODBCT_INT_HOURSECOND = SQL_INTERVAL_HOUR_TO_SECOND;
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_HOUR type.
+const ODBCT_INT_HOUR = SQL_C_INTERVAL_HOUR;
 
-//! Defines a bind for the ODBC's \c INTERVAL_MINUTE_TO_SECOND type.
-const ODBCT_INT_MINUTESECOND = SQL_INTERVAL_MINUTE_TO_SECOND;
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_ type.
+const ODBCT_INT_MINUTE = SQL_C_INTERVAL_MINUTE;
+
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_SECOND type.
+const ODBCT_INT_SECOND = SQL_C_INTERVAL_SECOND;
+
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_DAY_TO_HOUR type.
+const ODBCT_INT_DAYHOUR = SQL_C_INTERVAL_DAY_TO_HOUR;
+
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_DAY_TO_MINUTE type.
+const ODBCT_INT_DAYMINUTE = SQL_C_INTERVAL_DAY_TO_MINUTE;
+
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_DAY_TO_SECOND type.
+const ODBCT_INT_DAYSECOND = SQL_C_INTERVAL_DAY_TO_SECOND;
+
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_HOUR_TO_MINUTE type.
+const ODBCT_INT_HOURMINUTE = SQL_C_INTERVAL_HOUR_TO_MINUTE;
+
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_HOUR_TO_SECOND type.
+const ODBCT_INT_HOURSECOND = SQL_C_INTERVAL_HOUR_TO_SECOND;
+
+//! Defines a bind for the ODBC's \c SQL_C_INTERVAL_MINUTE_TO_SECOND type.
+const ODBCT_INT_MINUTESECOND = SQL_C_INTERVAL_MINUTE_TO_SECOND;
 //@}
 
 /** @defgroup odbc_functions ODBC Functions

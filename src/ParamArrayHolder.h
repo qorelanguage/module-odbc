@@ -46,14 +46,14 @@ class ParamArrayHolder {
 public:
     DLLLOCAL ParamArrayHolder() : nullArray(0), nullIndArray(0), arraySize(0) {
         chars.reserve(16);
-        ints.reserve(8);
-        tinyints.reserve(4);
-        floats.reserve(8);
+        ints8.reserve(4);
+        ints64.reserve(8);
+        doubles.reserve(4);
         dates.reserve(4);
         times.reserve(4);
         timestamps.reserve(4);
         intervals.reserve(4);
-        indicators.reserve(32);
+        indicators.reserve(16);
     }
     DLLLOCAL ~ParamArrayHolder() { clear(); }
 
@@ -72,27 +72,75 @@ public:
         return array;
     }
 
-    DLLLOCAL int64* addIntArray(ExceptionSink* xsink) {
-        ints.push_back(new (std::nothrow) int64[arraySize]);
-        int64* array = ints[ints.size()-1];
+    DLLLOCAL int8_t* addInt8Array(ExceptionSink* xsink) {
+        ints8.push_back(new (std::nothrow) int8_t[arraySize]);
+        int8_t* array = ints8[ints8.size()-1];
         if (!array)
-            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate int64 array");
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate int8_t (SQL_C_STINYINT) array");
         return array;
     }
 
-    DLLLOCAL int8_t* addTinyintArray(ExceptionSink* xsink) {
-        tinyints.push_back(new (std::nothrow) int8_t[arraySize]);
-        int8_t* array = tinyints[tinyints.size()-1];
+    DLLLOCAL int16_t* addInt16Array(ExceptionSink* xsink) {
+        ints16.push_back(new (std::nothrow) int16_t[arraySize]);
+        int16_t* array = ints16[ints16.size()-1];
         if (!array)
-            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate int8_t (tinyint) array");
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate int16_t (SQL_C_SSHORT) array");
         return array;
     }
 
-    DLLLOCAL double* addFloatArray(ExceptionSink* xsink) {
-        floats.push_back(new (std::nothrow) double[arraySize]);
-        double* array = floats[floats.size()-1];
+    DLLLOCAL int32_t* addInt32Array(ExceptionSink* xsink) {
+        ints32.push_back(new (std::nothrow) int32_t[arraySize]);
+        int32_t* array = ints32[ints32.size()-1];
         if (!array)
-            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate double array");
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate int32_t (SQL_C_SLONG) array");
+        return array;
+    }
+
+    DLLLOCAL int64* addInt64Array(ExceptionSink* xsink) {
+        ints64.push_back(new (std::nothrow) int64[arraySize]);
+        int64* array = ints64[ints64.size()-1];
+        if (!array)
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate int64 (SQL_C_SBIGINT) array");
+        return array;
+    }
+
+    DLLLOCAL uint8_t* addUint8Array(ExceptionSink* xsink) {
+        uints8.push_back(new (std::nothrow) uint8_t[arraySize]);
+        uint8_t* array = uints8[uints8.size()-1];
+        if (!array)
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate uint8_t (SQL_C_UTINYINT) array");
+        return array;
+    }
+
+    DLLLOCAL uint16_t* addUint16Array(ExceptionSink* xsink) {
+        uints16.push_back(new (std::nothrow) uint16_t[arraySize]);
+        uint16_t* array = uints16[uints16.size()-1];
+        if (!array)
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate uint16_t (SQL_C_USHORT) array");
+        return array;
+    }
+
+    DLLLOCAL uint32_t* addUint32Array(ExceptionSink* xsink) {
+        uints32.push_back(new (std::nothrow) uint32_t[arraySize]);
+        uint32_t* array = uints32[uints32.size()-1];
+        if (!array)
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate uint32_t (SQL_C_ULONG) array");
+        return array;
+    }
+
+    DLLLOCAL float* addFloatArray(ExceptionSink* xsink) {
+        floats.push_back(new (std::nothrow) float[arraySize]);
+        float* array = floats[floats.size()-1];
+        if (!array)
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate float (SQL_C_FLOAT) array");
+        return array;
+    }
+
+    DLLLOCAL double* addDoubleArray(ExceptionSink* xsink) {
+        doubles.push_back(new (std::nothrow) double[arraySize]);
+        double* array = doubles[doubles.size()-1];
+        if (!array)
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate double (SQL_C_DOUBLE) array");
         return array;
     }
 
@@ -100,7 +148,7 @@ public:
         dates.push_back(new (std::nothrow) DATE_STRUCT[arraySize]);
         DATE_STRUCT* array = dates[dates.size()-1];
         if (!array)
-            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate timestamp array");
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate date (SQL_C_TYPE_DATE) array");
         return array;
     }
 
@@ -108,7 +156,7 @@ public:
         times.push_back(new (std::nothrow) TIME_STRUCT[arraySize]);
         TIME_STRUCT* array = times[times.size()-1];
         if (!array)
-            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate time array");
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate time (SQL_C_TYPE_TIME) array");
         return array;
     }
 
@@ -116,7 +164,7 @@ public:
         timestamps.push_back(new (std::nothrow) TIMESTAMP_STRUCT[arraySize]);
         TIMESTAMP_STRUCT* array = timestamps[timestamps.size()-1];
         if (!array)
-            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate timestamp array");
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate timestamp (SQL_C_TYPE_TIMESTAMP) array");
         return array;
     }
 
@@ -124,7 +172,7 @@ public:
         intervals.push_back(new (std::nothrow) SQL_INTERVAL_STRUCT[arraySize]);
         SQL_INTERVAL_STRUCT* array = intervals[intervals.size()-1];
         if (!array)
-            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate interval array");
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate interval (SQL_INTERVAL_STRUCT) array");
         return array;
     }
 
@@ -132,7 +180,7 @@ public:
         indicators.push_back(new (std::nothrow) SQLLEN[arraySize]);
         SQLLEN* array = indicators[indicators.size()-1];
         if (!array)
-            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate indicator array");
+            xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate indicator (SQLLEN) array");
         return array;
     }
 
@@ -169,17 +217,41 @@ public:
             delete [] (chars[i]);
         }
 
-        count = ints.size();
+        count = ints8.size();
         for (unsigned int i = 0; i < count; i++)
-            delete [] (ints[i]);
+            delete [] (ints8[i]);
 
-        count = tinyints.size();
+        count = ints16.size();
         for (unsigned int i = 0; i < count; i++)
-            delete [] (tinyints[i]);
+            delete [] (ints16[i]);
+
+        count = ints32.size();
+        for (unsigned int i = 0; i < count; i++)
+            delete [] (ints32[i]);
+
+        count = ints64.size();
+        for (unsigned int i = 0; i < count; i++)
+            delete [] (ints64[i]);
+
+        count = uints8.size();
+        for (unsigned int i = 0; i < count; i++)
+            delete [] (uints8[i]);
+
+        count = uints16.size();
+        for (unsigned int i = 0; i < count; i++)
+            delete [] (uints16[i]);
+
+        count = uints32.size();
+        for (unsigned int i = 0; i < count; i++)
+            delete [] (uints32[i]);
 
         count = floats.size();
         for (unsigned int i = 0; i < count; i++)
             delete [] (floats[i]);
+
+        count = doubles.size();
+        for (unsigned int i = 0; i < count; i++)
+            delete [] (doubles[i]);
 
         count = dates.size();
         for (unsigned int i = 0; i < count; i++)
@@ -202,9 +274,15 @@ public:
             delete [] (indicators[i]);
 
         chars.clear();
-        ints.clear();
-        tinyints.clear();
+        ints8.clear();
+        ints16.clear();
+        ints32.clear();
+        ints64.clear();
+        uints8.clear();
+        uints16.clear();
+        uints32.clear();
         floats.clear();
+        doubles.clear();
         dates.clear();
         times.clear();
         timestamps.clear();
@@ -223,9 +301,15 @@ public:
 
 private:
     std::vector<char**> chars;
-    std::vector<int64*> ints;
-    std::vector<int8_t*> tinyints;
-    std::vector<double*> floats;
+    std::vector<int8_t*> ints8;
+    std::vector<int16_t*> ints16;
+    std::vector<int32_t*> ints32;
+    std::vector<int64*> ints64;
+    std::vector<uint8_t*> uints8;
+    std::vector<uint16_t*> uints16;
+    std::vector<uint32_t*> uints32;
+    std::vector<float*> floats;
+    std::vector<double*> doubles;
     std::vector<DATE_STRUCT*> dates;
     std::vector<TIME_STRUCT*> times;
     std::vector<TIMESTAMP_STRUCT*> timestamps;

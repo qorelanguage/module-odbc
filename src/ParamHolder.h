@@ -45,7 +45,10 @@ class ParamHolder {
 public:
     DLLLOCAL ParamHolder() {
         strings.reserve(16);
-        tinyints.reserve(8);
+        ints8.reserve(8);
+        ints16.reserve(2);
+        ints32.reserve(2);
+        uints8.reserve(2);
         lengths.reserve(32);
         dates.reserve(4);
         timestamps.reserve(4);
@@ -59,9 +62,39 @@ public:
         return s;
     }
 
-    DLLLOCAL int8_t* addTinyint(int8_t i) {
-        tinyints.push_back(i);
-        return &(tinyints[tinyints.size()-1]);
+    DLLLOCAL int8_t* addInt8(int8_t i) {
+        ints8.push_back(i);
+        return &(ints8[ints8.size()-1]);
+    }
+
+    DLLLOCAL int16_t* addInt16(int16_t i) {
+        ints16.push_back(i);
+        return &(ints16[ints16.size()-1]);
+    }
+
+    DLLLOCAL int32_t* addInt32(int32_t i) {
+        ints32.push_back(i);
+        return &(ints32[ints32.size()-1]);
+    }
+
+    DLLLOCAL uint8_t* addUint8(uint8_t i) {
+        uints8.push_back(i);
+        return &(uints8[uints8.size()-1]);
+    }
+
+    DLLLOCAL uint16_t* addUint16(uint16_t i) {
+        uints16.push_back(i);
+        return &(uints16[uints16.size()-1]);
+    }
+
+    DLLLOCAL uint32_t* addUint32(uint32_t i) {
+        uints32.push_back(i);
+        return &(uints32[uints32.size()-1]);
+    }
+
+    DLLLOCAL float* addFloat(float f) {
+        floats.push_back(f);
+        return &(floats[floats.size()-1]);
     }
 
     DLLLOCAL SQLLEN* addLength(SQLLEN l) {
@@ -95,7 +128,13 @@ public:
             delete [] (strings[i]);
 
         strings.clear();
-        tinyints.clear();
+        ints8.clear();
+        ints16.clear();
+        ints32.clear();
+        uints8.clear();
+        uints16.clear();
+        uints32.clear();
+        floats.clear();
         lengths.clear();
         dates.clear();
         times.clear();
@@ -103,7 +142,13 @@ public:
 
 private:
     std::vector<char*> strings;
-    std::vector<int8_t> tinyints;
+    std::vector<int8_t> ints8;
+    std::vector<int16_t> ints16;
+    std::vector<int32_t> ints32;
+    std::vector<uint8_t> uints8;
+    std::vector<uint16_t> uints16;
+    std::vector<uint32_t> uints32;
+    std::vector<float> floats;
     std::vector<SQLLEN> lengths;
     std::vector<DATE_STRUCT> dates;
     std::vector<TIME_STRUCT> times;

@@ -312,7 +312,77 @@ private:
      */
     DLLLOCAL int bindParamArrayBindHash(int column, const QoreHashNode* arg, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c DATE value.
+    //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_SLONG value.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeSLong(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_ULONG value.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeULong(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_SSHORT value.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeSShort(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_USHORT value.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeUShort(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_STINYINT value.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeSTinyint(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_UTINYINT value.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeUTinyint(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_FLOAT value.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeFloat(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_TYPE_DATE value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -322,7 +392,7 @@ private:
      */
     DLLLOCAL int bindTypeDate(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c TIME value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_TYPE_TIME value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -332,7 +402,7 @@ private:
      */
     DLLLOCAL int bindTypeTime(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c TIMESTAMP value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_TYPE_TIMESTAMP value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -342,7 +412,7 @@ private:
      */
     DLLLOCAL int bindTypeTimestamp(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_YEAR value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_YEAR value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -352,7 +422,7 @@ private:
      */
     DLLLOCAL int bindTypeIntYear(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_MONTH value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_MONTH value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -362,7 +432,7 @@ private:
      */
     DLLLOCAL int bindTypeIntMonth(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_YEAR_TO_MONTH value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_YEAR_TO_MONTH value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -372,7 +442,7 @@ private:
      */
     DLLLOCAL int bindTypeIntYearMonth(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_DAY value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_DAY value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -382,7 +452,7 @@ private:
      */
     DLLLOCAL int bindTypeIntDay(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_HOUR value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_HOUR value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -392,7 +462,7 @@ private:
      */
     DLLLOCAL int bindTypeIntHour(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_MINUTE value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_MINUTE value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -402,7 +472,7 @@ private:
      */
     DLLLOCAL int bindTypeIntMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_SECOND value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_SECOND value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -412,7 +482,7 @@ private:
      */
     DLLLOCAL int bindTypeIntSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_DAY_TO_HOUR value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_DAY_TO_HOUR value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -422,7 +492,7 @@ private:
      */
     DLLLOCAL int bindTypeIntDayHour(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_DAY_TO_MINUTE value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_DAY_TO_MINUTE value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -432,7 +502,7 @@ private:
      */
     DLLLOCAL int bindTypeIntDayMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_DAY_TO_SECOND value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_DAY_TO_SECOND value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -442,7 +512,7 @@ private:
      */
     DLLLOCAL int bindTypeIntDaySecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_HOUR_TO_MINUTE value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_HOUR_TO_MINUTE value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -452,7 +522,7 @@ private:
      */
     DLLLOCAL int bindTypeIntHourMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_HOUR_TO_SECOND value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_HOUR_TO_SECOND value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -462,7 +532,7 @@ private:
      */
     DLLLOCAL int bindTypeIntHourSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date passed using \c odbc_bind as an ODBC's \c INTERVAL_MINUTE_TO_SECOND value.
+    //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_MINUTE_TO_SECOND value.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -472,7 +542,77 @@ private:
      */
     DLLLOCAL int bindTypeIntMinuteSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c DATE values.
+    //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_SLONG values.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeSLongArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_ULONG values.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeULongArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_SSHORT values.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeSShortArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_USHORT values.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeUShortArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_STINYINT values.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeSTinyintArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_UTINYINT values.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeUTinyintArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_FLOAT values.
+    /** @param column ODBC column number, starting from 1
+        @param arg value part of the \c odbc_bind hash
+        @param ret reference to \c SQLRETURN where result of the binding will be stored
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int bindTypeFloatArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_TYPE_DATE values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -482,7 +622,7 @@ private:
      */
     DLLLOCAL int bindTypeDateArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c TIME values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_TYPE_TIME values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -492,7 +632,7 @@ private:
      */
     DLLLOCAL int bindTypeTimeArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c TIMESTAMP values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_TYPE_TIMESTAMP values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -502,7 +642,7 @@ private:
      */
     DLLLOCAL int bindTypeTimestampArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_YEAR values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_YEAR values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -512,7 +652,7 @@ private:
      */
     DLLLOCAL int bindTypeIntYearArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_MONTH values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_MONTH values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -522,7 +662,7 @@ private:
      */
     DLLLOCAL int bindTypeIntMonthArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_YEAR_TO_MONTH values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_YEAR_TO_MONTH values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -532,7 +672,7 @@ private:
      */
     DLLLOCAL int bindTypeIntYearMonthArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_DAY values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_DAY values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -542,7 +682,7 @@ private:
      */
     DLLLOCAL int bindTypeIntDayArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_HOUR values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_HOUR values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -552,7 +692,7 @@ private:
      */
     DLLLOCAL int bindTypeIntHourArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_MINUTE values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_MINUTE values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -562,7 +702,7 @@ private:
      */
     DLLLOCAL int bindTypeIntMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_SECOND values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_SECOND values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -572,7 +712,7 @@ private:
      */
     DLLLOCAL int bindTypeIntSecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_DAY_TO_HOUR values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_DAY_TO_HOUR values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -582,7 +722,7 @@ private:
      */
     DLLLOCAL int bindTypeIntDayHourArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_DAY_TO_MINUTE values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_DAY_TO_MINUTE values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -592,7 +732,7 @@ private:
      */
     DLLLOCAL int bindTypeIntDayMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_DAY_TO_SECOND values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_DAY_TO_SECOND values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -602,7 +742,7 @@ private:
      */
     DLLLOCAL int bindTypeIntDaySecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_HOUR_TO_MINUTE values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_HOUR_TO_MINUTE values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -612,7 +752,7 @@ private:
      */
     DLLLOCAL int bindTypeIntHourMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_HOUR_TO_SECOND values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_HOUR_TO_SECOND values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
@@ -622,7 +762,7 @@ private:
      */
     DLLLOCAL int bindTypeIntHourSecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
 
-    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC's \c INTERVAL_MINUTE_TO_SECOND values.
+    //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_MINUTE_TO_SECOND values.
     /** @param column ODBC column number, starting from 1
         @param arg value part of the \c odbc_bind hash
         @param ret reference to \c SQLRETURN where result of the binding will be stored
