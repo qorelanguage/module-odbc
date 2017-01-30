@@ -1906,7 +1906,7 @@ int ODBCStatement::bindTypeSLongArray(int column, const AbstractQoreNode* arg, S
             return -1;
         }
         for (qore_size_t i = 0; i < arraySize; i++) {
-            int64 n = reinterpret_cast<const QoreBigIntNode*>(arg)->val;
+            int64 n = reinterpret_cast<const QoreBigIntNode*>(lst->retrieve_entry(i))->val;
             if (n < static_cast<int64>(LONG_MIN) || n > static_cast<int64>(LONG_MAX)) {
                 xsink->raiseException("DBI:ODBC:BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_SLONG odbc_bind", n);
                 return -1;
@@ -1950,7 +1950,7 @@ int ODBCStatement::bindTypeULongArray(int column, const AbstractQoreNode* arg, S
             return -1;
         }
         for (qore_size_t i = 0; i < arraySize; i++) {
-            int64 n = reinterpret_cast<const QoreBigIntNode*>(arg)->val;
+            int64 n = reinterpret_cast<const QoreBigIntNode*>(lst->retrieve_entry(i))->val;
             if (n < 0 || n > static_cast<int64>(ULONG_MAX)) {
                 xsink->raiseException("DBI:ODBC:BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_ULONG odbc_bind", n);
                 return -1;
@@ -1994,7 +1994,7 @@ int ODBCStatement::bindTypeSShortArray(int column, const AbstractQoreNode* arg, 
             return -1;
         }
         for (qore_size_t i = 0; i < arraySize; i++) {
-            int64 n = reinterpret_cast<const QoreBigIntNode*>(arg)->val;
+            int64 n = reinterpret_cast<const QoreBigIntNode*>(lst->retrieve_entry(i))->val;
             if (n < static_cast<int64>(SHRT_MIN) || n > static_cast<int64>(SHRT_MAX)) {
                 xsink->raiseException("DBI:ODBC:BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_SSHORT odbc_bind", n);
                 return -1;
@@ -2038,7 +2038,7 @@ int ODBCStatement::bindTypeUShortArray(int column, const AbstractQoreNode* arg, 
             return -1;
         }
         for (qore_size_t i = 0; i < arraySize; i++) {
-            int64 n = reinterpret_cast<const QoreBigIntNode*>(arg)->val;
+            int64 n = reinterpret_cast<const QoreBigIntNode*>(lst->retrieve_entry(i))->val;
             if (n < 0 || n > static_cast<int64>(USHRT_MAX)) {
                 xsink->raiseException("DBI:ODBC:BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_USHORT odbc_bind", n);
                 return -1;
@@ -2082,7 +2082,7 @@ int ODBCStatement::bindTypeSTinyintArray(int column, const AbstractQoreNode* arg
             return -1;
         }
         for (qore_size_t i = 0; i < arraySize; i++) {
-            int64 n = reinterpret_cast<const QoreBigIntNode*>(arg)->val;
+            int64 n = reinterpret_cast<const QoreBigIntNode*>(lst->retrieve_entry(i))->val;
             if (n < static_cast<int64>(SCHAR_MIN) || n > static_cast<int64>(SCHAR_MAX)) {
                 xsink->raiseException("DBI:ODBC:BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_STINYINT odbc_bind", n);
                 return -1;
@@ -2126,7 +2126,7 @@ int ODBCStatement::bindTypeUTinyintArray(int column, const AbstractQoreNode* arg
             return -1;
         }
         for (qore_size_t i = 0; i < arraySize; i++) {
-            int64 n = reinterpret_cast<const QoreBigIntNode*>(arg)->val;
+            int64 n = reinterpret_cast<const QoreBigIntNode*>(lst->retrieve_entry(i))->val;
             if (n < 0 || n > static_cast<int64>(UCHAR_MAX)) {
                 xsink->raiseException("DBI:ODBC:BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_UTINYINT odbc_bind", n);
                 return -1;
@@ -2170,7 +2170,7 @@ int ODBCStatement::bindTypeFloatArray(int column, const AbstractQoreNode* arg, S
             return -1;
         }
         for (qore_size_t i = 0; i < arraySize; i++) {
-            float n = reinterpret_cast<const QoreFloatNode*>(arg)->f;
+            float n = reinterpret_cast<const QoreFloatNode*>(lst->retrieve_entry(i))->f;
             array[i] = n;
         }
     }
