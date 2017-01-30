@@ -54,7 +54,7 @@ const ODBCT_STINYINT = SQL_C_STINYINT;
 //! Defines a bind for the ODBC's \c SQL_C_UTINYINT type.
 const ODBCT_UTINYINT = SQL_C_UTINYINT;
 
-//! Defines a bind for the ODBC's \c SQL_C_FLOAT type.
+//! Defines a bind for the ODBC's \c SQL_C_FLOAT (\c SQL_REAL) type.
 const ODBCT_FLOAT = SQL_C_FLOAT;
 
 //! Defines a bind for the ODBC's \c SQL_C_TYPE_DATE type.

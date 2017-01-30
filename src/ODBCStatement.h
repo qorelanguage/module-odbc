@@ -1109,8 +1109,8 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
     switch(rcol.dataType) {
         // Integer types.
         case SQL_INTEGER: {
-            SQLINTEGER val;
-            ret = SQLGetData(stmt, column, SQL_C_SLONG, &val, sizeof(SQLINTEGER), &indicator);
+            SQLBIGINT val;
+            ret = SQLGetData(stmt, column, SQL_C_SBIGINT, &val, sizeof(SQLBIGINT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 return new QoreBigIntNode(val);
             }
@@ -1125,26 +1125,26 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             break;
         }
         case SQL_SMALLINT: {
-            SQLSMALLINT val;
-            ret = SQLGetData(stmt, column, SQL_C_SSHORT, &val, sizeof(SQLSMALLINT), &indicator);
+            SQLINTEGER val;
+            ret = SQLGetData(stmt, column, SQL_C_SLONG, &val, sizeof(SQLINTEGER), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new QoreBigIntNode(val);
+                return new QoreBigIntNode(static_cast<int64>(val));
             }
             break;
         }
         case SQL_TINYINT: {
-            SQLSCHAR val;
-            ret = SQLGetData(stmt, column, SQL_C_STINYINT, &val, sizeof(SQLSCHAR), &indicator);
+            SQLSMALLINT val;
+            ret = SQLGetData(stmt, column, SQL_C_SSHORT, &val, sizeof(SQLSMALLINT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new QoreBigIntNode(val);
+                return new QoreBigIntNode(static_cast<int64>(val));
             }
             break;
         }
 
         // Float types.
         case SQL_FLOAT: {
-            SQLFLOAT val;
-            ret = SQLGetData(stmt, column, SQL_C_DOUBLE, &val, sizeof(SQLFLOAT), &indicator);
+            SQLDOUBLE val;
+            ret = SQLGetData(stmt, column, SQL_C_DOUBLE, &val, sizeof(SQLDOUBLE), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 return new QoreFloatNode(val);
             }

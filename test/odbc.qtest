@@ -25,9 +25,19 @@ class OdbcTest inherits QUnit::Test {
                 "type": "SMALLINT",
                 "values": (1, 0, 32767, -32768),
             },
+            "sintodb": {
+                "type": "SMALLINT",
+                "values": odbc_bind(ODBCT_SSHORT, (1, 0, 32767, -32768)),
+                "expected": (1, 0, 32767, -32768),
+            },
             "i": {
                 "type": "INTEGER",
                 "values": (2147483647, 0, -1, -2147483648),
+            },
+            "iodb": {
+                "type": "INTEGER",
+                "values": odbc_bind(ODBCT_SLONG, (2147483647, 0, -1, -2147483648)),
+                "expected": (2147483647, 0, -1, -2147483648),
             },
             "decim": {
                 "type": "DECIMAL(5,2)",
@@ -44,6 +54,11 @@ class OdbcTest inherits QUnit::Test {
             "r": {
                 "type": "REAL",
                 "values": (0.00390625, 0.0078125, -0.0078125, 0.0),
+            },
+            "rodb": {
+                "type": "REAL",
+                "values": odbc_bind(ODBCT_FLOAT, (0.00390625, 0.0078125, -0.0078125, 0.0)),
+                "expected": (0.00390625, 0.0078125, -0.0078125, 0.0),
             },
             "flt": {
                 "type": "FLOAT",
@@ -101,10 +116,20 @@ class OdbcTest inherits QUnit::Test {
                 "type": "TINYINT",
                 "values": (1, 0, 127, -128),
             },
-            /*"tintunsig": {
+            "mytintodb": {
+                "type": "TINYINT",
+                "values": odbc_bind(ODBCT_STINYINT, (1, 0, 127, -128)),
+                "expected": (1, 0, 127, -128),
+            },
+            "myutint": {
                 "type": "TINYINT UNSIGNED",
                 "values": (1, 0, 127, 255),
-            },*/
+            },
+            "myutintodb": {
+                "type": "TINYINT UNSIGNED",
+                "values": odbc_bind(ODBCT_UTINYINT, (1, 0, 127, 255)),
+                "expected": (1, 0, 127, 255),
+            },
             "mymint": {
                 "type": "MEDIUMINT",
                 "values": (1, 0, 8388607, -8388608),
@@ -113,14 +138,6 @@ class OdbcTest inherits QUnit::Test {
                 "type": "MEDIUMINT UNSIGNED",
                 "values": (1, 0, 127, 16777215),
             },
-            /*"intunsig": {
-                "type": "INTEGER UNSIGNED",
-                "values": (1, 0, 127, 4294967295),
-            },*/
-            /*"mysqlbit": {
-                "type": "BIT",
-                "values": (0, 1, 1, 0),
-            },*/
             "mytm": {
                 "type": "TIME",
                 "values": odbc_bind(ODBCT_TIME, (00:00:00Z, 05:23:17Z, 03:59:20Z, 14:15:16Z)),
@@ -266,6 +283,11 @@ class OdbcTest inherits QUnit::Test {
                 "type": "BINARY_FLOAT",
                 "values": (0.00390625, 0.0078125, -0.0078125, 0.0),
             },
+            "orabinfltodb": {
+                "type": "BINARY_FLOAT",
+                "values": odbc_bind(ODBCT_FLOAT, (0.00390625, 0.0078125, -0.0078125, 0.0)),
+                "expected": (0.00390625, 0.0078125, -0.0078125, 0.0),
+            },
             "orabindbl": {
                 "type": "BINARY_DOUBLE",
                 "values": (1.72, 3.1456789765432, 0.0, -2.7218281828),
@@ -327,7 +349,12 @@ class OdbcTest inherits QUnit::Test {
             },
             "mstint": {
                 "type": "TINYINT",
-                "values": (1, 0, 20, 120),
+                "values": (1, 0, 255, 128),
+            },
+            "mstintodb": {
+                "type": "TINYINT",
+                "values": odbc_bind(ODBCT_UTINYINT, (1, 0, 255, 128)),
+                "expected": (1, 0, 255, 128),
             },
             /*"msbit": {
                 "type": "BIT",
@@ -571,7 +598,9 @@ class OdbcTest inherits QUnit::Test {
                 }
             }
             Columns.sint.expected = map number($1), Columns.sint.values;
+            Columns.sintodb.expected = map number($1), Columns.sintodb.expected;
             Columns.i.expected = map number($1), Columns.i.values;
+            Columns.iodb.expected = map number($1), Columns.iodb.expected;
         }
 
         # Try additional MSSQL types.
