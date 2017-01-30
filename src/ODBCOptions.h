@@ -50,7 +50,7 @@ enum NumericOption {
 
 struct ODBCOptions {
 public:
-    ODBCOptions() : bigint(EBO_NATIVE), numeric(ENO_OPTIMAL), frPrec(9) {}
+    ODBCOptions() : bigint(EBO_NATIVE), numeric(ENO_OPTIMAL), frPrec(3) {}
     ODBCOptions(BigintOption bo, NumericOption no, SQLSMALLINT fp) : bigint(bo), numeric(no), frPrec(fp) {}
 
     //! Option used for deciding how BIGINT parameters will be bound.
