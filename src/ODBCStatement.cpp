@@ -323,7 +323,8 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashI
             return 0;
         }
 
-        for (int j = 0; j < resColumns.size(); j++) {
+        int columnCount = resColumns.size();
+        for (int j = 0; j < columnCount; j++) {
             ODBCResultColumn& rcol = resColumns[j];
             ReferenceHolder<AbstractQoreNode> n(getColumnValue(j+1, rcol, xsink), xsink);
             if (!n || *xsink)
