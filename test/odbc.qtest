@@ -137,8 +137,8 @@ class OdbcTest inherits QUnit::Test {
                 "expected": (2016-00-00, 2012-00-00, 2016-00-00, 1970-00-00),
             },
             "mytstamp": {
-                "type": "TIMESTAMP",
-                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
+                "type": "TIMESTAMP(3)",
+                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17.456, 2016-01-11T03:00:20.789, 2016-01-11T14:15:16),
                 "expected": (),
             },
         };
@@ -150,8 +150,14 @@ class OdbcTest inherits QUnit::Test {
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
             },
             "pgc": {
-                "type": "CHAR(128)",
+                "type": "CHAR(64)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+                "expected": (
+                    "text                                                            ",
+                    "lorem                                                           ",
+                    "Příliš žluťoučký kůň úpěl ďábelské ódy                          ",
+                    "ipsum dolor                                                     "
+                ),
             },
             "pgbin": {
                 "type": "bytea",
@@ -177,7 +183,7 @@ class OdbcTest inherits QUnit::Test {
             },
             "pgtstamp": {
                 "type": "TIMESTAMP",
-                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
+                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17.456, 2016-01-11T03:00:20.789, 2016-01-11T14:15:16),
                 "expected": (),
             },
         };
@@ -266,7 +272,7 @@ class OdbcTest inherits QUnit::Test {
             },
             "oratstamp": {
                 "type": "TIMESTAMP",
-                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17, 2016-01-11T03:00:20, 2016-01-11T14:15:16),
+                "values": (2016-01-11T00:00:00, 2016-01-11T05:23:17.456, 2016-01-11T03:00:20.789, 2016-01-11T14:15:16),
                 "expected": (),
             },
         };
@@ -321,7 +327,7 @@ class OdbcTest inherits QUnit::Test {
             },
             "mstint": {
                 "type": "TINYINT",
-                "values": (1, 0, 255, 128),
+                "values": (1, 0, 20, 120),
             },
             /*"msbit": {
                 "type": "BIT",
@@ -716,6 +722,8 @@ class OdbcTest inherits QUnit::Test {
         ret = ds.exec("SELECT * FROM " + tableName);
         if (oracleDB)
             ret = hashLowercaseKeys(ret);
+        #printf("types test expected results: %N\n\n", results);
+        #printf("types test actual results: %N\n\n", ret);
         assertEq(results, ret);
 
         ds.exec("DROP TABLE " + tableName);
