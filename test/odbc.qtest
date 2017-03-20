@@ -329,6 +329,7 @@ class OdbcTest inherits QUnit::Test {
             "msvbin": {
                 "type": "VARBINARY(64)",
                 "values": (<bead>, <feed>, <beadaabbccdd>, <1122aabb3344ccdd55667788>),
+                "expected": (<bead00000000000000000000>, <feed00000000000000000000>, <beadaabbccdd000000000000>, <1122aabb3344ccdd55667788>),
             },
             "msblob": {
                 "type": "BLOB(64)",
@@ -621,6 +622,14 @@ class OdbcTest inherits QUnit::Test {
                 if (mssql.getKey() == "msdtime") {
                     for (int i = 0; i < Columns.msdtime.values.size(); i++) {
                         push Columns.msdtime.expected, utcTz.date(Columns.msdtime.values[i]);
+                    }
+                }
+                else if (mssql.getKey() == "msbin") {
+                    for (int i = 0; i < Columns.msbin.values.size(); i++) {
+                        push Columns.msbin.expected, Columns.msbin.values[i];
+                        reference exp = \Columns.msbin.expected[i];
+                        for (int j = exp.size(); j < 64; j++)
+                            exp += <00>;
                     }
                 }
             }
