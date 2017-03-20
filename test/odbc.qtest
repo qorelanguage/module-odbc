@@ -691,6 +691,7 @@ class OdbcTest inherits QUnit::Test {
         hash results1 = {"id": (1, 2), "txt": ("abcdef123456", "test 789 abc lorem ipsum")};
         list results2 = ({"id": 1, "txt": "abcdef123456"}, {"id": 2, "txt": "test 789 abc lorem ipsum"});
 
+        on_error ds.rollback();
         ret = ds.exec("SELECT * FROM " + tableName);
         if (oracleDB)
             ret = hashLowercaseKeys(ret);
@@ -744,6 +745,7 @@ class OdbcTest inherits QUnit::Test {
         valdef = valdef.substr(0, valdef.size()-1);
 
         SQLStatement stmt = new SQLStatement(ds);
+        on_error stmt.rollback();
         stmt.prepare("INSERT INTO " + tableName + sprintf(" (%s) VALUES (", foldl $1 + ", " + $2, Columns.keys()) + valdef + ")");
         stmt.bindArgs(arguments);
         stmt.exec();
@@ -757,15 +759,15 @@ class OdbcTest inherits QUnit::Test {
                 results{key} = results{key}.values;
         }
 
-        ret = ds.exec("SELECT * FROM " + tableName);
+        ret = ds.select("SELECT * FROM " + tableName);
         if (oracleDB)
             ret = hashLowercaseKeys(ret);
         #printf("types test expected results: %N\n\n", results);
         #printf("types test actual results: %N\n\n", ret);
         assertEq(results, ret);
 
+        on_exit ds.commit();
         ds.exec("DROP TABLE " + tableName);
-        ds.commit();
     }
 
     timezoneTest() {
@@ -782,6 +784,7 @@ class OdbcTest inherits QUnit::Test {
         }
         tzDs.commit();
 
+        on_error tzDs.rollback();
         any ret = tzDs.exec("CREATE TABLE " + tableName + " (id int, t " + (mssqlDB ? "datetime)" : "timestamp)"));
         assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);
         tzDs.commit();
@@ -816,6 +819,7 @@ class OdbcTest inherits QUnit::Test {
         ds.commit();
 
         SQLStatement stmt = new SQLStatement(ds);
+        on_error stmt.rollback();
         stmt.prepare("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)");
 
         stmt.bindArgs((2, ("text", "abc", "lorem")));
