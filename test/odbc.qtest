@@ -303,23 +303,19 @@ class OdbcTest inherits QUnit::Test {
         hash MssqlColumns = {
             "msvc": {
                 "type": "VARCHAR(64)",
-                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
-                "expected": (
-                    "text                                                            ",
-                    "lorem                                                           ",
-                    "Příliš žluťoučký kůň úpěl ďábelské ódy           ",
-                    "ipsum dolor                                                     "
-                ),
+                "values": ("text", "lorem", "Çûëýåxyz", "ipsum dolor"),
             },
             "msc": {
                 "type": "CHAR(64)",
-                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
-                "expected": (
-                    "text                                                            ",
-                    "lorem                                                           ",
-                    "Příliš žluťoučký kůň úpěl ďábelské ódy           ",
-                    "ipsum dolor                                                     "
-                ),
+                "values": ("text", "lorem", "Çûëýåxyz", "ipsum dolor"),
+            },
+            "msnvc": {
+                "type": "NVARCHAR(64)",
+                "values": ("text", "lorem", "Çûëýåxyz", "ipsum dolor"),
+            },
+            "msnc": {
+                "type": "NCHAR(64)",
+                "values": ("text", "lorem", "Çûëýåxyz", "ipsum dolor"),
             },
             "msbin": {
                 "type": "BINARY(64)",
@@ -656,6 +652,18 @@ class OdbcTest inherits QUnit::Test {
         return lst;
     }
 
+    trimHashOfLists(reference h) {
+        foreach string k in (keys h) {
+            h{k} = trim h{k};
+        }
+    }
+
+    trimListOfHashes(reference lst) {
+        for (int i = 0; i < lst.size(); i++) {
+            lst[i] = trim lst[i];
+        }
+    }
+
     basicTest() {
         {
             Datasource test = new Datasource("odbc", "abc", "xyz");
@@ -695,16 +703,22 @@ class OdbcTest inherits QUnit::Test {
         ret = ds.exec("SELECT * FROM " + tableName);
         if (oracleDB)
             ret = hashLowercaseKeys(ret);
+        if (mssqlDB)
+            trimHashOfLists(\ret);
         assertEq(results1, ret);
 
         ret = ds.select("SELECT * FROM " + tableName);
         if (oracleDB)
             ret = hashLowercaseKeys(ret);
+        if (mssqlDB)
+            trimHashOfLists(\ret);
         assertEq(results1, ret);
 
         ret = ds.selectRows("SELECT * FROM " + tableName);
         if (oracleDB)
             ret = hashListLowercaseKeys(ret);
+        if (mssqlDB)
+            trimListOfHashes(\ret);
         assertEq(results2, ret);
 
         ds.exec("DROP TABLE " + tableName);
@@ -762,6 +776,8 @@ class OdbcTest inherits QUnit::Test {
         ret = ds.select("SELECT * FROM " + tableName);
         if (oracleDB)
             ret = hashLowercaseKeys(ret);
+        if (mssqlDB)
+            trimHashOfLists(\ret);
         #printf("types test expected results: %N\n\n", results);
         #printf("types test actual results: %N\n\n", ret);
         assertEq(results, ret);
@@ -836,12 +852,21 @@ class OdbcTest inherits QUnit::Test {
         hash h = {"id": (2, 2, 2, 4, 5, 6), "txt": ("text", "abc", "lorem", "ipsum", "dolor", "sit")};
         if (oracleDB)
             h.id = (2n, 2n, 2n, 4n, 5n, 6n);
-        if (mssqlDB)
-            h.txt = ("text ", "abc  ", "lorem", "ipsum", "dolor", "sit");
 
         ret = ds.select("SELECT * FROM " + tableName);
         if (oracleDB)
             ret = hashLowercaseKeys(ret);
+        if (mssqlDB)
+            trimHashOfLists(\ret);
+        /*printf("ret: %N\n", ret);
+        printf("h details\n---\n");
+        foreach string s in (h.txt) {
+            printf("%s: %d bytes, %d chars, %s\n", s, s.size(), s.length(), s.encoding());
+        }
+        printf("ret details\n---\n");
+        foreach string s in (ret.txt) {
+            printf("%s: %d bytes, %d chars, %s\n", s, s.size(), s.length(), s.encoding());
+        }*/
         assertEq(h, ret);
     }
 }
