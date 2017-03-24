@@ -46,6 +46,7 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
     bindArgs(xsink),
     conn(c),
     serverEnc(0),
+    notUtf16Enc(false),
     serverTz(conn->getServerTimezone()),
     options(conn->getOptions()),
     affectedRowCount(0),
@@ -54,8 +55,11 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
     params(new QoreListNode, xsink)
 {
     const char* dbEnc = c->getDatasource()->getDBEncoding();
-    if (dbEnc)
+    if (dbEnc) {
         serverEnc = QEM.findCreate(dbEnc);
+        if (serverEnc != QCS_UTF16 && serverEnc != QCS_UTF16BE && serverEnc != QCS_UTF16LE)
+            notUtf16Enc = true;
+    }
 
     if (conn->allocStatementHandle(stmt, xsink))
         return;
@@ -66,6 +70,7 @@ ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     bindArgs(xsink),
     conn(static_cast<ODBCConnection*>(ds->getPrivateData())),
     serverEnc(0),
+    notUtf16Enc(false),
     serverTz(conn->getServerTimezone()),
     options(conn->getOptions()),
     affectedRowCount(0),
@@ -74,8 +79,11 @@ ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
     params(new QoreListNode, xsink)
 {
     const char* dbEnc = ds->getDBEncoding();
-    if (dbEnc)
+    if (dbEnc) {
         serverEnc = QEM.findCreate(dbEnc);
+        if (serverEnc != QCS_UTF16 && serverEnc != QCS_UTF16BE && serverEnc != QCS_UTF16LE)
+            notUtf16Enc = true;
+    }
 
     if (conn->allocStatementHandle(stmt, xsink))
         return;
@@ -779,7 +787,7 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
                 if (*xsink)
                     return -1;
                 SQLLEN* indPtr = paramHolder.addLength(len);
-                if (serverEnc) {
+                if (serverEnc && notUtf16Enc) {
                     ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
                         len, 0, reinterpret_cast<SQLCHAR*>(cstr), len, indPtr);
                 }
@@ -1124,7 +1132,7 @@ int ODBCStatement::bindParamArrayList(int column, const QoreListNode* lst, Excep
             qore_size_t maxlen;
             if (createArrayFromStringList(lst, array, indArray, maxlen, xsink))
                 return -1;
-            if (serverEnc) {
+            if (serverEnc && notUtf16Enc) {
                 ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
                     maxlen, 0, reinterpret_cast<SQLCHAR*>(array), maxlen, indArray);
             }
@@ -1252,7 +1260,7 @@ int ODBCStatement::bindParamArraySingleValue(int column, const AbstractQoreNode*
             char* array;
             if (createArrayFromString(reinterpret_cast<const QoreStringNode*>(arg), array, indArray, len, xsink))
                 return -1;
-            if (serverEnc) {
+            if (serverEnc && notUtf16Enc) {
                 ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
                     len, 0, reinterpret_cast<SQLCHAR*>(array), len, indArray);
             }

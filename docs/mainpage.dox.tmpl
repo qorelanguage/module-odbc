@@ -5,8 +5,17 @@
     Contents of this documentation:
     - @ref odbcintro
     - @ref odbcoptions
+      - @ref odbc_number_options
+      - @ref odbc_bigint_options
+      - @ref odbc_frprec_option
+      - @ref odbc_timeout_options
     - @ref odbctrans
     - @ref odbcbind
+      - @ref odbc_timezone
+      - @ref odbc_encoding_support
+      - @ref odbc_oracle_support
+      - @ref odbc_binding_by_value
+      - @ref odbc_to_qore
     - @ref odbcstoredprocs
     - @ref odbcreleasenotes
 
@@ -83,7 +92,9 @@ major_version * 1000000 + minor_version * 10000 + sub_version
     - \c "bigint-native": bind Qore int values as native \c SQL_C_SBIGINT values to ODBC statements; this is the default
     - \c "bigint-string": bind Qore int values as \c SQL_C_CHAR values (strings) to ODBC statements
     - \c "fractional-precision": precision to use for the fractional seconds part of date, time, timestamp and interval values; in the range 1-9 (default is 3)
-    - \c "qore-timezone": accepts a string argument that can be either a region name (ex: \c "Europe/Prague") or a UTC offset (ex: \c "+01:00") to set the server's time zone rules; this is useful if connecting to a database server in a different time zone.  If this option is not set then the server's time zone is assumed to be the same as the client's time zone; see @ref timezone.
+    - \c "qore-timezone": accepts a string argument that can be either a region name (ex: \c "Europe/Prague") or a UTC offset (ex: \c "+01:00") to set the server's timezone rules; this is useful if connecting to a database server in a different timezone; if this option is not set then the server's timezone is assumed to be the same as the client's timezone
+    - \c "login-timeout": timeout value in seconds used for logging in to the connection (connecting); possible values are integers from 0 up (default is 60); setting the timeout to 0 means to wait indefinitely
+    - \c "connection-timeout": timeout value in seconds used for the connection; possible values are integers from 0 up (default is 60); setting the timeout to 0 means to wait indefinitely
 
     Options can be set in the \c Datasource or \c DatasourcePool constructors as in the following examples:
     @code
@@ -97,19 +108,25 @@ major_version * 1000000 + minor_version * 10000 + sub_version
 
     @subsection odbc_number_options Number Options
 
-    The number options (\c "optimal-numbers", \c "string-numbers" and \c "numeric-numbers") are all mutually-exclusive; setting one automatically disables the others. These options also ignore their arguments; the last one set takes effect (also note that setting it with any value sets the option, even @ref False).
+    The number options (\c "optimal-numbers", \c "string-numbers" and \c "numeric-numbers") are all mutually-exclusive; setting one automatically disables the others. These options also ignore their arguments; the last one set takes effect (also note that setting it with any value sets the option, even False).
 
     The default if no other option is explicitly set is \c "optimal-numbers".  Note that this represents a change from previous versions where \c NUMERIC or \c DECIMAL values were returned as strings in order to avoid the loss of information.  To set the old behavior, set the \c "string-numbers" option when creating the \c Datasource or \c DatasourcePool object.
 
     @subsection odbc_bigint_options Bigint Options
 
-    The bigint options (\c "bigint-native" and \c "bigint-string") are mutually-exclusive; setting one automatically disables the other. These options also ignore their arguments; the last one set takes effect (also note that setting it with any value sets the option, even @ref False).
+    The bigint options (\c "bigint-native" and \c "bigint-string") are mutually-exclusive; setting one automatically disables the other. These options also ignore their arguments; the last one set takes effect (also note that setting it with any value sets the option, even False).
 
     The default if no other option is explicitly set is \c "bigint-native".
 
     @subsection odbc_frprec_option Fractional Precision Option
 
     This option sets how big fractional seconds precision will be used when binding any date, time, timestamp and/or interval parameter with seconds part. The default value is 3. Possible values are 1 to 9.
+
+    @subsection odbc_timeout_options Login Timeout and Connection Timeout Options
+
+    Login timeout option is used to set for how long the ODBC driver should wait during the initial connection phase. Connection timeout option is used to set the timeout for when the connection is open and it stops responding.
+
+    Both of the options have a default value of 60 and can be set to numbers ranging from 0 up. A value of 0 means to wait indefinitely (never time out). Both \c Qore int values and integers in the form of strings can be used to set these options.
 
     @section odbctrans Transaction Management
 
@@ -119,7 +136,7 @@ major_version * 1000000 + minor_version * 10000 + sub_version
 
     @section odbcbind Binding and Types
 
-    Apart from simply passing values for binding you can also use the \ref odbc_bind() function to specify the type to bind. See @ref odbc_binding_by_value for more information about how types are bound when binding by value with this driver.
+    Apart from simply passing values for binding you can also use the \ref odbc_bind() function to specify the type to bind. See \ref odbc_binding_by_value for more information about how types are bound when binding by value with this driver.
 
     For \c NUMERIC columns, the %d specification in the query string can be used to substitute a numeric value or a literal null directly in the query string, providing the same effect as a bind by value in a very convenient form for the programmer. For example:
 
@@ -133,9 +150,9 @@ major_version * 1000000 + minor_version * 10000 + sub_version
 
     When binding arrays, all data types in the Qore list must be identical.
 
-    When retrieving ODBC data, ODBC types are converted to Qore types as per @ref odbc_to_qore.
+    When retrieving ODBC data, ODBC types are converted to Qore types as per \ref odbc_to_qore.
 
-    @subsection odbc_timezone Time Zone Support
+    @subsection odbc_timezone Timezone Support
 
     The driver now sets the server's time zone rules when the connection is established; this is taken from the current time zone settings of the calling Program object and can also be overridden/changed by setting the \c "qore-timezone" driver option (see @ref odbcoptions).
 
@@ -144,6 +161,24 @@ major_version * 1000000 + minor_version * 10000 + sub_version
     When selecting date/time values, the values returned are tagged with the server's time zone.
 
     Note that the above rules are applied when the current Program's time zone settings are different than the connection's time zone settings at the time when the write operation (bind) read operation (select) is performed.  This is meant to provide consistent support to connecting to a database server in a different time zone.
+
+    @subsection odbc_encoding_support Character Encoding Support
+
+    ODBC module supports using all of Qore's charsets to transfer data between Qore and the databases.
+
+    If no encoding is set when creating an ODBC datasource, the module converts all outbound text data to UTF-16 strings and binds them as \c SQL_C_WCHAR datatype. Incoming \c SQL_WCHAR data is received as \c UTF-16, while incoming \c SQL_CHAR data is assumed to be in Qore's default encoding.
+
+    If encoding is set when creating an ODBC datasource, the module converts all outbound text data to it and binds it as either \c SQL_C_CHAR or \c SQL_C_WCHAR datatypes depending on the specific encoding. Incoming \c SQL_WCHAR data is received as \c UTF-16, while incoming \c SQL_CHAR data is assumed to be of the set encoding.
+
+    @subsection odbc_oracle_support Oracle Support
+
+    User of this module can use it to connect to Oracle databases. There is one issue however which is connected to this. This module binds \c Qore int values as \c SQL_C_SBIGINT datatype by default. This does not work with Oracle databases though. To overcome this problem, there are two options:
+
+    1) Use the \c "bigint-string" option when opening an ODBC connection. This causes all \c Qore integer values to be bound and sent to the DB as strings. It is less efficient than binding as bigints but works.
+
+    2) Make sure that the integer values fit the respective numerical limits and use \ref odbc_bind() to bind the integer values as one of the following ODBC datatypes: \c SQL_C_SLONG, \c SQL_C_ULONG, \c SQL_C_SSHORT, \c SQL_C_USHORT, \c SQL_C_STINYINT or \c SQL_C_UTINYINT.
+
+    @see odbc_bind_constants
 
     @subsection odbc_binding_by_value Binding By Value
 
@@ -159,6 +194,7 @@ major_version * 1000000 + minor_version * 10000 + sub_version
     |\c binary|\c SQL_C_BINARY|\c SQL_BINARY|Qore binary data is bound directly as binary data.
 
     @subsection odbc_to_qore ODBC to Qore Type Mappings
+
     |!ODBC Type|!Qore Type|!Notes
     |\c SQL_BIT|\c bool|direct conversion
     |\c SQL_BINARY|\c binary|direct conversion

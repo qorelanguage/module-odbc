@@ -233,6 +233,9 @@ private:
     //! Server encoding used for SQL_CHAR input and output parameters.
     const QoreEncoding* serverEnc;
 
+    //! Whether the server encoding is not UTF-16(LE/BE).
+    bool notUtf16Enc;
+
     //! Server timezone used for the date/time input and output parameters.
     const AbstractQoreZoneInfo* serverTz;
 
@@ -1534,6 +1537,19 @@ char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, qore_size_t& 
     }
     TempEncodingHelper tstr(arg, enc, xsink);
     len = tstr->size();
+
+    // Remove BOM if present and encoding is UTF-16.
+    if ((enc == QCS_UTF16 || enc == QCS_UTF16LE || enc == QCS_UTF16BE) && len >= 2) {
+        char* buf = const_cast<char*>(tstr->getBuffer());
+        if ((buf[0] == 0xFF && buf[1] == 0xFE) || (buf[0] == 0xFE && buf[1] == 0xFF)) {
+            memmove((void*)buf, (void*)(buf+2), len-2);
+            buf[len-2] = '\0';
+        }
+        else if (len >= 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF) {
+            memmove((void*)buf, (void*)(buf+3), len-3);
+            buf[len-3] = '\0';
+        }
+    }
     return tstr.giveBuffer();
 }
 

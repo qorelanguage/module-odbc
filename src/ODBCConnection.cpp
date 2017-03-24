@@ -108,8 +108,8 @@ int ODBCConnection::connect(ExceptionSink* xsink) {
     // Set connection attributes.
     SQLSetConnectAttr(dbc, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, SQL_IS_UINTEGER);
     SQLSetConnectAttr(dbc, SQL_ATTR_QUIET_MODE, 0, SQL_IS_POINTER);
-    SQLSetConnectAttr(dbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
-    SQLSetConnectAttr(dbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)60, SQL_IS_UINTEGER);
+    SQLSetConnectAttr(dbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)options.loginTimeout, SQL_IS_UINTEGER);
+    SQLSetConnectAttr(dbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)options.connTimeout, SQL_IS_UINTEGER);
 
     // Get connection string.
     SQLWCHAR* odbcDS = reinterpret_cast<SQLWCHAR*>(const_cast<char*>(connStrUTF16->getBuffer()));
@@ -271,56 +271,26 @@ int ODBCConnection::setOption(const char* opt, const AbstractQoreNode* val, Exce
         options.numeric = ENO_OPTIMAL;
         return 0;
     }
-    if (!strcasecmp(opt, DBI_OPT_NUMBER_STRING)) {
+    else if (!strcasecmp(opt, DBI_OPT_NUMBER_STRING)) {
         options.numeric = ENO_STRING;
         return 0;
     }
-    if (!strcasecmp(opt, DBI_OPT_NUMBER_NUMERIC)) {
+    else if (!strcasecmp(opt, DBI_OPT_NUMBER_NUMERIC)) {
         options.numeric = ENO_NUMERIC;
         return 0;
     }
-    if (!strcasecmp(opt, OPT_BIGINT_NATIVE)) {
+    else if (!strcasecmp(opt, OPT_BIGINT_NATIVE)) {
         options.bigint = EBO_NATIVE;
         return 0;
     }
-    if (!strcasecmp(opt, OPT_BIGINT_STRING)) {
+    else if (!strcasecmp(opt, OPT_BIGINT_STRING)) {
         options.bigint = EBO_STRING;
         return 0;
     }
-    if (!strcasecmp(opt, OPT_FRAC_PRECISION)) {
-        if (val) {
-            if (val->getType() == NT_INT) {
-                const QoreBigIntNode* in = reinterpret_cast<const QoreBigIntNode*>(val);
-                if (in->val <= 0 || in->val > 9) {
-                    xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
-                    return -1;
-                }
-                options.frPrec = in->val;
-            }
-            else if (val->getType() == NT_STRING) {
-                const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
-                TempEncodingHelper tstr(str, QCS_UTF8, xsink);
-                if (*xsink)
-                    return -1;
-                errno = 0;
-                long int num = strtol(tstr->getBuffer(), 0, 10);
-                if (num <= 0 || num > 9) {
-                    xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
-                    return -1;
-                }
-                options.frPrec = num;
-            }
-            else {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
-                return -1;
-            }
-        }
-        else {
-            xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
-            return -1;
-        }
+    else if (!strcasecmp(opt, OPT_FRAC_PRECISION)) {
+        return setFracPrecisionOption(val, xsink);
     }
-    if (!strcasecmp(opt, OPT_QORE_TIMEZONE)) {
+    else if (!strcasecmp(opt, OPT_QORE_TIMEZONE)) {
         if (val && val->getType() == NT_STRING) {
             const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
             TempEncodingHelper tzName(str, QCS_UTF8, xsink);
@@ -334,6 +304,12 @@ int ODBCConnection::setOption(const char* opt, const AbstractQoreNode* val, Exce
             xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires a name of a timezone (e.g. \"Europe/Prague\") or a time offset string (e.g. \"+02:00\")", OPT_QORE_TIMEZONE);
             return -1;
         }
+    }
+    else if (!strcasecmp(opt, OPT_LOGIN_TIMEOUT)) {
+        return setLoginTimeoutOption(val, xsink);
+    }
+    else if (!strcasecmp(opt, OPT_CONN_TIMEOUT)) {
+        return setConnectionTimeoutOption(val, xsink);
     }
 
     return 0;
@@ -373,6 +349,12 @@ AbstractQoreNode* ODBCConnection::getOption(const char* opt) {
             return new QoreStringNode("UTC");
         }
     }
+
+    if (!strcasecmp(opt, OPT_LOGIN_TIMEOUT))
+        return new QoreBigIntNode(static_cast<int64>(options.connTimeout));
+
+    if (!strcasecmp(opt, OPT_CONN_TIMEOUT))
+        return new QoreBigIntNode(static_cast<int64>(options.loginTimeout));
 
     return 0;
 }
@@ -436,37 +418,8 @@ int ODBCConnection::parseOptions(ExceptionSink* xsink) {
         }
         if (!strcasecmp(OPT_FRAC_PRECISION, hi.getKey())) {
             const AbstractQoreNode* val = hi.getValue();
-            if (val) {
-                if (val->getType() == NT_INT) {
-                    const QoreBigIntNode* in = reinterpret_cast<const QoreBigIntNode*>(val);
-                    if (in->val <= 0 || in->val > 9) {
-                        xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
-                        return -1;
-                    }
-                    options.frPrec = in->val;
-                }
-                else if (val->getType() == NT_STRING) {
-                    const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
-                    TempEncodingHelper tstr(str, QCS_UTF8, xsink);
-                    if (*xsink)
-                        return -1;
-                    errno = 0;
-                    long int num = strtol(tstr->getBuffer(), 0, 10);
-                    if (num <= 0 || num > 9) {
-                        xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
-                        return -1;
-                    }
-                    options.frPrec = num;
-                }
-                else {
-                    xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
-                    return -1;
-                }
-            }
-            else {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+            if (setFracPrecisionOption(val, xsink))
                 return -1;
-            }
             continue;
         }
         if (!strcasecmp(OPT_QORE_TIMEZONE, hi.getKey())) {
@@ -482,7 +435,134 @@ int ODBCConnection::parseOptions(ExceptionSink* xsink) {
             serverTz = tz;
             continue;
         }
+        if (!strcasecmp(OPT_LOGIN_TIMEOUT, hi.getKey())) {
+            const AbstractQoreNode* val = hi.getValue();
+            if (setLoginTimeoutOption(val, xsink))
+                return -1;
+            continue;
+        }
+        if (!strcasecmp(OPT_CONN_TIMEOUT, hi.getKey())) {
+            const AbstractQoreNode* val = hi.getValue();
+            if (setConnectionTimeoutOption(val, xsink))
+                return -1;
+            continue;
+        }
     }
+    return 0;
+}
+
+int ODBCConnection::setFracPrecisionOption(const AbstractQoreNode* val, ExceptionSink* xsink) {
+    if (val) {
+        if (val->getType() == NT_INT) {
+            const QoreBigIntNode* in = reinterpret_cast<const QoreBigIntNode*>(val);
+            if (in->val <= 0 || in->val > 9) {
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+                return -1;
+            }
+            options.frPrec = in->val;
+        }
+        else if (val->getType() == NT_STRING) {
+            const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
+            TempEncodingHelper tstr(str, QCS_UTF8, xsink);
+            if (*xsink)
+                return -1;
+            long int num = strtol(tstr->getBuffer(), 0, 10);
+            if (num <= 0 || num > 9) {
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+                return -1;
+            }
+            options.frPrec = num;
+        }
+        else {
+            xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+            return -1;
+        }
+    }
+    else {
+        xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+        return -1;
+    }
+
+    return 0;
+}
+
+int ODBCConnection::setLoginTimeoutOption(const AbstractQoreNode* val, ExceptionSink* xsink) {
+    if (val) {
+        if (val->getType() == NT_INT) {
+            const QoreBigIntNode* in = reinterpret_cast<const QoreBigIntNode*>(val);
+            if (in->val < 0) {
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_LOGIN_TIMEOUT);
+                return -1;
+            }
+            options.loginTimeout = in->val;
+        }
+        else if (val->getType() == NT_STRING) {
+            const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
+            TempEncodingHelper tstr(str, QCS_UTF8, xsink);
+            if (*xsink)
+                return -1;
+            const char* buf = tstr->getBuffer();
+            for (int i = 0, limit = tstr->size(); i < limit; i++) {
+                if (!isdigit(buf[i]) && buf[i] != ' ')
+                    xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_LOGIN_TIMEOUT);
+            }
+            long int num = strtol(tstr->getBuffer(), 0, 10);
+            if (num < 0) {
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_LOGIN_TIMEOUT);
+                return -1;
+            }
+            options.loginTimeout = num;
+        }
+        else {
+            xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_LOGIN_TIMEOUT);
+            return -1;
+        }
+    }
+    else {
+        xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_LOGIN_TIMEOUT);
+        return -1;
+    }
+
+    return 0;
+}
+
+int ODBCConnection::setConnectionTimeoutOption(const AbstractQoreNode* val, ExceptionSink* xsink) {
+    if (val) {
+        if (val->getType() == NT_INT) {
+            const QoreBigIntNode* in = reinterpret_cast<const QoreBigIntNode*>(val);
+            if (in->val < 0) {
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_CONN_TIMEOUT);
+                return -1;
+            }
+            options.connTimeout = in->val;
+        }
+        else if (val->getType() == NT_STRING) {
+            const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
+            TempEncodingHelper tstr(str, QCS_UTF8, xsink);
+            if (*xsink)
+                return -1;
+            const char* buf = tstr->getBuffer();
+            for (int i = 0, limit = tstr->size(); i < limit; i++) {
+                if (!isdigit(buf[i]) && buf[i] != ' ')
+                    xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_CONN_TIMEOUT);
+            }
+            long int num = strtol(tstr->getBuffer(), 0, 10);
+            if (num < 0) {
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_CONN_TIMEOUT);
+                return -1;
+            }
+            options.connTimeout = num;
+        }
+        else {
+            xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_CONN_TIMEOUT);
+            return -1;
+        }
+    }
+    else {
+        xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_CONN_TIMEOUT);
+        return -1;
+    }
+
     return 0;
 }
 
@@ -516,6 +596,10 @@ int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
         if (!strcasecmp(OPT_FRAC_PRECISION, hi.getKey()))
             continue;
         if (!strcasecmp(OPT_QORE_TIMEZONE, hi.getKey()))
+            continue;
+        if (!strcasecmp(OPT_LOGIN_TIMEOUT, hi.getKey()))
+            continue;
+        if (!strcasecmp(OPT_CONN_TIMEOUT, hi.getKey()))
             continue;
 
         // Append options to the connection string.

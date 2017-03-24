@@ -32,6 +32,8 @@
 #define OPT_BIGINT_STRING "bigint-string"            //!< BIGINT values bound as strings
 #define OPT_QORE_TIMEZONE "qore-timezone"            //!< timezone used for the connection
 #define OPT_FRAC_PRECISION "fractional-precision"    //!< fractional seconds precision
+#define OPT_LOGIN_TIMEOUT "login-timeout"            //!< timeout value in seconds used for logging in to the connection (connecting)
+#define OPT_CONN_TIMEOUT "connection-timeout"        //!< timeout value in seconds used for the connection
 
 namespace odbc {
 
@@ -50,8 +52,19 @@ enum NumericOption {
 
 struct ODBCOptions {
 public:
-    ODBCOptions() : bigint(EBO_NATIVE), numeric(ENO_OPTIMAL), frPrec(3) {}
-    ODBCOptions(BigintOption bo, NumericOption no, SQLSMALLINT fp) : bigint(bo), numeric(no), frPrec(fp) {}
+    ODBCOptions() :
+        bigint(EBO_NATIVE),
+        numeric(ENO_OPTIMAL),
+        frPrec(3),
+        loginTimeout(60),
+        connTimeout(60) {}
+
+    ODBCOptions(BigintOption bo, NumericOption no, SQLSMALLINT fp, SQLUINTEGER lt, SQLUINTEGER ct) :
+        bigint(bo),
+        numeric(no),
+        frPrec(fp),
+        loginTimeout(lt),
+        connTimeout(ct) {}
 
     //! Option used for deciding how BIGINT parameters will be bound.
     BigintOption bigint;
@@ -61,6 +74,12 @@ public:
 
     //! Fractional seconds precision (1-9).
     SQLSMALLINT frPrec;
+
+    //! Connection login timeout.
+    SQLUINTEGER loginTimeout;
+
+    //! Connection timeout.
+    SQLUINTEGER connTimeout;
 };
 
 } // namespace odbc

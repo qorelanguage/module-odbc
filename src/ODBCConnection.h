@@ -240,6 +240,30 @@ private:
      */
     DLLLOCAL int parseOptions(ExceptionSink* xsink);
 
+    //! Set fractional precision option to the passed value, check for errors.
+    /** @param val new value for the option
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int setFracPrecisionOption(const AbstractQoreNode* val, ExceptionSink* xsink);
+
+    //! Set login timeout to the passed value, check for errors.
+    /** @param val new value for the option
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int setLoginTimeoutOption(const AbstractQoreNode* val, ExceptionSink* xsink);
+
+    //! Set connection timeout to the passed value, check for errors.
+    /** @param val new value for the option
+        @param xsink exception sink
+
+        @return 0 for OK, -1 for error
+     */
+    DLLLOCAL int setConnectionTimeoutOption(const AbstractQoreNode* val, ExceptionSink* xsink);
+
     //! Prepare ODBC connection string and save it to the passed string.
     /** @param str connection string
         @param xsink exception sink
