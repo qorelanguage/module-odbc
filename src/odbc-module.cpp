@@ -4,7 +4,7 @@
 
   Qore ODBC module
 
-  Copyright (C) 2016 Qore Technologies s.r.o.
+  Copyright (C) 2016 - 2017 Qore Technologies s.r.o.
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -50,7 +50,7 @@ DLLEXPORT char qore_module_name[] = "odbc";
 DLLEXPORT char qore_module_version[] = PACKAGE_VERSION;
 DLLEXPORT char qore_module_description[] = "ODBC database driver module";
 DLLEXPORT char qore_module_author[] = "Ondrej Musil <ondrej.musil@qoretechnologies.com>";
-DLLEXPORT char qore_module_url[] = "http://qore.org";
+DLLEXPORT char qore_module_url[] = "https://github.com/qorelanguage/module-odbc";
 DLLEXPORT int qore_module_api_major = QORE_MODULE_API_MAJOR;
 DLLEXPORT int qore_module_api_minor = QORE_MODULE_API_MINOR;
 DLLEXPORT qore_module_init_t qore_module_init = odbc_module_init;
