@@ -42,16 +42,10 @@ namespace odbc {
 ///////////////////////////
 
 ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
-    stmt(SQL_NULL_HSTMT),
     bindArgs(xsink),
     conn(c),
-    serverEnc(0),
-    notUtf16Enc(false),
     serverTz(conn->getServerTimezone()),
     options(conn->getOptions()),
-    affectedRowCount(0),
-    readRows(0),
-    paramCountInSql(0),
     params(new QoreListNode, xsink)
 {
     const char* dbEnc = c->getDatasource()->getDBEncoding();
@@ -66,16 +60,10 @@ ODBCStatement::ODBCStatement(ODBCConnection* c, ExceptionSink* xsink) :
 }
 
 ODBCStatement::ODBCStatement(Datasource* ds, ExceptionSink* xsink) :
-    stmt(SQL_NULL_HSTMT),
     bindArgs(xsink),
     conn(static_cast<ODBCConnection*>(ds->getPrivateData())),
-    serverEnc(0),
-    notUtf16Enc(false),
     serverTz(conn->getServerTimezone()),
     options(conn->getOptions()),
-    affectedRowCount(0),
-    readRows(0),
-    paramCountInSql(0),
     params(new QoreListNode, xsink)
 {
     const char* dbEnc = ds->getDBEncoding();
@@ -458,6 +446,26 @@ int ODBCStatement::exec(const QoreString* qstr, ExceptionSink* xsink) {
     return execIntern(tstr->getBuffer(), textLen, xsink);
 }
 
+void ODBCStatement::clear(ExceptionSink* xsink) {
+    // Free current statement handle since the associated connection handle has to be also freed.
+    freeStatementHandle();
+}
+
+void ODBCStatement::reset(ExceptionSink* xsink) {
+    clear(xsink);
+
+    affectedRowCount = 0;
+    readRows = 0;
+    paramCountInSql = 0;
+
+    paramHolder.clear();
+    arrayHolder.clear();
+    resColumns.clear();
+
+    params = nullptr;
+    bindArgs = nullptr;
+}
+
 
 /////////////////////////////
 //   Protected methods    //
@@ -516,14 +524,20 @@ int ODBCStatement::execIntern(const char* str, SQLINTEGER textLen, ExceptionSink
             if (conn->getDatasource()->activeTransaction())
                 xsink->raiseException("DBI:ODBC:TRANSACTION-ERROR", "connection to database server lost while in a transaction; transaction has been lost");
 
-            // Free current statement handle since the associated connection handle has to be also freed.
-            freeStatementHandle();
+            // Reset current statement state while the driver-specific context data is still present.
+            clear(xsink);
+
+            // Free and reset statement states for all active statements while the driver-specific context data is still present.
+            conn->getDatasource()->connectionLost(xsink);
 
             // Disconnect first.
             conn->disconnect();
 
             // Then try to reconnect.
             if (conn->connect(xsink)) {
+                // Free state completely.
+                reset(xsink);
+
                 // Reconnect failed. Marking connection as closed.
                 // The following call will close any open statements and then the datasource.
                 conn->getDatasource()->connectionAborted();
@@ -533,6 +547,13 @@ int ODBCStatement::execIntern(const char* str, SQLINTEGER textLen, ExceptionSink
             // Don't execute again if the connection was aborted while in a transaction.
             if (conn->getDatasource()->activeTransaction())
                 return -1;
+
+            // Don't execute again if any exceptions have occured, including if the connection was aborted while in a transaction.
+            if (*xsink) {
+                // Close all statements and remove private data but leave datasource open.
+                conn->getDatasource()->connectionRecovered(xsink);
+                return -1;
+            }
 
             // Allocate new statement handle.
             if (conn->allocStatementHandle(stmt, xsink))

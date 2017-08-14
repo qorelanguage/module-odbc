@@ -126,9 +126,20 @@ public:
      */
     DLLLOCAL int exec(const QoreString* qstr, ExceptionSink* xsink);
 
+    //! Clear.
+    /**
+        This function is called when the DB connection is lost while executing SQL so that
+        the current state can be freed while the driver-specific context data is still present
+        reset the query but does not clear the SQL string or saved args.
+     */
+    DLLLOCAL void clear(ExceptionSink* xsink);
+
+    //! Completely reset and clear.
+    DLLLOCAL void reset(ExceptionSink* xsink);
+
 protected:
     //! ODBC statement handle.
-    SQLHSTMT stmt;
+    SQLHSTMT stmt = SQL_NULL_HSTMT;
 
     //! Copy of the original command.
     QoreString command;
@@ -231,10 +242,10 @@ private:
     ODBCConnection* conn;
 
     //! Server encoding used for SQL_CHAR input and output parameters.
-    const QoreEncoding* serverEnc;
+    const QoreEncoding* serverEnc = nullptr;
 
     //! Whether the server encoding is not UTF-16(LE/BE).
-    bool notUtf16Enc;
+    bool notUtf16Enc = false;
 
     //! Server timezone used for the date/time input and output parameters.
     const AbstractQoreZoneInfo* serverTz;
@@ -243,13 +254,13 @@ private:
     ODBCOptions options;
 
     //! Count of rows affected by the executed UPDATE, INSERT or DELETE statements.
-    SQLLEN affectedRowCount;
+    SQLLEN affectedRowCount = 0;
 
     //! Count of rows already read from the result-set.
-    unsigned int readRows;
+    unsigned int readRows = 0;
 
     //! Count of required parameters for the SQL command.
-    qore_size_t paramCountInSql;
+    qore_size_t paramCountInSql = 0;
 
     //! Temporary holder for params.
     intern::ParamHolder paramHolder;
