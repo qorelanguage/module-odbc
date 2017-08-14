@@ -194,13 +194,13 @@ private:
     Datasource* ds;
 
     //! Server timezone.
-    const AbstractQoreZoneInfo* serverTz;
+    const AbstractQoreZoneInfo* serverTz = nullptr;
 
     //! ODBC environment handle.
-    SQLHENV env;
+    SQLHENV env = SQL_NULL_HENV;
 
     //! ODBC connection handle.
-    SQLHDBC dbc;
+    SQLHDBC dbc = SQL_NULL_HDBC;
 
     //! Connection string.
     QoreString connStr;
@@ -209,22 +209,22 @@ private:
     std::unique_ptr<QoreString> connStrUTF16;
 
     //! Whether an ODBC connection has been opened.
-    bool connected;
+    bool connected = false;
 
     //! Whether the ODBC connection is dead.
-    bool isDead;
+    bool isDead = false;
 
     //! Whether a transaction is active.
-    bool activeTransaction;
+    bool activeTransaction = false;
 
     //! Options regarding parameters and results.
     ODBCOptions options;
 
     //! Version of the used ODBC DB driver.
-    int clientVer;
+    int clientVer = 0;
 
     //! Version of the connected DBMS.
-    int serverVer;
+    int serverVer = 0;
 
     //! Initialize environment.
     /** @param xsink exception sink

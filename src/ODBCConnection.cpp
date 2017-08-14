@@ -43,15 +43,7 @@ static SQLINTEGER getUTF8CharCount(const char* str) {
 
 ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     ds(d),
-    serverTz(0),
-    env(SQL_NULL_HENV),
-    dbc(SQL_NULL_HDBC),
     connStr(QCS_UTF8),
-    connected(false),
-    isDead(false),
-    activeTransaction(false),
-    clientVer(0),
-    serverVer(0)
 {
     // Parse options passed through the datasource.
     if (parseOptions(xsink))
