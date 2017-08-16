@@ -4,7 +4,7 @@
 
   Qore ODBC module
 
-  Copyright (C) 2016 Qore Technologies s.r.o.
+  Copyright (C) 2016 - 2017 Qore Technologies s.r.o.
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -1551,7 +1551,7 @@ char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, qore_size_t& 
 
     // Remove BOM if present and encoding is UTF-16.
     if ((enc == QCS_UTF16 || enc == QCS_UTF16LE || enc == QCS_UTF16BE) && len >= 2) {
-        char* buf = const_cast<char*>(tstr->getBuffer());
+        unsigned char* buf = const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(tstr->getBuffer()));
         if ((buf[0] == 0xFF && buf[1] == 0xFE) || (buf[0] == 0xFE && buf[1] == 0xFF)) {
             memmove((void*)buf, (void*)(buf+2), len-2);
             buf[len-2] = '\0';

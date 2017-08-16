@@ -4,7 +4,7 @@
 
   Qore ODBC module
 
-  Copyright (C) 2016 Qore Technologies s.r.o.
+  Copyright (C) 2016 - 2017 Qore Technologies s.r.o.
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -43,7 +43,7 @@ static SQLINTEGER getUTF8CharCount(const char* str) {
 
 ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     ds(d),
-    connStr(QCS_UTF8),
+    connStr(QCS_UTF8)
 {
     // Parse options passed through the datasource.
     if (parseOptions(xsink))
@@ -100,8 +100,8 @@ int ODBCConnection::connect(ExceptionSink* xsink) {
     // Set connection attributes.
     SQLSetConnectAttr(dbc, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, SQL_IS_UINTEGER);
     SQLSetConnectAttr(dbc, SQL_ATTR_QUIET_MODE, 0, SQL_IS_POINTER);
-    SQLSetConnectAttr(dbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)options.loginTimeout, SQL_IS_UINTEGER);
-    SQLSetConnectAttr(dbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)options.connTimeout, SQL_IS_UINTEGER);
+    SQLSetConnectAttr(dbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)(size_t)options.loginTimeout, SQL_IS_UINTEGER);
+    SQLSetConnectAttr(dbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)(size_t)options.connTimeout, SQL_IS_UINTEGER);
 
     // Get connection string.
     SQLWCHAR* odbcDS = reinterpret_cast<SQLWCHAR*>(const_cast<char*>(connStrUTF16->getBuffer()));
