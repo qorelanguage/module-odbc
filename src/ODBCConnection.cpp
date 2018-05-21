@@ -1,28 +1,28 @@
 /* -*- indent-tabs-mode: nil -*- */
 /*
-  ODBCConnection.cpp
+    ODBCConnection.cpp
 
-  Qore ODBC module
+    Qore ODBC module
 
-  Copyright (C) 2016 - 2017 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
 
-  Permission is hereby granted, free of charge, to any person obtaining a
-  copy of this software and associated documentation files (the "Software"),
-  to deal in the Software without restriction, including without limitation
-  the rights to use, copy, modify, merge, publish, distribute, sublicense,
-  and/or sell copies of the Software, and to permit persons to whom the
-  Software is furnished to do so, subject to the following conditions:
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-  DEALINGS IN THE SOFTWARE.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
 */
 
 #include "ODBCConnection.h"
@@ -258,7 +258,7 @@ AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink*
     return new QoreBigIntNode(res.rowsAffected());
 }
 
-int ODBCConnection::setOption(const char* opt, const AbstractQoreNode* val, ExceptionSink* xsink) {
+int ODBCConnection::setOption(const char* opt, QoreValue val, ExceptionSink* xsink) {
     if (!strcasecmp(opt, DBI_OPT_NUMBER_OPT)) {
         options.numeric = ENO_OPTIMAL;
         return 0;
@@ -283,8 +283,8 @@ int ODBCConnection::setOption(const char* opt, const AbstractQoreNode* val, Exce
         return setFracPrecisionOption(val, xsink);
     }
     else if (!strcasecmp(opt, OPT_QORE_TIMEZONE)) {
-        if (val && val->getType() == NT_STRING) {
-            const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
+        if (val.getType() == NT_STRING) {
+            const QoreStringNode* str = val.get<const QoreStringNode>();
             TempEncodingHelper tzName(str, QCS_UTF8, xsink);
             if (*xsink)
                 return -1;
@@ -409,32 +409,32 @@ int ODBCConnection::parseOptions(ExceptionSink* xsink) {
             continue;
         }
         if (!strcasecmp(OPT_FRAC_PRECISION, hi.getKey())) {
-            const AbstractQoreNode* val = hi.getValue();
+            QoreValue val = hi.get();
             if (setFracPrecisionOption(val, xsink))
                 return -1;
             continue;
         }
         if (!strcasecmp(OPT_QORE_TIMEZONE, hi.getKey())) {
-            const AbstractQoreNode* val = hi.getValue();
-            if (val->getType() != NT_STRING) {
+            QoreValue val = hi.get();
+            if (val.getType() != NT_STRING) {
                 xsink->raiseException("DBI:ODBC:OPTION-ERROR", "non-string value passed for the '%s' option", OPT_QORE_TIMEZONE);
                 return -1;
             }
-            const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
-            const AbstractQoreZoneInfo* tz = find_create_timezone(str->getBuffer(), xsink);
+            const QoreStringNode* str = val.get<const QoreStringNode>();
+            const AbstractQoreZoneInfo* tz = find_create_timezone(str->c_str(), xsink);
             if (*xsink)
                 return -1;
             serverTz = tz;
             continue;
         }
         if (!strcasecmp(OPT_LOGIN_TIMEOUT, hi.getKey())) {
-            const AbstractQoreNode* val = hi.getValue();
+            QoreValue val = hi.get();
             if (setLoginTimeoutOption(val, xsink))
                 return -1;
             continue;
         }
         if (!strcasecmp(OPT_CONN_TIMEOUT, hi.getKey())) {
-            const AbstractQoreNode* val = hi.getValue();
+            QoreValue val = hi.get();
             if (setConnectionTimeoutOption(val, xsink))
                 return -1;
             continue;
@@ -443,22 +443,22 @@ int ODBCConnection::parseOptions(ExceptionSink* xsink) {
     return 0;
 }
 
-int ODBCConnection::setFracPrecisionOption(const AbstractQoreNode* val, ExceptionSink* xsink) {
+int ODBCConnection::setFracPrecisionOption(QoreValue val, ExceptionSink* xsink) {
     if (val) {
-        if (val->getType() == NT_INT) {
-            const QoreBigIntNode* in = reinterpret_cast<const QoreBigIntNode*>(val);
-            if (in->val <= 0 || in->val > 9) {
+        if (val.getType() == NT_INT) {
+            int64 i = val.getAsBigInt();
+            if (i <= 0 || i > 9) {
                 xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
                 return -1;
             }
-            options.frPrec = in->val;
+            options.frPrec = i;
         }
-        else if (val->getType() == NT_STRING) {
-            const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
+        else if (val.getType() == NT_STRING) {
+            const QoreStringNode* str = val.get<const QoreStringNode>();
             TempEncodingHelper tstr(str, QCS_UTF8, xsink);
             if (*xsink)
                 return -1;
-            long int num = strtol(tstr->getBuffer(), 0, 10);
+            long int num = strtol(tstr->c_str(), 0, 10);
             if (num <= 0 || num > 9) {
                 xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
                 return -1;
@@ -478,18 +478,18 @@ int ODBCConnection::setFracPrecisionOption(const AbstractQoreNode* val, Exceptio
     return 0;
 }
 
-int ODBCConnection::setLoginTimeoutOption(const AbstractQoreNode* val, ExceptionSink* xsink) {
+int ODBCConnection::setLoginTimeoutOption(QoreValue val, ExceptionSink* xsink) {
     if (val) {
-        if (val->getType() == NT_INT) {
-            const QoreBigIntNode* in = reinterpret_cast<const QoreBigIntNode*>(val);
-            if (in->val < 0) {
+        if (val.getType() == NT_INT) {
+            int64 i = val.getAsBigInt();
+            if (i < 0) {
                 xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_LOGIN_TIMEOUT);
                 return -1;
             }
-            options.loginTimeout = in->val;
+            options.loginTimeout = i;
         }
-        else if (val->getType() == NT_STRING) {
-            const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
+        else if (val.getType() == NT_STRING) {
+            const QoreStringNode* str = val.get<const QoreStringNode>();
             TempEncodingHelper tstr(str, QCS_UTF8, xsink);
             if (*xsink)
                 return -1;
@@ -518,18 +518,18 @@ int ODBCConnection::setLoginTimeoutOption(const AbstractQoreNode* val, Exception
     return 0;
 }
 
-int ODBCConnection::setConnectionTimeoutOption(const AbstractQoreNode* val, ExceptionSink* xsink) {
+int ODBCConnection::setConnectionTimeoutOption(QoreValue val, ExceptionSink* xsink) {
     if (val) {
-        if (val->getType() == NT_INT) {
-            const QoreBigIntNode* in = reinterpret_cast<const QoreBigIntNode*>(val);
-            if (in->val < 0) {
+        if (val.getType() == NT_INT) {
+            int64 i = val.getAsBigInt();
+            if (i < 0) {
                 xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_CONN_TIMEOUT);
                 return -1;
             }
-            options.connTimeout = in->val;
+            options.connTimeout = i;
         }
-        else if (val->getType() == NT_STRING) {
-            const QoreStringNode* str = reinterpret_cast<const QoreStringNode*>(val);
+        else if (val.getType() == NT_STRING) {
+            const QoreStringNode* str = val.get<const QoreStringNode>();
             TempEncodingHelper tstr(str, QCS_UTF8, xsink);
             if (*xsink)
                 return -1;
@@ -570,7 +570,7 @@ int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
 
     ConstHashIterator hi(ds->getConnectOptions());
     while (hi.next()) {
-        const AbstractQoreNode* val = hi.getValue();
+        QoreValue val = hi.get();
         if (!val)
             continue;
 
@@ -595,10 +595,10 @@ int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
             continue;
 
         // Append options to the connection string.
-        qore_type_t ntype = val->getType();
+        qore_type_t ntype = val.getType();
         switch (ntype) {
             case NT_STRING: {
-                const QoreStringNode* strNode = reinterpret_cast<const QoreStringNode*>(val);
+                const QoreStringNode* strNode = val.get<const QoreStringNode>();
                 TempEncodingHelper tstr(strNode, QCS_UTF8, xsink);
                 if (*xsink)
                     return -1;
@@ -620,12 +620,12 @@ int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
                 break;
             }
             case NT_BOOLEAN: {
-                bool b = reinterpret_cast<const QoreBoolNode*>(val)->getValue();
+                bool b = val.getAsBool();
                 connStr.sprintf("%s=%s;", hi.getKey(), b ? "1" : "0");
                 break;
             }
             default: {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "option values of type '%s' are not supported by the ODBC driver", val->getTypeName());
+                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "option values of type '%s' are not supported by the ODBC driver", val.getTypeName());
                 return -1;
             }
         } //  switch

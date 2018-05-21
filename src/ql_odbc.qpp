@@ -1,30 +1,30 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  ql_odbc.qpp
+    ql_odbc.qpp
 
-  Qore ODBC module
+    Qore ODBC module
 
-  ODBC Interface to Qore DBI layer
+    ODBC Interface to Qore DBI layer
 
-  Copyright (C) 2016 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
 
-  Permission is hereby granted, free of charge, to any person obtaining a
-  copy of this software and associated documentation files (the "Software"),
-  to deal in the Software without restriction, including without limitation
-  the rights to use, copy, modify, merge, publish, distribute, sublicense,
-  and/or sell copies of the Software, and to permit persons to whom the
-  Software is furnished to do so, subject to the following conditions:
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-  DEALINGS IN THE SOFTWARE.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
 */
 
 #include <sql.h>
@@ -127,15 +127,15 @@ db.exec("INSERT INTO table_abc (id, dt) VALUES (%v, %v)", 42, odbc_bind(ODBCT_DA
 
     @throw DBI:ODBC:BIND-ERROR if the type argument is 0 this exception is raised
  */
-hash odbc_bind(softint type, any value) [flags=RET_VALUE_ONLY] {
+hash odbc_bind(softint type, auto value) [flags=RET_VALUE_ONLY] {
     if (!type) {
         xsink->raiseException("DBI:ODBC:BIND-ERROR", "expecting type number as first parameter to odbc_bind()");
         return 0;
     }
 
     QoreHashNode *h = new QoreHashNode;
-    h->setKeyValue("^odbct^", new QoreBigIntNode(type), xsink);
-    h->setKeyValue("^value^", value ? value->refSelf() : 0, xsink);
+    h->setKeyValue("^odbct^", type, xsink);
+    h->setKeyValue("^value^", value.refSelf(), xsink);
     return h;
 }
 //@}

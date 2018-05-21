@@ -1,28 +1,28 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  ParamHolder.h
+    ParamHolder.h
 
-  Qore ODBC module
+    Qore ODBC module
 
-  Copyright (C) 2016 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
 
-  Permission is hereby granted, free of charge, to any person obtaining a
-  copy of this software and associated documentation files (the "Software"),
-  to deal in the Software without restriction, including without limitation
-  the rights to use, copy, modify, merge, publish, distribute, sublicense,
-  and/or sell copies of the Software, and to permit persons to whom the
-  Software is furnished to do so, subject to the following conditions:
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-  DEALINGS IN THE SOFTWARE.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
 */
 
 #ifndef _QORE_MODULE_ODBC_PARAMHOLDER_H
@@ -92,9 +92,19 @@ public:
         return &(uints32[uints32.size()-1]);
     }
 
+    DLLLOCAL int64* addInt64(int64 i) {
+        int64s.push_back(i);
+        return &(int64s[int64s.size()-1]);
+    }
+
     DLLLOCAL float* addFloat(float f) {
         floats.push_back(f);
         return &(floats[floats.size()-1]);
+    }
+
+    DLLLOCAL double* addDouble(double f) {
+        doubles.push_back(f);
+        return &(doubles[doubles.size()-1]);
     }
 
     DLLLOCAL SQLLEN* addLength(SQLLEN l) {
@@ -148,7 +158,9 @@ private:
     std::vector<uint8_t> uints8;
     std::vector<uint16_t> uints16;
     std::vector<uint32_t> uints32;
+    std::vector<int64> int64s;
     std::vector<float> floats;
+    std::vector<double> doubles;
     std::vector<SQLLEN> lengths;
     std::vector<DATE_STRUCT> dates;
     std::vector<TIME_STRUCT> times;

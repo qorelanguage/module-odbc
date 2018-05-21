@@ -4,7 +4,7 @@
 
   Qore ODBC module
 
-  Copyright (C) 2016 - 2017 Qore Technologies s.r.o.
+  Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -315,7 +315,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindParamArraySingleValue(int column, const AbstractQoreNode* arg, ExceptionSink* xsink);
+    DLLLOCAL int bindParamArraySingleValue(int column, QoreValue arg, ExceptionSink* xsink);
 
     //! Bind a value or a list of values passed using \c odbc_bind as an array.
     /** @param column ODBC column number, starting from 1
@@ -334,7 +334,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeSLong(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeSLong(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_ULONG value.
     /** @param column ODBC column number, starting from 1
@@ -344,7 +344,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeULong(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeULong(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_SSHORT value.
     /** @param column ODBC column number, starting from 1
@@ -354,7 +354,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeSShort(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeSShort(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_USHORT value.
     /** @param column ODBC column number, starting from 1
@@ -364,7 +364,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeUShort(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeUShort(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_STINYINT value.
     /** @param column ODBC column number, starting from 1
@@ -374,7 +374,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeSTinyint(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeSTinyint(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_UTINYINT value.
     /** @param column ODBC column number, starting from 1
@@ -384,7 +384,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeUTinyint(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeUTinyint(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int passed using \c odbc_bind as an ODBC \c SQL_C_FLOAT value.
     /** @param column ODBC column number, starting from 1
@@ -394,7 +394,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeFloat(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeFloat(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_TYPE_DATE value.
     /** @param column ODBC column number, starting from 1
@@ -404,7 +404,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeDate(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeDate(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_TYPE_TIME value.
     /** @param column ODBC column number, starting from 1
@@ -414,7 +414,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeTime(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeTime(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_TYPE_TIMESTAMP value.
     /** @param column ODBC column number, starting from 1
@@ -424,7 +424,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeTimestamp(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeTimestamp(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_YEAR value.
     /** @param column ODBC column number, starting from 1
@@ -434,7 +434,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntYear(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntYear(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_MONTH value.
     /** @param column ODBC column number, starting from 1
@@ -444,7 +444,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntMonth(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMonth(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_YEAR_TO_MONTH value.
     /** @param column ODBC column number, starting from 1
@@ -454,7 +454,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntYearMonth(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntYearMonth(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_DAY value.
     /** @param column ODBC column number, starting from 1
@@ -464,7 +464,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntDay(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDay(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_HOUR value.
     /** @param column ODBC column number, starting from 1
@@ -474,7 +474,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntHour(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHour(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_MINUTE value.
     /** @param column ODBC column number, starting from 1
@@ -484,7 +484,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMinute(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_SECOND value.
     /** @param column ODBC column number, starting from 1
@@ -494,7 +494,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntSecond(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_DAY_TO_HOUR value.
     /** @param column ODBC column number, starting from 1
@@ -504,7 +504,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntDayHour(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDayHour(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_DAY_TO_MINUTE value.
     /** @param column ODBC column number, starting from 1
@@ -514,7 +514,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntDayMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDayMinute(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_DAY_TO_SECOND value.
     /** @param column ODBC column number, starting from 1
@@ -524,7 +524,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntDaySecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDaySecond(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_HOUR_TO_MINUTE value.
     /** @param column ODBC column number, starting from 1
@@ -534,7 +534,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntHourMinute(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHourMinute(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_HOUR_TO_SECOND value.
     /** @param column ODBC column number, starting from 1
@@ -544,7 +544,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntHourSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHourSecond(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date passed using \c odbc_bind as an ODBC \c SQL_C_INTERVAL_MINUTE_TO_SECOND value.
     /** @param column ODBC column number, starting from 1
@@ -554,7 +554,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntMinuteSecond(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMinuteSecond(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_SLONG values.
     /** @param column ODBC column number, starting from 1
@@ -564,7 +564,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeSLongArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeSLongArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_ULONG values.
     /** @param column ODBC column number, starting from 1
@@ -574,7 +574,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeULongArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeULongArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_SSHORT values.
     /** @param column ODBC column number, starting from 1
@@ -584,7 +584,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeSShortArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeSShortArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_USHORT values.
     /** @param column ODBC column number, starting from 1
@@ -594,7 +594,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeUShortArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeUShortArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_STINYINT values.
     /** @param column ODBC column number, starting from 1
@@ -604,7 +604,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeSTinyintArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeSTinyintArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_UTINYINT values.
     /** @param column ODBC column number, starting from 1
@@ -614,7 +614,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeUTinyintArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeUTinyintArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore int or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_FLOAT values.
     /** @param column ODBC column number, starting from 1
@@ -624,7 +624,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeFloatArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeFloatArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_TYPE_DATE values.
     /** @param column ODBC column number, starting from 1
@@ -634,7 +634,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeDateArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeDateArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_TYPE_TIME values.
     /** @param column ODBC column number, starting from 1
@@ -644,7 +644,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeTimeArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeTimeArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_TYPE_TIMESTAMP values.
     /** @param column ODBC column number, starting from 1
@@ -654,7 +654,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeTimestampArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeTimestampArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_YEAR values.
     /** @param column ODBC column number, starting from 1
@@ -664,7 +664,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntYearArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntYearArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_MONTH values.
     /** @param column ODBC column number, starting from 1
@@ -674,7 +674,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntMonthArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMonthArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_YEAR_TO_MONTH values.
     /** @param column ODBC column number, starting from 1
@@ -684,7 +684,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntYearMonthArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntYearMonthArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_DAY values.
     /** @param column ODBC column number, starting from 1
@@ -694,7 +694,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntDayArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDayArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_HOUR values.
     /** @param column ODBC column number, starting from 1
@@ -704,7 +704,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntHourArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHourArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_MINUTE values.
     /** @param column ODBC column number, starting from 1
@@ -714,7 +714,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMinuteArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_SECOND values.
     /** @param column ODBC column number, starting from 1
@@ -724,7 +724,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntSecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntSecondArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_DAY_TO_HOUR values.
     /** @param column ODBC column number, starting from 1
@@ -734,7 +734,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntDayHourArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDayHourArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_DAY_TO_MINUTE values.
     /** @param column ODBC column number, starting from 1
@@ -744,7 +744,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntDayMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDayMinuteArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_DAY_TO_SECOND values.
     /** @param column ODBC column number, starting from 1
@@ -754,7 +754,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntDaySecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntDaySecondArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_HOUR_TO_MINUTE values.
     /** @param column ODBC column number, starting from 1
@@ -764,7 +764,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntHourMinuteArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHourMinuteArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_HOUR_TO_SECOND values.
     /** @param column ODBC column number, starting from 1
@@ -774,7 +774,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntHourSecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntHourSecondArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Bind a Qore date or a list of them passed using \c odbc_bind as an array of ODBC \c SQL_C_INTERVAL_MINUTE_TO_SECOND values.
     /** @param column ODBC column number, starting from 1
@@ -784,7 +784,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int bindTypeIntMinuteSecondArray(int column, const AbstractQoreNode* arg, SQLRETURN& ret, ExceptionSink* xsink);
+    DLLLOCAL int bindTypeIntMinuteSecondArray(int column, QoreValue arg, SQLRETURN& ret, ExceptionSink* xsink);
 
     //! Create a new char array filled with string values from the passed Qore list.
     /** @param arg list of Qore strings used to fill the array
@@ -938,7 +938,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromBool(const QoreBoolNode* arg, int8_t*& array, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromBool(bool arg, int8_t*& array, ExceptionSink* xsink);
 
     //! Create an int64 array filled with the passed Qore int value.
     /** @param arg Qore int used for initializing the array values
@@ -947,7 +947,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromInt(const QoreBigIntNode* arg, int64*& array, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromInt(int64 arg, int64*& array, ExceptionSink* xsink);
 
     //! Create a new char array filled with the passed stringified int.
     /** @param arg int used to fill the array
@@ -958,7 +958,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createStrArrayFromInt(const QoreBigIntNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL int createStrArrayFromInt(QoreValue val, char*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink);
 
     //! Create a double array filled with the passed Qore float value.
     /** @param arg Qore float used for initializing the array values
@@ -967,7 +967,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromFloat(const QoreFloatNode* arg, double*& array, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromFloat(double val, double*& array, ExceptionSink* xsink);
 
     //! Create a new indicator array filled with the passed indicator value.
     /** @param indicator value used to fill the array
