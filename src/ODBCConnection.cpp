@@ -186,18 +186,18 @@ int ODBCConnection::rollback(ExceptionSink* xsink) {
     return 0;
 }
 
-AbstractQoreNode* ODBCConnection::select(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
+QoreValue ODBCConnection::select(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCStatement res(this, xsink);
     if (*xsink)
-        return 0;
+        return QoreValue();
 
     if (res.exec(qstr, args, xsink))
-        return 0;
+        return QoreValue();
 
     if (res.hasResultData())
         return res.getOutputHash(xsink, false);
 
-    return new QoreBigIntNode(res.rowsAffected());
+    return res.rowsAffected();
 }
 
 QoreListNode* ODBCConnection::selectRows(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
@@ -222,40 +222,40 @@ QoreHashNode* ODBCConnection::selectRow(const QoreString* qstr, const QoreListNo
     return res.getSingleRow(xsink);
 }
 
-AbstractQoreNode* ODBCConnection::exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
+QoreValue ODBCConnection::exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     //fprintf(stderr, "ODBCConnection::exec called: '%s'\n", qstr->c_str());
     ODBCStatement res(this, xsink);
     if (*xsink)
-        return 0;
+        return QoreValue();
 
     if (res.exec(qstr, args, xsink)) {
         //fprintf(stderr, "exec failed\n");
-        return 0;
+        return QoreValue();
     }
     activeTransaction = true;
 
     if (res.hasResultData())
         return res.getOutputHash(xsink, false);
 
-    return new QoreBigIntNode(res.rowsAffected());
+    return res.rowsAffected();
 }
 
-AbstractQoreNode* ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink* xsink) {
+QoreValue ODBCConnection::execRaw(const QoreString* qstr, ExceptionSink* xsink) {
     //fprintf(stderr, "ODBCConnection::execRaw called: '%s'\n", qstr->c_str());
     ODBCStatement res(this, xsink);
     if (*xsink)
-        return 0;
+        return QoreValue();
 
     if (res.exec(qstr, xsink)) {
         //fprintf(stderr, "execRaw failed\n");
-        return 0;
+        return QoreValue();
     }
     activeTransaction = true;
 
     if (res.hasResultData())
         return res.getOutputHash(xsink, false);
 
-    return new QoreBigIntNode(res.rowsAffected());
+    return res.rowsAffected();
 }
 
 int ODBCConnection::setOption(const char* opt, QoreValue val, ExceptionSink* xsink) {
@@ -307,27 +307,27 @@ int ODBCConnection::setOption(const char* opt, QoreValue val, ExceptionSink* xsi
     return 0;
 }
 
-AbstractQoreNode* ODBCConnection::getOption(const char* opt) {
+QoreValue ODBCConnection::getOption(const char* opt) {
     assert(options.numeric == ENO_OPTIMAL || options.numeric == ENO_STRING || options.numeric == ENO_NUMERIC);
     assert(options.bigint == EBO_NATIVE || options.bigint == EBO_STRING);
 
     if (!strcasecmp(opt, DBI_OPT_NUMBER_OPT))
-        return get_bool_node(options.numeric == ENO_OPTIMAL);
+        return options.numeric == ENO_OPTIMAL;
 
     if (!strcasecmp(opt, DBI_OPT_NUMBER_STRING))
-        return get_bool_node(options.numeric == ENO_STRING);
+        return options.numeric == ENO_STRING;
 
     if (!strcasecmp(opt, DBI_OPT_NUMBER_NUMERIC))
-        return get_bool_node(options.numeric == ENO_NUMERIC);
+        return options.numeric == ENO_NUMERIC;
 
     if (!strcasecmp(opt, OPT_BIGINT_NATIVE))
-        return get_bool_node(options.bigint == EBO_NATIVE);
+        return options.bigint == EBO_NATIVE;
 
     if (!strcasecmp(opt, OPT_BIGINT_STRING))
-        return get_bool_node(options.bigint == EBO_STRING);
+        return options.bigint == EBO_STRING;
 
     if (!strcasecmp(opt, OPT_FRAC_PRECISION))
-        return new QoreBigIntNode(static_cast<int64>(options.frPrec));
+        return static_cast<int64>(options.frPrec);
 
     if (!strcasecmp(opt, OPT_QORE_TIMEZONE)) {
         if (serverTz) {
@@ -343,12 +343,12 @@ AbstractQoreNode* ODBCConnection::getOption(const char* opt) {
     }
 
     if (!strcasecmp(opt, OPT_LOGIN_TIMEOUT))
-        return new QoreBigIntNode(static_cast<int64>(options.connTimeout));
+        return static_cast<int64>(options.connTimeout);
 
     if (!strcasecmp(opt, OPT_CONN_TIMEOUT))
-        return new QoreBigIntNode(static_cast<int64>(options.loginTimeout));
+        return static_cast<int64>(options.loginTimeout);
 
-    return 0;
+    return QoreValue();
 }
 
 int ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) {

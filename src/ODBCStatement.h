@@ -1,28 +1,28 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  ODBCStatement.h
+    ODBCStatement.h
 
-  Qore ODBC module
+    Qore ODBC module
 
-  Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
 
-  Permission is hereby granted, free of charge, to any person obtaining a
-  copy of this software and associated documentation files (the "Software"),
-  to deal in the Software without restriction, including without limitation
-  the rights to use, copy, modify, merge, publish, distribute, sublicense,
-  and/or sell copies of the Software, and to permit persons to whom the
-  Software is furnished to do so, subject to the following conditions:
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-  DEALINGS IN THE SOFTWARE.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
 */
 
 #ifndef _QORE_MODULE_ODBC_ODBCSTATEMENT_H
@@ -297,7 +297,7 @@ private:
 
         @return result value wrapped in a Qore node, or 0 in case of error
      */
-    DLLLOCAL inline AbstractQoreNode* getColumnValue(int column, ODBCResultColumn& rcol, ExceptionSink* xsink);
+    DLLLOCAL QoreValue getColumnValue(int column, ODBCResultColumn& rcol, ExceptionSink* xsink);
 
     //! Bind a list of values as an array.
     /** @param column ODBC column number, starting from 1
@@ -1112,7 +1112,7 @@ public:
     }
 };
 
-inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, ExceptionSink* xsink) {
+inline QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, ExceptionSink* xsink) {
     SQLLEN indicator;
     SQLRETURN ret;
 
@@ -1126,7 +1126,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             SQLBIGINT val;
             ret = SQLGetData(stmt, column, SQL_C_SBIGINT, &val, sizeof(SQLBIGINT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new QoreBigIntNode(val);
+                return val;
             }
             break;
         }
@@ -1134,7 +1134,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             SQLBIGINT val;
             ret = SQLGetData(stmt, column, SQL_C_SBIGINT, &val, sizeof(SQLBIGINT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new QoreBigIntNode(val);
+                return val;
             }
             break;
         }
@@ -1142,7 +1142,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             SQLINTEGER val;
             ret = SQLGetData(stmt, column, SQL_C_SLONG, &val, sizeof(SQLINTEGER), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new QoreBigIntNode(static_cast<int64>(val));
+                return static_cast<int64>(val);
             }
             break;
         }
@@ -1150,7 +1150,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             SQLSMALLINT val;
             ret = SQLGetData(stmt, column, SQL_C_SSHORT, &val, sizeof(SQLSMALLINT), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new QoreBigIntNode(static_cast<int64>(val));
+                return static_cast<int64>(val);
             }
             break;
         }
@@ -1160,7 +1160,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             SQLDOUBLE val;
             ret = SQLGetData(stmt, column, SQL_C_DOUBLE, &val, sizeof(SQLDOUBLE), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new QoreFloatNode(val);
+                return val;
             }
             break;
         }
@@ -1168,7 +1168,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             SQLDOUBLE val;
             ret = SQLGetData(stmt, column, SQL_C_DOUBLE, &val, sizeof(SQLDOUBLE), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new QoreFloatNode(val);
+                return val;
             }
             break;
         }
@@ -1176,7 +1176,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             SQLREAL val;
             ret = SQLGetData(stmt, column, SQL_C_FLOAT, &val, sizeof(SQLREAL), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return new QoreFloatNode(val);
+                return val;
             }
             break;
         }
@@ -1201,7 +1201,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
                         char descTypeName[32];
                         SQLColAttributeA(stmt, column, SQL_DESC_TYPE_NAME, descTypeName, 32, 0, 0);
                         if (strcmp(descTypeName, "bool") == 0) {
-                            return get_bool_node((buffer[0])-48);
+                            return (bool)((buffer[0])-48);
                         }
                     }
 
@@ -1281,11 +1281,11 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
                         long long num = strtoll(val, 0, 10);
                         if (errno == ERANGE)
                             return new QoreNumberNode(val);
-                        return new QoreBigIntNode(num);
+                        return num;
                     }
                     SimpleRefHolder<QoreNumberNode> afterDot(new QoreNumberNode(dot+1));
                     if (afterDot->equals(0LL))
-                        return new QoreBigIntNode(strtoll(val, 0, 10));
+                        return strtoll(val, 0, 10);
                     return new QoreNumberNode(val);
                 }
                 else if (options.numeric == ENO_STRING) {
@@ -1303,7 +1303,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
             SQLCHAR val;
             ret = SQLGetData(stmt, column, SQL_C_BIT, &val, sizeof(SQLCHAR), &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-                return get_bool_node(val);
+                return (bool)val;
             }
             break;
         }
@@ -1534,7 +1534,7 @@ inline AbstractQoreNode* ODBCStatement::getColumnValue(int column, ODBCResultCol
         xsink->raiseException("DBI:ODBC:RESULT-ERROR", s.c_str(), readRows, column-1, column);
     }
 
-    return 0;
+    return QoreValue();
 }
 
 char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink) {

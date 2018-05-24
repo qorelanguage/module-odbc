@@ -324,7 +324,7 @@ QoreHashNode* ODBCStatement::getOutputHash(ExceptionSink* xsink, bool emptyHashI
         int columnCount = resColumns.size();
         for (int j = 0; j < columnCount; j++) {
             ODBCResultColumn& rcol = resColumns[j];
-            ReferenceHolder<AbstractQoreNode> n(getColumnValue(j+1, rcol, xsink), xsink);
+            ValueHolder n(getColumnValue(j+1, rcol, xsink), xsink);
             if (!n || *xsink)
                 return 0;
 
@@ -722,7 +722,7 @@ QoreHashNode* ODBCStatement::getRowIntern(GetRowInternStatus& status, ExceptionS
     int columns = resColumns.size();
     for (int i = 0; i < columns; i++) {
         ODBCResultColumn& col = resColumns[i];
-        ReferenceHolder<AbstractQoreNode> n(xsink);
+        ValueHolder n(xsink);
         n = getColumnValue(i+1, col, xsink);
         if (*xsink) {
             status = EGRIS_ERROR;

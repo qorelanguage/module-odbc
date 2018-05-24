@@ -1,28 +1,28 @@
 /* indent-tabs-mode: nil -*- */
 /*
-  odbc-module.cpp
+    odbc-module.cpp
 
-  Qore ODBC module
+    Qore ODBC module
 
-  Copyright (C) 2016 - 2017 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
 
-  Permission is hereby granted, free of charge, to any person obtaining a
-  copy of this software and associated documentation files (the "Software"),
-  to deal in the Software without restriction, including without limitation
-  the rights to use, copy, modify, merge, publish, distribute, sublicense,
-  and/or sell copies of the Software, and to permit persons to whom the
-  Software is furnished to do so, subject to the following conditions:
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-  DEALINGS IN THE SOFTWARE.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
 */
 
 #include <memory>
@@ -96,11 +96,11 @@ static int odbc_close(Datasource* ds) {
     return 0;
 }
 
-static AbstractQoreNode* odbc_select(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
+static QoreValue odbc_select(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
-        return nullptr;
+        return QoreValue();
     }
     return conn->select(qstr, args, xsink);
 }
@@ -116,34 +116,32 @@ static QoreHashNode* odbc_select_row(Datasource* ds, const QoreString* qstr, con
 }
 #endif
 
-static AbstractQoreNode* odbc_select_rows(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
+static QoreValue odbc_select_rows(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
-        return nullptr;
+        return QoreValue();
     }
     return conn->selectRows(qstr, args, xsink);
 }
 
-static AbstractQoreNode* odbc_exec(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
+static QoreValue odbc_exec(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
-        return nullptr;
+        return QoreValue();
     }
     return conn->exec(qstr, args, xsink);
 }
 
-#ifdef _QORE_HAS_DBI_EXECRAW
-static AbstractQoreNode* odbc_execRaw(Datasource* ds, const QoreString* qstr, ExceptionSink* xsink) {
+static QoreValue odbc_execRaw(Datasource* ds, const QoreString* qstr, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
-        return nullptr;
+        return QoreValue();
     }
     return conn->execRaw(qstr, xsink);
 }
-#endif
 
 static int odbc_begin_transaction(Datasource* ds, ExceptionSink* xsink) {
     return 0;
@@ -167,22 +165,22 @@ static int odbc_rollback(Datasource* ds, ExceptionSink* xsink) {
     return conn->rollback(xsink);
 }
 
-static AbstractQoreNode* odbc_get_client_version(const Datasource* ds, ExceptionSink* xsink) {
+static QoreValue odbc_get_client_version(const Datasource* ds, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
-        return nullptr;
+        return QoreValue();
     }
-    return new QoreBigIntNode(conn->getClientVersion());
+    return conn->getClientVersion();
 }
 
-static AbstractQoreNode* odbc_get_server_version(Datasource* ds, ExceptionSink* xsink) {
+static QoreValue odbc_get_server_version(Datasource* ds, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
-        return nullptr;
+        return QoreValue();
     }
-    return new QoreBigIntNode(conn->getServerVersion());
+    return conn->getServerVersion();
 }
 
 static int odbc_stmt_prepare(SQLStatement* stmt, const QoreString& str, const QoreListNode* args, ExceptionSink* xsink) {
@@ -316,7 +314,7 @@ static int odbc_stmt_close(SQLStatement* stmt, ExceptionSink* xsink) {
     return *xsink ? -1 : 0;
 }
 
-static int odbc_opt_set(Datasource* ds, const char* opt, const AbstractQoreNode* val, ExceptionSink* xsink) {
+static int odbc_opt_set(Datasource* ds, const char* opt, const QoreValue val, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = (odbc::ODBCConnection*)ds->getPrivateData();
     if (!conn) {
         xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
@@ -325,10 +323,10 @@ static int odbc_opt_set(Datasource* ds, const char* opt, const AbstractQoreNode*
     return conn->setOption(opt, val, xsink);
 }
 
-static AbstractQoreNode* odbc_opt_get(const Datasource* ds, const char* opt) {
+static QoreValue odbc_opt_get(const Datasource* ds, const char* opt) {
     odbc::ODBCConnection* conn = (odbc::ODBCConnection*)ds->getPrivateData();
     if (!conn) {
-        return nullptr;
+        return QoreValue();
     }
     return conn->getOption(opt);
 }
@@ -343,18 +341,13 @@ QoreStringNode *odbc_module_init() {
     methods.add(QDBI_METHOD_OPEN, odbc_open);
     methods.add(QDBI_METHOD_CLOSE, odbc_close);
     methods.add(QDBI_METHOD_SELECT, odbc_select);
-#ifdef _QORE_HAS_DBI_SELECT_ROW
     methods.add(QDBI_METHOD_SELECT_ROW, odbc_select_row);
-#endif
     methods.add(QDBI_METHOD_SELECT_ROWS, odbc_select_rows);
     methods.add(QDBI_METHOD_EXEC, odbc_exec);
-#ifdef _QORE_HAS_DBI_EXECRAW
     methods.add(QDBI_METHOD_EXECRAW, odbc_execRaw);
-#endif
     methods.add(QDBI_METHOD_COMMIT, odbc_commit);
     methods.add(QDBI_METHOD_ROLLBACK, odbc_rollback);
     methods.add(QDBI_METHOD_BEGIN_TRANSACTION, odbc_begin_transaction);
-    methods.add(QDBI_METHOD_ABORT_TRANSACTION_START, odbc_rollback);
     methods.add(QDBI_METHOD_GET_CLIENT_VERSION, odbc_get_client_version);
     methods.add(QDBI_METHOD_GET_SERVER_VERSION, odbc_get_server_version);
 

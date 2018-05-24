@@ -33,18 +33,7 @@
 #include <sql.h>
 #include <sqlext.h>
 
-#include "qore/AbstractPrivateData.h"
-#include "qore/QoreEncoding.h"
-#include "qore/QoreString.h"
-#include "qore/QoreStringNode.h"
-#include "qore/AbstractQoreNode.h"
-#include "qore/QoreHashNode.h"
-#include "qore/QoreListNode.h"
-#include "qore/common.h"
-#include "qore/Datasource.h"
-#include "qore/ExceptionSink.h"
-#include "qore/QoreBigIntNode.h"
-#include "qore/QoreListNode.h"
+#include "qore/Qore.h"
 
 #include "ODBCOptions.h"
 
@@ -101,7 +90,7 @@ public:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL AbstractQoreNode* select(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink);
+    DLLLOCAL QoreValue select(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink);
 
     //! Select multiple rows from the database.
     /** @param qstr Qore-style SQL statement
@@ -128,7 +117,7 @@ public:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL AbstractQoreNode* exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink);
+    DLLLOCAL QoreValue exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink);
 
     //! Execute a raw SQL statement.
     /** @param qstr SQL statement
@@ -136,7 +125,7 @@ public:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL AbstractQoreNode* execRaw(const QoreString* qstr, ExceptionSink* xsink);
+    DLLLOCAL QoreValue execRaw(const QoreString* qstr, ExceptionSink* xsink);
 
     //! Allocate an ODBC statement handle.
     /** @param stmt ODBC statement handle
@@ -153,14 +142,14 @@ public:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int setOption(const char* opt, QoreValue val, ExceptionSink* xsink);
+    DLLLOCAL int setOption(const char* opt, const QoreValue val, ExceptionSink* xsink);
 
     //! Get the current value of an option of the connection.
     /** @param opt option name
 
         @return option's value
      */
-    DLLLOCAL AbstractQoreNode* getOption(const char* opt);
+    DLLLOCAL QoreValue getOption(const char* opt);
 
     //! Get the current options of the connection.
     DLLLOCAL ODBCOptions getOptions() const { return options; }
