@@ -1,28 +1,28 @@
 /* -*- mode: c++; indent-tabs-mode: nil -*- */
 /*
-  ODBCConnection.h
+    ODBCConnection.h
 
-  Qore ODBC module
+    Qore ODBC module
 
-  Copyright (C) 2016 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
 
-  Permission is hereby granted, free of charge, to any person obtaining a
-  copy of this software and associated documentation files (the "Software"),
-  to deal in the Software without restriction, including without limitation
-  the rights to use, copy, modify, merge, publish, distribute, sublicense,
-  and/or sell copies of the Software, and to permit persons to whom the
-  Software is furnished to do so, subject to the following conditions:
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-  DEALINGS IN THE SOFTWARE.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
 */
 
 #ifndef _QORE_MODULE_ODBC_ODBCCONNECTION_H
@@ -33,18 +33,7 @@
 #include <sql.h>
 #include <sqlext.h>
 
-#include "qore/AbstractPrivateData.h"
-#include "qore/QoreEncoding.h"
-#include "qore/QoreString.h"
-#include "qore/QoreStringNode.h"
-#include "qore/AbstractQoreNode.h"
-#include "qore/QoreHashNode.h"
-#include "qore/QoreListNode.h"
-#include "qore/common.h"
-#include "qore/Datasource.h"
-#include "qore/ExceptionSink.h"
-#include "qore/QoreBigIntNode.h"
-#include "qore/QoreListNode.h"
+#include "qore/Qore.h"
 
 #include "ODBCOptions.h"
 
@@ -101,7 +90,7 @@ public:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL AbstractQoreNode* select(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink);
+    DLLLOCAL QoreValue select(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink);
 
     //! Select multiple rows from the database.
     /** @param qstr Qore-style SQL statement
@@ -128,7 +117,7 @@ public:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL AbstractQoreNode* exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink);
+    DLLLOCAL QoreValue exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink);
 
     //! Execute a raw SQL statement.
     /** @param qstr SQL statement
@@ -136,7 +125,7 @@ public:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL AbstractQoreNode* execRaw(const QoreString* qstr, ExceptionSink* xsink);
+    DLLLOCAL QoreValue execRaw(const QoreString* qstr, ExceptionSink* xsink);
 
     //! Allocate an ODBC statement handle.
     /** @param stmt ODBC statement handle
@@ -153,14 +142,14 @@ public:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int setOption(const char* opt, const AbstractQoreNode* val, ExceptionSink* xsink);
+    DLLLOCAL int setOption(const char* opt, const QoreValue val, ExceptionSink* xsink);
 
     //! Get the current value of an option of the connection.
     /** @param opt option name
 
         @return option's value
      */
-    DLLLOCAL AbstractQoreNode* getOption(const char* opt);
+    DLLLOCAL QoreValue getOption(const char* opt);
 
     //! Get the current options of the connection.
     DLLLOCAL ODBCOptions getOptions() const { return options; }
@@ -246,7 +235,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int setFracPrecisionOption(const AbstractQoreNode* val, ExceptionSink* xsink);
+    DLLLOCAL int setFracPrecisionOption(QoreValue val, ExceptionSink* xsink);
 
     //! Set login timeout to the passed value, check for errors.
     /** @param val new value for the option
@@ -254,7 +243,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int setLoginTimeoutOption(const AbstractQoreNode* val, ExceptionSink* xsink);
+    DLLLOCAL int setLoginTimeoutOption(QoreValue val, ExceptionSink* xsink);
 
     //! Set connection timeout to the passed value, check for errors.
     /** @param val new value for the option
@@ -262,7 +251,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int setConnectionTimeoutOption(const AbstractQoreNode* val, ExceptionSink* xsink);
+    DLLLOCAL int setConnectionTimeoutOption(QoreValue val, ExceptionSink* xsink);
 
     //! Prepare ODBC connection string and save it to the passed string.
     /** @param str connection string
