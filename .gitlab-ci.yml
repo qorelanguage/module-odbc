@@ -15,12 +15,8 @@ default:
 
 variables:
   POSTGRES_PASSWORD: omq
-  TZ: 'Europe/Prague'
-  PGTZ: 'Europe/Prague'
-#  QORE_DB_CONNSTR_ODBC: 'odbc:postgres/omq@(UTF8){DRIVER=PostgreSQL Unicode,Server=postgres,Database=postgres}'
-#  QORE_DB_CONNSTR_ODBC: 'odbc:postgres/omq@postgres(UTF8)%postgres'
+  QORE_DB_CONNSTR_ODBC: 'odbc:postgres/omq@(UTF8){DRIVER=PostgreSQL Unicode,Server=postgres,Database=postgres}'
   REPO_NAME: module-odbc
-  QORE_DB_CONNSTR_PGSQL: 'pgsql:postgres/omq@postgres(UTF8)%postgres{timezone=Europe/Prague}'
 
 test-ubuntu:
   stage: test
