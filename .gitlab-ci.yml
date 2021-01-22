@@ -1,25 +1,46 @@
 stages:
   - test
 
-test:
-  stage: test
-  image: $CI_REGISTRY/infrastructure/qore-test-base/qore-test-base:develop-slim
+default:
   tags:
     - docker-exec
   services:
-  - name: postgres:11
-  variables:
-    POSTGRES_PASSWORD: omq
-    QORE_DB_CONNSTR_ODBC: 'odbc:postgres/omq@(UTF8){DRIVER=PostgreSQL Unicode,Server=postgres,Database=postgres}'
-    REPO_NAME: module-odbc
-  script:
+    - name: postgres:13
+  before_script:
     - |
         curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}?access_token=${GITHUB_ACCESS_TOKEN}" \
         -X POST -H "Content-Type: application/json" \
         -d "{\"state\": \"pending\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
+    - set +e
+
+variables:
+  POSTGRES_PASSWORD: omq
+  QORE_DB_CONNSTR_ODBC: 'odbc:postgres/omq@(UTF8){DRIVER=PostgreSQL Unicode,Server=postgres,Database=postgres}'
+  REPO_NAME: module-odbc
+
+test-ubuntu:
+  stage: test
+  image: $CI_REGISTRY/infrastructure/qore-test-base/qore-test-base:develop
+  script:
     - |
-        set +e
-        if test/docker_test/test.sh; then
+        if test/docker_test/test-ubuntu.sh; then
+          curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}?access_token=${GITHUB_ACCESS_TOKEN}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"state\": \"success\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
+          exit 0
+        else
+          curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}?access_token=${GITHUB_ACCESS_TOKEN}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"state\": \"failure\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
+          exit 1
+        fi
+
+test-alpine:
+  stage: test
+  image: $CI_REGISTRY/infrastructure/qore-test-base/qore-test-base:develop-alpine
+  script:
+    - |
+        if test/docker_test/test-alpine.sh; then
           curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}?access_token=${GITHUB_ACCESS_TOKEN}" \
             -X POST -H "Content-Type: application/json" \
             -d "{\"state\": \"success\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
