@@ -430,7 +430,7 @@ class OdbcTest inherits QUnit::Test {
     }
 
     initDatasource() {
-        connStr = ENV.QORE_DB_CONNSTR_ODBC;
+        connStr = ENV.QORE_DB_CONNSTR_PGSQL;
         if (!connStr) {
             printf("No connection string set. Cannot run the tests.\n");
             exit(1);
