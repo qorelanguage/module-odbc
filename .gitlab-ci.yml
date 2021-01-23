@@ -8,8 +8,8 @@ default:
     - name: postgres:13
   before_script:
     - |
-        curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}?access_token=${GITHUB_ACCESS_TOKEN}" \
-        -X POST -H "Content-Type: application/json" \
+        curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA} \
+        -X POST -u omusil24:${GITHUB_ACCESS_TOKEN} -H "Content-Type: application/json" \
         -d "{\"state\": \"pending\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
     - set +e
 
