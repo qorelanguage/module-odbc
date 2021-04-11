@@ -649,7 +649,7 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
                 QoreValue v = args ? args->retrieveEntry(index++) : QoreValue();
                 if ((*p) == 'd') {
                     DBI_concat_numeric(&tmp, v);
-                    str->replace(offset, 2, &tmp);
+                    str->replace(offset, 2, tmp.c_str());
                     p = str->getBuffer() + offset + tmp.strlen();
                     tmp.clear();
                     continue;
@@ -657,7 +657,7 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
                 if ((*p) == 's') {
                     if (DBI_concat_string(&tmp, v, xsink))
                         return -1;
-                    str->replace(offset, 2, &tmp);
+                    str->replace(offset, 2, tmp.c_str());
                     p = str->getBuffer() + offset + tmp.strlen();
                     tmp.clear();
                     continue;
