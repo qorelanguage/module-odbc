@@ -4,7 +4,7 @@
 
     Qore ODBC module
 
-    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2022 Qore Technologies s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -99,7 +99,7 @@ static int odbc_close(Datasource* ds) {
 static QoreValue odbc_select(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
-        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();
     }
     return conn->select(qstr, args, xsink);
@@ -109,7 +109,7 @@ static QoreValue odbc_select(Datasource* ds, const QoreString* qstr, const QoreL
 static QoreHashNode* odbc_select_row(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
-        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return nullptr;
     }
     return conn->selectRow(qstr, args, xsink);
@@ -119,7 +119,7 @@ static QoreHashNode* odbc_select_row(Datasource* ds, const QoreString* qstr, con
 static QoreValue odbc_select_rows(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
-        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();
     }
     return conn->selectRows(qstr, args, xsink);
@@ -128,7 +128,7 @@ static QoreValue odbc_select_rows(Datasource* ds, const QoreString* qstr, const 
 static QoreValue odbc_exec(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
-        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();
     }
     return conn->exec(qstr, args, xsink);
@@ -137,7 +137,7 @@ static QoreValue odbc_exec(Datasource* ds, const QoreString* qstr, const QoreLis
 static QoreValue odbc_execRaw(Datasource* ds, const QoreString* qstr, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
-        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();
     }
     return conn->execRaw(qstr, xsink);
@@ -150,7 +150,7 @@ static int odbc_begin_transaction(Datasource* ds, ExceptionSink* xsink) {
 static int odbc_commit(Datasource* ds, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
-        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return -1;
     }
     return conn->commit(xsink);
@@ -159,7 +159,7 @@ static int odbc_commit(Datasource* ds, ExceptionSink* xsink) {
 static int odbc_rollback(Datasource* ds, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
-        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return -1;
     }
     return conn->rollback(xsink);
@@ -168,7 +168,7 @@ static int odbc_rollback(Datasource* ds, ExceptionSink* xsink) {
 static QoreValue odbc_get_client_version(const Datasource* ds, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
-        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();
     }
     return conn->getClientVersion();
@@ -177,7 +177,7 @@ static QoreValue odbc_get_client_version(const Datasource* ds, ExceptionSink* xs
 static QoreValue odbc_get_server_version(Datasource* ds, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
     if (!conn) {
-        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();
     }
     return conn->getServerVersion();
@@ -217,7 +217,7 @@ static int odbc_stmt_bind(SQLStatement* stmt, const QoreListNode& args, Exceptio
 }
 
 static int odbc_stmt_bind_placeholders(SQLStatement* stmt, const QoreListNode& args, ExceptionSink* xsink) {
-    xsink->raiseException("DBI:ODBC:BIND-PLACEHHODERS-ERROR", "binding placeholders is not necessary or supported with the odbc driver");
+    xsink->raiseException("ODBC-BIND-PLACEHHODERS-ERROR", "binding placeholders is not necessary or supported with the odbc driver");
     return -1;
 }
 
@@ -317,7 +317,7 @@ static int odbc_stmt_close(SQLStatement* stmt, ExceptionSink* xsink) {
 static int odbc_opt_set(Datasource* ds, const char* opt, const QoreValue val, ExceptionSink* xsink) {
     odbc::ODBCConnection* conn = (odbc::ODBCConnection*)ds->getPrivateData();
     if (!conn) {
-        xsink->raiseException("DBI:ODBC:NO-CONNECTION-ERROR", "there is no open connection");
+        xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return -1;
     }
     return conn->setOption(opt, val, xsink);
@@ -372,10 +372,20 @@ QoreStringNode *odbc_module_init() {
     methods.add(QDBI_METHOD_OPT_SET, odbc_opt_set);
     methods.add(QDBI_METHOD_OPT_GET, odbc_opt_get);
 
-    methods.registerOption(DBI_OPT_NUMBER_OPT, "when set, numeric/decimal values are returned as integers if possible, otherwise as arbitrary-precision number values; the argument is ignored; setting this option turns it on and turns off 'string-numbers' and 'numeric-numbers'");
-    methods.registerOption(DBI_OPT_NUMBER_STRING, "when set, numeric/decimal values are returned as strings for backwards-compatibility; the argument is ignored; setting this option turns it on and turns off 'optimal-numbers' and 'numeric-numbers'");
-    methods.registerOption(DBI_OPT_NUMBER_NUMERIC, "when set, numeric/decimal values are returned as arbitrary-precision number values; the argument is ignored; setting this option turns it on and turns off 'string-numbers' and 'optimal-numbers'");
-    methods.registerOption("qore-timezone", "set the server-side timezone, value must be a string in the format accepted by Timezone::constructor() on the client (ie either a region name or a UTC offset like \"+01:00\"), if not set the server's time zone will be assumed to be the same as the client's", stringTypeInfo);
+    methods.registerOption(DBI_OPT_NUMBER_OPT, "when set, numeric/decimal values are returned as integers if "
+        "possible, otherwise as arbitrary-precision number values; the argument is ignored; setting this option "
+        "turns it on and turns off 'string-numbers' and 'numeric-numbers'");
+    methods.registerOption(DBI_OPT_NUMBER_STRING, "when set, numeric/decimal values are returned as strings for "
+        "backwards-compatibility; the argument is ignored; setting this option turns it on and turns off "
+        "'optimal-numbers' and 'numeric-numbers'");
+    methods.registerOption(DBI_OPT_NUMBER_NUMERIC, "when set, numeric/decimal values are returned as "
+        "arbitrary-precision number values; the argument is ignored; setting this option turns it on and turns off "
+        "'string-numbers' and 'optimal-numbers'");
+    methods.registerOption("qore-timezone", "set the server-side timezone, value must be a string in the format "
+        "accepted by Timezone::constructor() on the client (ie either a region name or a UTC offset like "
+        "\"+01:00\"), if not set the server's time zone will be assumed to be the same as the client's",
+        stringTypeInfo);
+    methods.registerOption("conn", "set the ODBC connection string", stringTypeInfo);
 
     DBID_ODBC = DBI.registerDriver("odbc", methods, DBI_ODBC_CAPS);
 
@@ -389,4 +399,3 @@ void odbc_module_ns_init(QoreNamespace *rns, QoreNamespace *qns) {
 void odbc_module_delete() {
     // nothing to do here in this case
 }
-

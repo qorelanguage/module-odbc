@@ -4,7 +4,7 @@
 
   Qore ODBC module
 
-  Copyright (C) 2016 Qore Technologies s.r.o.
+  Copyright (C) 2016 - 2022 Qore Technologies s.r.o.
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -46,17 +46,18 @@ public:
         @param s string where the output will be written to
      */
     DLLLOCAL static void extractDiag(SQLSMALLINT handleType, SQLHANDLE& handle, std::string& s) {
-        SQLINTEGER i = 1;
+        SQLINTEGER i = 0;
         SQLINTEGER native;
         SQLCHAR state[7];
         SQLCHAR text[512];
         SQLSMALLINT len;
-        SQLRETURN ret;
 
-        while(true) {
-            ret = SQLGetDiagRecA(handleType, handle, i++, state, &native, text, sizeof(text), &len);
-            if (!SQL_SUCCEEDED(ret))
+        while (true) {
+            SQLRETURN ret = SQLGetDiagRecA(handleType, handle, ++i, state, &native, text,
+                (SQLSMALLINT)sizeof(text), &len);
+            if (!SQL_SUCCEEDED(ret)) {
                 break;
+            }
             s += "; [";
             s += reinterpret_cast<char*>(state);
             s += "] (native ";

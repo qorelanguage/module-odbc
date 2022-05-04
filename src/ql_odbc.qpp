@@ -6,7 +6,7 @@
 
     ODBC Interface to Qore DBI layer
 
-    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2022 Qore Technologies s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -125,11 +125,11 @@ date d = 2016-1-14;
 db.exec("INSERT INTO table_abc (id, dt) VALUES (%v, %v)", 42, odbc_bind(ODBCT_DATE, d));
     @endcode
 
-    @throw DBI:ODBC:BIND-ERROR if the type argument is 0 this exception is raised
+    @throw ODBC-BIND-ERROR if the type argument is 0 this exception is raised
  */
 hash odbc_bind(softint type, auto value) [flags=RET_VALUE_ONLY] {
     if (!type) {
-        xsink->raiseException("DBI:ODBC:BIND-ERROR", "expecting type number as first parameter to odbc_bind()");
+        xsink->raiseException("ODBC-BIND-ERROR", "expecting type number as first parameter to odbc_bind()");
         return 0;
     }
 

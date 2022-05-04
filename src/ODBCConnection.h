@@ -4,7 +4,7 @@
 
     Qore ODBC module
 
-    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2022 Qore Technologies s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -153,6 +153,11 @@ public:
 
     //! Get the current options of the connection.
     DLLLOCAL ODBCOptions getOptions() const { return options; }
+
+    //! If column name case should be perserved or not
+    DLLLOCAL bool preserveCase() const {
+        return options.preserve_case;
+    }
 
     //! Return ODBC driver (client) version.
     /** @return version in the form: major*1000000 + minor*10000 + sub

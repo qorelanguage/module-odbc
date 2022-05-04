@@ -4,7 +4,7 @@
 
     Qore ODBC module
 
-    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2022 Qore Technologies s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -201,7 +201,7 @@ protected:
 
         @return parameter array size
      */
-    DLLLOCAL qore_size_t findArraySizeOfArgs(const QoreListNode* args) const;
+    DLLLOCAL size_t findArraySizeOfArgs(const QoreListNode* args) const;
 
     //! Return character count of the passed null-terminated UTF-8 string.
     /** @param str null-terminated UTF-8 string
@@ -260,7 +260,7 @@ private:
     unsigned int readRows = 0;
 
     //! Count of required parameters for the SQL command.
-    qore_size_t paramCountInSql = 0;
+    size_t paramCountInSql = 0;
 
     //! Temporary holder for params.
     intern::ParamHolder paramHolder;
@@ -795,7 +795,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromStringList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromStringList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, size_t& maxlen, ExceptionSink* xsink);
 
     //! Create a new char array filled with stringified number values from the passed Qore list.
     /** @param arg list of Qore numbers used to fill the array
@@ -806,7 +806,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromNumberList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromNumberList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, size_t& maxlen, ExceptionSink* xsink);
 
     //! Create a new void* array filled with values of binaries from the passed Qore list.
     /** @param arg list of Qore binaries used to fill the array
@@ -817,7 +817,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromBinaryList(const QoreListNode* arg, void*& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromBinaryList(const QoreListNode* arg, void*& array, SQLLEN*& indArray, size_t& maxlen, ExceptionSink* xsink);
 
     //! Create an ODBC timestamp array filled in using Qore dates from the passed Qore list.
     /** @param arg list of Qore dates used to fill the array
@@ -868,7 +868,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createStrArrayFromIntList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& maxlen, ExceptionSink* xsink);
+    DLLLOCAL int createStrArrayFromIntList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, size_t& maxlen, ExceptionSink* xsink);
 
     //! Create a double array filled with Qore floats from the passed Qore list.
     /** @param arg list of Qore floats used to fill the array
@@ -889,7 +889,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromString(const QoreStringNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromString(const QoreStringNode* arg, char*& array, SQLLEN*& indArray, size_t& len, ExceptionSink* xsink);
 
     //! Create a new char array filled with the passed stringified number.
     /** @param arg number used to fill the array
@@ -900,7 +900,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromNumber(const QoreNumberNode* arg, char*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromNumber(const QoreNumberNode* arg, char*& array, SQLLEN*& indArray, size_t& len, ExceptionSink* xsink);
 
     //! Create a new void array filled with the passed binary's value.
     /** @param arg binary whose value will be used to fill the array
@@ -911,7 +911,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createArrayFromBinary(const BinaryNode* arg, void*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL int createArrayFromBinary(const BinaryNode* arg, void*& array, SQLLEN*& indArray, size_t& len, ExceptionSink* xsink);
 
     //! Create an array of ODBC timestamps initialized with the passed Qore date.
     /** @param arg date used for initializing the timestamps
@@ -958,7 +958,7 @@ private:
 
         @return 0 for OK, -1 for error
      */
-    DLLLOCAL int createStrArrayFromInt(QoreValue val, char*& array, SQLLEN*& indArray, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL int createStrArrayFromInt(QoreValue val, char*& array, SQLLEN*& indArray, size_t& len, ExceptionSink* xsink);
 
     //! Create a double array filled with the passed Qore float value.
     /** @param arg Qore float used for initializing the array values
@@ -984,7 +984,7 @@ private:
 
         @return pointer to the new string (caller owns it) or 0 in case of error
      */
-    DLLLOCAL inline char* getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink);
+    DLLLOCAL inline char* getCharsFromString(const QoreStringNode* arg, size_t& len, ExceptionSink* xsink);
 
     //! Get an ODBC timestamp from Qore date value.
     /** @param arg source Qore date
@@ -1232,11 +1232,10 @@ inline QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rco
                 ret = SQLGetData(stmt, column, SQL_C_WCHAR, reinterpret_cast<SQLWCHAR*>(buf.get()), buflen, &indicator);
                 if (SQL_SUCCEEDED(ret)) {
 #ifdef WORDS_BIGENDIAN
-                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QCS_UTF16BE));
+                    return new QoreStringNode(buf.release(), indicator, buflen, QCS_UTF16BE);
 #else
-                    SimpleRefHolder<QoreStringNode> str(new QoreStringNode(buf.release(), indicator, buflen, QCS_UTF16LE));
+                    return new QoreStringNode(buf.release(), indicator, buflen, QCS_UTF16LE);
 #endif
-                    return str.release();
                 }
             }
             break;
@@ -1537,7 +1536,7 @@ inline QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rco
     return QoreValue();
 }
 
-char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, qore_size_t& len, ExceptionSink* xsink) {
+char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, size_t& len, ExceptionSink* xsink) {
     const QoreEncoding* enc = serverEnc;
     if (!enc) {
 #ifdef WORDS_BIGENDIAN
@@ -1555,8 +1554,7 @@ char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, qore_size_t& 
         if ((buf[0] == 0xFF && buf[1] == 0xFE) || (buf[0] == 0xFE && buf[1] == 0xFF)) {
             memmove((void*)buf, (void*)(buf+2), len-2);
             buf[len-2] = '\0';
-        }
-        else if (len >= 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF) {
+     } else if (len >= 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF) {
             memmove((void*)buf, (void*)(buf+3), len-3);
             buf[len-3] = '\0';
         }
@@ -1577,8 +1575,7 @@ TIMESTAMP_STRUCT ODBCStatement::getTimestampFromDate(const DateTimeNode* arg) {
     t.second = info.second;
     if (options.frPrec >= 6) { // 6-9
         t.fraction = info.us * 1000;
-    }
-    else { // 1-5
+    } else { // 1-5
         int n = pow(10, 6-options.frPrec);
         t.fraction = info.us / n;
         t.fraction *= n * 1000;
