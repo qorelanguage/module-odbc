@@ -12,7 +12,7 @@ apk add postgresql-client
 . test/docker_test/postgres_lib.sh
 setup_postgres_on_rippy
 
-export QORE_DB_CONNSTR_ODBC=odbc:${OMQ_DB_USER}/omq@(UTF8){DRIVER=PostgreSQL Unicode,Server=${OMQ_DB_HOST},Database=${OMQ_DB_NAME}}
+export QORE_DB_CONNSTR_ODBC="odbc:${OMQ_DB_USER}/omq@(UTF8){DRIVER=PostgreSQL Unicode,Server=${OMQ_DB_HOST},Database=${OMQ_DB_NAME}}"
 
 # setup MODULE_SRC_DIR env var
 cwd=`pwd`
