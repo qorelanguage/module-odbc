@@ -4,8 +4,6 @@ stages:
 default:
   tags:
     - docker-exec
-  services:
-    - name: postgres:13
   before_script:
     - |
         curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}?access_token=${GITHUB_ACCESS_TOKEN}" \
