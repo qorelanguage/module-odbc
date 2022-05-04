@@ -1,9 +1,9 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.0)
 
 project(qore-odbc-module)
 
 set (VERSION_MAJOR 1)
-set (VERSION_MINOR 0)
+set (VERSION_MINOR 1)
 set (VERSION_PATCH 0)
 
 set(PROJECT_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")

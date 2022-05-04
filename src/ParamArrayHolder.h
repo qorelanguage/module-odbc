@@ -4,7 +4,7 @@
 
     Qore ODBC module
 
-    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2022 Qore Technologies s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -57,8 +57,8 @@ public:
     }
     DLLLOCAL ~ParamArrayHolder() { clear(); }
 
-    DLLLOCAL void setArraySize(qore_size_t s) { arraySize = s; }
-    DLLLOCAL qore_size_t getArraySize() const { return arraySize; }
+    DLLLOCAL void setArraySize(size_t s) { arraySize = s; }
+    DLLLOCAL size_t getArraySize() const { return arraySize; }
 
     DLLLOCAL char** addCharArray(ExceptionSink* xsink) {
         chars.push_back(new (std::nothrow) char*[arraySize]);
@@ -67,7 +67,7 @@ public:
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate char array");
             return 0;
         }
-        for (qore_size_t i = 0; i < arraySize; i++)
+        for (size_t i = 0; i < arraySize; i++)
             array[i] = NULL;
         return array;
     }
@@ -204,7 +204,7 @@ public:
             xsink->raiseException("DBI:ODBC:MEMORY-ERROR", "could not allocate null indicator array");
             return 0;
         }
-        for (qore_size_t i = 0; i < arraySize; i++)
+        for (size_t i = 0; i < arraySize; i++)
             nullIndArray[i] = SQL_NULL_DATA;
         return nullIndArray;
     }
@@ -212,7 +212,7 @@ public:
     DLLLOCAL void clear() {
         unsigned int count = chars.size();
         for (unsigned int i = 0; i < count; i++) {
-            for (qore_size_t j = 0; j < arraySize; j++)
+            for (size_t j = 0; j < arraySize; j++)
                 delete [] (chars[i][j]);
             delete [] (chars[i]);
         }
@@ -319,7 +319,7 @@ private:
     char* nullArray;
     SQLLEN* nullIndArray;
 
-    qore_size_t arraySize;
+    size_t arraySize;
 };
 
 } // namespace intern

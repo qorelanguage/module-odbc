@@ -4,7 +4,7 @@
 
   Qore ODBC module
 
-  Copyright (C) 2016 Qore Technologies s.r.o.
+  Copyright (C) 2016 - 2022 Qore Technologies s.r.o.
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -33,15 +33,13 @@
 namespace odbc {
 
 ODBCPreparedStatement::ODBCPreparedStatement(ODBCConnection* c, ExceptionSink* xsink) :
-    ODBCStatement(c, xsink),
-    outputRow(xsink)
-{
+        ODBCStatement(c, xsink),
+    outputRow(xsink) {
 }
 
 ODBCPreparedStatement::ODBCPreparedStatement(Datasource* ds, ExceptionSink* xsink) :
-    ODBCStatement(ds, xsink),
-    outputRow(xsink)
-{
+        ODBCStatement(ds, xsink),
+    outputRow(xsink) {
 }
 
 ODBCPreparedStatement::~ODBCPreparedStatement() {
@@ -51,28 +49,24 @@ int ODBCPreparedStatement::prepare(const QoreString& qstr, const QoreListNode* a
     command = qstr;
 
     // Convert string to required character encoding.
-    std::unique_ptr<QoreString> str(qstr.convertEncoding(QCS_UTF8, xsink));
-    if (!str.get())
+    TempEncodingHelper str(qstr, QCS_UTF8, xsink);
+    if (*xsink) {
         return -1;
-    if (parse(str.get(), args, xsink))
+    }
+    str.makeTemp();
+    if (parse(const_cast<QoreString*>(*str), args, xsink)) {
         return -1;
+    }
 
     // Bind the arguments.
-    if (args)
+    if (args) {
         bindArgs = args->listRefSelf();
+    }
 
-#ifdef WORDS_BIGENDIAN
-    TempEncodingHelper tstr(str.get(), QCS_UTF16BE, xsink);
-#else
-    TempEncodingHelper tstr(str.get(), QCS_UTF16LE, xsink);
-#endif
-    if (*xsink)
-        return -1;
-
-    SQLINTEGER textLen = getUTF8CharCount(const_cast<char*>(str->c_str()));
-    SQLRETURN ret = SQLPrepareW(stmt, reinterpret_cast<SQLWCHAR*>(const_cast<char*>(tstr->getBuffer())), textLen);
+    SQLINTEGER textLen = str->length();
+    SQLRETURN ret = SQLPrepareA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(str->c_str())), textLen);
     if (!SQL_SUCCEEDED(ret)) { // error
-        handleStmtError("DBI:ODBC:PREPARE-ERROR", "error occured when preparing the SQL statement", xsink);
+        handleStmtError("ODBC-PREPARE-ERROR", "error occured when preparing the SQL statement", xsink);
         return -1;
     }
     return 0;
@@ -82,8 +76,7 @@ int ODBCPreparedStatement::exec(ExceptionSink* xsink) {
     if (hasArrays(*bindArgs)) {
         if (bindInternArray(*bindArgs, xsink))
             return -1;
-    }
-    else {
+    } else {
         if (bindIntern(*bindArgs, xsink))
             return -1;
     }
@@ -98,7 +91,8 @@ int ODBCPreparedStatement::bind(const QoreListNode& args, ExceptionSink* xsink) 
 
 QoreHashNode* ODBCPreparedStatement::fetchRow(ExceptionSink* xsink) {
     if (!outputRow) {
-        xsink->raiseException("DBI:ODBC:FETCH-ROW-ERROR", "call SQLStatement::next() before calling SQLStatement::fetchRow()");
+        xsink->raiseException("ODBC-FETCH-ROW-ERROR", "call SQLStatement::next() before calling "
+            "SQLStatement::fetchRow()");
         return 0;
     }
 
@@ -117,8 +111,9 @@ QoreHashNode* ODBCPreparedStatement::fetchColumns(int maxRows, ExceptionSink* xs
 bool ODBCPreparedStatement::next(ExceptionSink* xsink) {
     GetRowInternStatus status;
     outputRow = getRowIntern(status, xsink);
-    if (status == EGRIS_OK)
+    if (status == EGRIS_OK) {
         return true;
+    }
     return false;
 }
 
@@ -138,8 +133,7 @@ int ODBCPreparedStatement::resetAfterLostConnection(ExceptionSink* xsink) {
             xsink->assimilate(xs);
             return -1;
         }
-    }
-    else {
+    } else {
         if (bindIntern(*bindArgs, &xs)) {
             xsink->assimilate(xs);
             return -1;

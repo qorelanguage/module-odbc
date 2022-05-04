@@ -4,7 +4,7 @@
 
     Qore ODBC module
 
-    Copyright (C) 2016 - 2018 Qore Technologies s.r.o.
+    Copyright (C) 2016 - 2022 Qore Technologies s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -35,19 +35,11 @@
 
 namespace odbc {
 
-static SQLINTEGER getUTF8CharCount(const char* str) {
-    SQLINTEGER len = 0;
-    for (; *str; ++str) if ((*str & 0xC0) != 0x80) ++len;
-    return len;
-}
-
-ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
-    ds(d),
-    connStr(QCS_UTF8)
-{
+ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) : ds(d), connStr(QCS_UTF8) {
     // Parse options passed through the datasource.
-    if (parseOptions(xsink))
+    if (parseOptions(xsink)) {
         return;
+    }
 
     // Timezone handling.
     if (!serverTz) {
@@ -56,16 +48,19 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) :
     }
 
     // Initialize environment.
-    if (envInit(xsink))
+    if (envInit(xsink)) {
         return;
+    }
 
     // Prepare ODBC connection string.
-    if(prepareConnectionString(xsink))
+    if (prepareConnectionString(xsink)) {
         return;
+    }
 
     // Connect.
-    if (connect(xsink))
+    if (connect(xsink)) {
         return;
+    }
 
     // Get DBMS (server) and ODBC DB driver (client) versions.
     getVersions();
@@ -75,10 +70,12 @@ ODBCConnection::~ODBCConnection() {
     disconnect();
 
     // Free up allocated handles.
-    if (dbc != SQL_NULL_HDBC)
+    if (dbc != SQL_NULL_HDBC) {
         SQLFreeHandle(SQL_HANDLE_DBC, dbc);
-    if (env != SQL_NULL_HENV)
+    }
+    if (env != SQL_NULL_HENV) {
         SQLFreeHandle(SQL_HANDLE_ENV, env);
+    }
 }
 
 int ODBCConnection::connect(ExceptionSink* xsink) {
@@ -93,7 +90,7 @@ int ODBCConnection::connect(ExceptionSink* xsink) {
     // Allocate a connection handle.
     ret = SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
     if (!SQL_SUCCEEDED(ret)) { // error
-        xsink->raiseException("DBI:ODBC:CONNECTION-HANDLE-ERROR", "could not allocate a connection handle");
+        xsink->raiseException("ODBC-CONNECTION-HANDLE-ERROR", "could not allocate a connection handle");
         return -1;
     }
 
@@ -103,15 +100,12 @@ int ODBCConnection::connect(ExceptionSink* xsink) {
     SQLSetConnectAttr(dbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)(size_t)options.loginTimeout, SQL_IS_UINTEGER);
     SQLSetConnectAttr(dbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)(size_t)options.connTimeout, SQL_IS_UINTEGER);
 
-    // Get connection string.
-    SQLWCHAR* odbcDS = reinterpret_cast<SQLWCHAR*>(const_cast<char*>(connStrUTF16->getBuffer()));
-
-    // Connect.
-    ret = SQLDriverConnectW(dbc, 0, odbcDS, getUTF8CharCount(connStr.getBuffer()), 0, 0, 0, SQL_DRIVER_NOPROMPT);
+    // Connect
+    ret = SQLDriverConnectA(dbc, 0, (SQLCHAR*)connStr.c_str(), connStr.length(), 0, 0, 0, SQL_DRIVER_NOPROMPT);
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("could not connect to the datasource; connection string: '%s'");
         ODBCErrorHelper::extractDiag(SQL_HANDLE_DBC, dbc, s);
-        xsink->raiseException("DBI:ODBC:CONNECTION-ERROR", s.c_str(), connStr.getBuffer());
+        xsink->raiseException("ODBC-CONNECTION-ERROR", s.c_str(), connStr.c_str());
         return -1;
     }
     connected = true;
@@ -124,32 +118,26 @@ void ODBCConnection::disconnect() {
         SQLRETURN ret = SQLDisconnect(dbc);
         if (SQL_SUCCEEDED(ret)) {
             connected = false;
-        }
-        else {
+        } else {
             char state[7];
             memset(state, 0, sizeof(state));
             ODBCErrorHelper::extractState(SQL_HANDLE_DBC, dbc, state);
             //fprintf(stderr, "state: %s\n", state);
             if (strncmp(state, "08003", 5) == 0) { // Connection not open.
                 connected = false;
-            }
-            else if (strncmp(state, "HY000", 5) == 0) { // General error.
+            } else if (strncmp(state, "HY000", 5) == 0) { // General error.
                 connected = false;
-            }
-            else if (strncmp(state, "HYT01", 5) == 0) { // Connection timeout expired.
+            } else if (strncmp(state, "HYT01", 5) == 0) { // Connection timeout expired.
                 connected = false;
-            }
-            else if (strncmp(state, "HY117", 5) == 0) { // Connection is suspended due to unknown transaction state. Only disconnect and read-only functions are allowed.
+            } else if (strncmp(state, "HY117", 5) == 0) { // Connection is suspended due to unknown transaction state. Only disconnect and read-only functions are allowed.
                 connected = false;
-            }
-            else if (strncmp(state, "25000", 5) == 0) { // Transaction still active.
+            } else if (strncmp(state, "25000", 5) == 0) { // Transaction still active.
                 if (!activeTransaction) {
                     if (isDead)
                         isDead = false;
                     rollback(0);
                 }
-            }
-            else {
+            } else {
                 qore_usleep(50*1000); // Sleep in intervals of 50 ms until disconnected.
             }
         }
@@ -164,7 +152,7 @@ int ODBCConnection::commit(ExceptionSink* xsink) {
 
     SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, dbc, SQL_COMMIT);
     if (!SQL_SUCCEEDED(ret)) { // error
-        handleDbcError("DBI:ODBC:COMMIT-ERROR", "could not commit the transaction", xsink);
+        handleDbcError("ODBC-COMMIT-ERROR", "could not commit the transaction", xsink);
         return -1;
     }
     activeTransaction = false;
@@ -179,7 +167,7 @@ int ODBCConnection::rollback(ExceptionSink* xsink) {
 
     SQLRETURN ret = SQLEndTran(SQL_HANDLE_DBC, dbc, SQL_ROLLBACK);
     if (!SQL_SUCCEEDED(ret)) { // error
-        handleDbcError("DBI:ODBC:ROLLBACK-ERROR", "could not rollback the transaction", xsink);
+        handleDbcError("ODBC-ROLLBACK-ERROR", "could not rollback the transaction", xsink);
         return -1;
     }
     activeTransaction = false;
@@ -203,10 +191,10 @@ QoreValue ODBCConnection::select(const QoreString* qstr, const QoreListNode* arg
 QoreListNode* ODBCConnection::selectRows(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCStatement res(this, xsink);
     if (*xsink)
-        return 0;
+        return nullptr;
 
     if (res.exec(qstr, args, xsink))
-        return 0;
+        return nullptr;
 
     return res.getOutputList(xsink);
 }
@@ -214,10 +202,10 @@ QoreListNode* ODBCConnection::selectRows(const QoreString* qstr, const QoreListN
 QoreHashNode* ODBCConnection::selectRow(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     ODBCStatement res(this, xsink);
     if (*xsink)
-        return 0;
+        return nullptr;
 
     if (res.exec(qstr, args, xsink))
-        return 0;
+        return nullptr;
 
     return res.getSingleRow(xsink);
 }
@@ -225,8 +213,9 @@ QoreHashNode* ODBCConnection::selectRow(const QoreString* qstr, const QoreListNo
 QoreValue ODBCConnection::exec(const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
     //fprintf(stderr, "ODBCConnection::exec called: '%s'\n", qstr->c_str());
     ODBCStatement res(this, xsink);
-    if (*xsink)
+    if (*xsink) {
         return QoreValue();
+    }
 
     if (res.exec(qstr, args, xsink)) {
         //fprintf(stderr, "exec failed\n");
@@ -262,46 +251,40 @@ int ODBCConnection::setOption(const char* opt, QoreValue val, ExceptionSink* xsi
     if (!strcasecmp(opt, DBI_OPT_NUMBER_OPT)) {
         options.numeric = ENO_OPTIMAL;
         return 0;
-    }
-    else if (!strcasecmp(opt, DBI_OPT_NUMBER_STRING)) {
+    } else if (!strcasecmp(opt, DBI_OPT_NUMBER_STRING)) {
         options.numeric = ENO_STRING;
         return 0;
-    }
-    else if (!strcasecmp(opt, DBI_OPT_NUMBER_NUMERIC)) {
+    } else if (!strcasecmp(opt, DBI_OPT_NUMBER_NUMERIC)) {
         options.numeric = ENO_NUMERIC;
         return 0;
-    }
-    else if (!strcasecmp(opt, OPT_BIGINT_NATIVE)) {
+    } else if (!strcasecmp(opt, OPT_BIGINT_NATIVE)) {
         options.bigint = EBO_NATIVE;
         return 0;
-    }
-    else if (!strcasecmp(opt, OPT_BIGINT_STRING)) {
+    } else if (!strcasecmp(opt, OPT_BIGINT_STRING)) {
         options.bigint = EBO_STRING;
         return 0;
-    }
-    else if (!strcasecmp(opt, OPT_FRAC_PRECISION)) {
+    } else if (!strcasecmp(opt, OPT_FRAC_PRECISION)) {
         return setFracPrecisionOption(val, xsink);
-    }
-    else if (!strcasecmp(opt, OPT_QORE_TIMEZONE)) {
+    } else if (!strcasecmp(opt, OPT_QORE_TIMEZONE)) {
         if (val.getType() == NT_STRING) {
             const QoreStringNode* str = val.get<const QoreStringNode>();
             TempEncodingHelper tzName(str, QCS_UTF8, xsink);
             if (*xsink)
                 return -1;
-            serverTz = find_create_timezone(tzName->getBuffer(), xsink);
+            serverTz = find_create_timezone(tzName->c_str(), xsink);
             if (*xsink)
                 return -1;
         }
         else {
-            xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires a name of a timezone (e.g. \"Europe/Prague\") or a time offset string (e.g. \"+02:00\")", OPT_QORE_TIMEZONE);
+            xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires a name of a timezone (e.g. \"Europe/Prague\") or a time offset string (e.g. \"+02:00\")", OPT_QORE_TIMEZONE);
             return -1;
         }
-    }
-    else if (!strcasecmp(opt, OPT_LOGIN_TIMEOUT)) {
+    } else if (!strcasecmp(opt, OPT_LOGIN_TIMEOUT)) {
         return setLoginTimeoutOption(val, xsink);
-    }
-    else if (!strcasecmp(opt, OPT_CONN_TIMEOUT)) {
+    } else if (!strcasecmp(opt, OPT_CONN_TIMEOUT)) {
         return setConnectionTimeoutOption(val, xsink);
+    } else if (!strcasecmp(opt, OPT_PRESERVE_CASE)) {
+        options.preserve_case = val.getAsBool();
     }
 
     return 0;
@@ -363,7 +346,7 @@ int ODBCConnection::allocStatementHandle(SQLHSTMT& stmt, ExceptionSink* xsink) {
 
     SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, dbc, &stmt);
     if (!SQL_SUCCEEDED(ret)) { // error
-        handleDbcError("DBI:ODBC:STATEMENT-ALLOC-ERROR", "could not allocate a statement handle", xsink);
+        handleDbcError("ODBC-STATEMENT-ALLOC-ERROR", "could not allocate a statement handle", xsink);
         return -1;
     }
 
@@ -375,7 +358,7 @@ int ODBCConnection::envInit(ExceptionSink* xsink) {
     // Allocate an environment handle.
     ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
     if (!SQL_SUCCEEDED(ret)) { // error
-        xsink->raiseException("DBI:ODBC:ENV-HANDLE-ERROR", "could not allocate an environment handle");
+        xsink->raiseException("ODBC-ENV-HANDLE-ERROR", "could not allocate an environment handle");
         return -1;
     }
 
@@ -417,7 +400,8 @@ int ODBCConnection::parseOptions(ExceptionSink* xsink) {
         if (!strcasecmp(OPT_QORE_TIMEZONE, hi.getKey())) {
             QoreValue val = hi.get();
             if (val.getType() != NT_STRING) {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "non-string value passed for the '%s' option", OPT_QORE_TIMEZONE);
+                xsink->raiseException("ODBC-OPTION-ERROR", "non-string value passed for the '%s' option",
+                    OPT_QORE_TIMEZONE);
                 return -1;
             }
             const QoreStringNode* str = val.get<const QoreStringNode>();
@@ -448,30 +432,31 @@ int ODBCConnection::setFracPrecisionOption(QoreValue val, ExceptionSink* xsink) 
         if (val.getType() == NT_INT) {
             int64 i = val.getAsBigInt();
             if (i <= 0 || i > 9) {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+                xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9",
+                    OPT_FRAC_PRECISION);
                 return -1;
             }
             options.frPrec = i;
-        }
-        else if (val.getType() == NT_STRING) {
+        } else if (val.getType() == NT_STRING) {
             const QoreStringNode* str = val.get<const QoreStringNode>();
             TempEncodingHelper tstr(str, QCS_UTF8, xsink);
             if (*xsink)
                 return -1;
             long int num = strtol(tstr->c_str(), 0, 10);
             if (num <= 0 || num > 9) {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+                xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9",
+                    OPT_FRAC_PRECISION);
                 return -1;
             }
             options.frPrec = num;
-        }
-        else {
-            xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+        } else {
+            xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9",
+                OPT_FRAC_PRECISION);
             return -1;
         }
-    }
-    else {
-        xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9", OPT_FRAC_PRECISION);
+    } else {
+        xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 1 to 9",
+            OPT_FRAC_PRECISION);
         return -1;
     }
 
@@ -483,35 +468,37 @@ int ODBCConnection::setLoginTimeoutOption(QoreValue val, ExceptionSink* xsink) {
         if (val.getType() == NT_INT) {
             int64 i = val.getAsBigInt();
             if (i < 0) {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_LOGIN_TIMEOUT);
+                xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 0 up",
+                    OPT_LOGIN_TIMEOUT);
                 return -1;
             }
             options.loginTimeout = i;
-        }
-        else if (val.getType() == NT_STRING) {
+        } else if (val.getType() == NT_STRING) {
             const QoreStringNode* str = val.get<const QoreStringNode>();
             TempEncodingHelper tstr(str, QCS_UTF8, xsink);
             if (*xsink)
                 return -1;
-            const char* buf = tstr->getBuffer();
+            const char* buf = tstr->c_str();
             for (int i = 0, limit = tstr->size(); i < limit; i++) {
                 if (!isdigit(buf[i]) && buf[i] != ' ')
-                    xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_LOGIN_TIMEOUT);
+                    xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 0 up",
+                        OPT_LOGIN_TIMEOUT);
             }
-            long int num = strtol(tstr->getBuffer(), 0, 10);
+            long int num = strtol(tstr->c_str(), 0, 10);
             if (num < 0) {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_LOGIN_TIMEOUT);
+                xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 0 up",
+                    OPT_LOGIN_TIMEOUT);
                 return -1;
             }
             options.loginTimeout = num;
-        }
-        else {
-            xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_LOGIN_TIMEOUT);
+        } else {
+            xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 0 up",
+                OPT_LOGIN_TIMEOUT);
             return -1;
         }
-    }
-    else {
-        xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_LOGIN_TIMEOUT);
+    } else {
+        xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 0 up",
+            OPT_LOGIN_TIMEOUT);
         return -1;
     }
 
@@ -523,35 +510,37 @@ int ODBCConnection::setConnectionTimeoutOption(QoreValue val, ExceptionSink* xsi
         if (val.getType() == NT_INT) {
             int64 i = val.getAsBigInt();
             if (i < 0) {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_CONN_TIMEOUT);
+                xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 0 up",
+                    OPT_CONN_TIMEOUT);
                 return -1;
             }
             options.connTimeout = i;
-        }
-        else if (val.getType() == NT_STRING) {
+        } else if (val.getType() == NT_STRING) {
             const QoreStringNode* str = val.get<const QoreStringNode>();
             TempEncodingHelper tstr(str, QCS_UTF8, xsink);
             if (*xsink)
                 return -1;
-            const char* buf = tstr->getBuffer();
+            const char* buf = tstr->c_str();
             for (int i = 0, limit = tstr->size(); i < limit; i++) {
                 if (!isdigit(buf[i]) && buf[i] != ' ')
-                    xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_CONN_TIMEOUT);
+                    xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 0 up",
+                        OPT_CONN_TIMEOUT);
             }
-            long int num = strtol(tstr->getBuffer(), 0, 10);
+            long int num = strtol(tstr->c_str(), 0, 10);
             if (num < 0) {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_CONN_TIMEOUT);
+                xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 0 up",
+                    OPT_CONN_TIMEOUT);
                 return -1;
             }
             options.connTimeout = num;
-        }
-        else {
-            xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_CONN_TIMEOUT);
+        } else {
+            xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 0 up",
+                OPT_CONN_TIMEOUT);
             return -1;
         }
-    }
-    else {
-        xsink->raiseException("DBI:ODBC:OPTION-ERROR", "'%s' option requires an integer argument from 0 up", OPT_CONN_TIMEOUT);
+    } else {
+        xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires an integer argument from 0 up",
+            OPT_CONN_TIMEOUT);
         return -1;
     }
 
@@ -559,40 +548,63 @@ int ODBCConnection::setConnectionTimeoutOption(QoreValue val, ExceptionSink* xsi
 }
 
 int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
-    if (ds->getDBName() && strlen(ds->getDBName()) > 0)
-        connStr.sprintf("DSN=%s;", ds->getDBName());
+    {
+        const std::string& db = ds->getDBNameStr();
+        if (!db.empty()) {
+            if (db.find('=') != std::string::npos) {
+                connStr.set(db);
+                if (db.back() != ';') {
+                    connStr.concat(';');
+                }
+            } else {
+                connStr.sprintf("DSN=%s;", db.c_str());
+            }
+        }
+    }
 
-    if (ds->getUsername())
-        connStr.sprintf("UID=%s;", ds->getUsername());
+    if (ds->getUsername()) {
+        connStr.sprintf("USER=%s;UID=%s;", ds->getUsername(), ds->getUsername());
+    }
 
-    if (ds->getPassword())
-        connStr.sprintf("PWD=%s;", ds->getPassword());
+    if (ds->getPassword()) {
+        connStr.sprintf("PASSWORD=%s;", ds->getPassword());
+    }
 
     ConstHashIterator hi(ds->getConnectOptions());
     while (hi.next()) {
         QoreValue val = hi.get();
-        if (!val)
+        if (!val) {
             continue;
+        }
 
         // Skip module-specific (non-ODBC) options.
-        if (!strcasecmp(DBI_OPT_NUMBER_OPT, hi.getKey()))
+        if (!strcasecmp(DBI_OPT_NUMBER_OPT, hi.getKey())) {
             continue;
-        if (!strcasecmp(DBI_OPT_NUMBER_STRING, hi.getKey()))
+        }
+        if (!strcasecmp(DBI_OPT_NUMBER_STRING, hi.getKey())) {
             continue;
-        if (!strcasecmp(DBI_OPT_NUMBER_NUMERIC, hi.getKey()))
+        }
+        if (!strcasecmp(DBI_OPT_NUMBER_NUMERIC, hi.getKey())) {
             continue;
-        if (!strcasecmp(OPT_BIGINT_NATIVE, hi.getKey()))
+        }
+        if (!strcasecmp(OPT_BIGINT_NATIVE, hi.getKey())) {
             continue;
-        if (!strcasecmp(OPT_BIGINT_STRING, hi.getKey()))
+        }
+        if (!strcasecmp(OPT_BIGINT_STRING, hi.getKey())) {
             continue;
-        if (!strcasecmp(OPT_FRAC_PRECISION, hi.getKey()))
+        }
+        if (!strcasecmp(OPT_FRAC_PRECISION, hi.getKey())) {
             continue;
-        if (!strcasecmp(OPT_QORE_TIMEZONE, hi.getKey()))
+        }
+        if (!strcasecmp(OPT_QORE_TIMEZONE, hi.getKey())) {
             continue;
-        if (!strcasecmp(OPT_LOGIN_TIMEOUT, hi.getKey()))
+        }
+        if (!strcasecmp(OPT_LOGIN_TIMEOUT, hi.getKey())) {
             continue;
-        if (!strcasecmp(OPT_CONN_TIMEOUT, hi.getKey()))
+        }
+        if (!strcasecmp(OPT_CONN_TIMEOUT, hi.getKey())) {
             continue;
+        }
 
         // Append options to the connection string.
         qore_type_t ntype = val.getType();
@@ -600,15 +612,19 @@ int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
             case NT_STRING: {
                 const QoreStringNode* strNode = val.get<const QoreStringNode>();
                 TempEncodingHelper tstr(strNode, QCS_UTF8, xsink);
-                if (*xsink)
+                if (*xsink) {
                     return -1;
-                std::unique_ptr<QoreString> key(hi.getKeyString());
-                key->tolwr();
-                if (key->equal("driver")) {
-                    connStr.sprintf("%s={%s};", hi.getKey(), tstr->getBuffer());
                 }
-                else {
-                    connStr.sprintf("%s=%s;", hi.getKey(), tstr->getBuffer());
+                if (*hi.getKeyString() == "conn") {
+                    connStr.concat(tstr->c_str());
+                } else {
+                    QoreString key(hi.getKey());
+                    key.toupr();
+                    if (key.equal("DRIVER")) {
+                        connStr.sprintf("%s={%s};", key.c_str(), tstr->c_str());
+                    } else {
+                        connStr.sprintf("%s=%s;", key.c_str(), tstr->c_str());
+                    }
                 }
                 break;
             }
@@ -616,7 +632,7 @@ int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
             case NT_FLOAT:
             case NT_NUMBER: {
                 QoreStringValueHelper vh(val);
-                connStr.sprintf("%s=%s;", hi.getKey(), vh->getBuffer());
+                connStr.sprintf("%s=%s;", hi.getKey(), vh->c_str());
                 break;
             }
             case NT_BOOLEAN: {
@@ -625,22 +641,13 @@ int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
                 break;
             }
             default: {
-                xsink->raiseException("DBI:ODBC:OPTION-ERROR", "option values of type '%s' are not supported by the ODBC driver", val.getTypeName());
+                xsink->raiseException("ODBC-OPTION-ERROR", "option values of type '%s' are not supported by the "
+                    "ODBC driver", val.getTypeName());
                 return -1;
             }
         } //  switch
     } // while
 
-    // Create final UTF-16 connection string.
-#ifdef WORDS_BIGENDIAN
-    std::unique_ptr<QoreString> utf16Str(connStr.convertEncoding(QCS_UTF16BE, xsink));
-#else
-    std::unique_ptr<QoreString> utf16Str(connStr.convertEncoding(QCS_UTF16LE, xsink));
-#endif
-    if (*xsink || !utf16Str)
-        return -1;
-
-    connStrUTF16 = std::move(utf16Str);
     return 0;
 }
 
@@ -664,19 +671,20 @@ void ODBCConnection::getVersions() {
 
 void ODBCConnection::checkIfConnectionDead(ExceptionSink* xsink) {
     SQLULEN deadAttr = 0;
-    SQLRETURN ret = SQLGetConnectAttr(dbc, SQL_ATTR_CONNECTION_DEAD, reinterpret_cast<SQLPOINTER>(&deadAttr), sizeof(deadAttr), 0);
+    SQLRETURN ret = SQLGetConnectAttr(dbc, SQL_ATTR_CONNECTION_DEAD, reinterpret_cast<SQLPOINTER>(&deadAttr),
+        sizeof(deadAttr), 0);
     if (SQL_SUCCEEDED(ret)) {
         if (deadAttr == SQL_CD_TRUE) // Connection is dead.
             isDead = true;
-    }
-    else { // error
-        handleDbcError("DBI:ODBC:CONNECTION-ERROR", "could not find out if connection is alive", xsink);
+    } else { // error
+        handleDbcError("ODBC-CONNECTION-ERROR", "could not find out if connection is alive", xsink);
     }
 }
 
 void ODBCConnection::handleDbcError(const char* err, const char* desc, ExceptionSink* xsink) {
-    if (!xsink)
+    if (!xsink) {
         return;
+    }
     std::string s(desc);
     ODBCErrorHelper::extractDiag(SQL_HANDLE_DBC, dbc, s);
     xsink->raiseException(err, s.c_str());
@@ -685,7 +693,7 @@ void ODBCConnection::handleDbcError(const char* err, const char* desc, Exception
 void ODBCConnection::deadConnectionError(ExceptionSink* xsink) {
     if (!xsink)
         return;
-    xsink->raiseException("DBI:ODBC:CONNECTION-DEAD-ERROR", "the connection is dead; create a new one");
+    xsink->raiseException("ODBC-CONNECTION-DEAD-ERROR", "the connection is dead; create a new one");
 }
 
 // Version string is in the form "INT.INT.INT".
@@ -694,8 +702,9 @@ int ODBCConnection::parseOdbcVersion(const char* str) {
     int minor = 0;
     int sub = 0;
     int ret = sscanf(str, "%d.%d.%d", &major, &minor, &sub);
-    if (ret == EOF || ret == 0)
+    if (ret == EOF || ret == 0) {
         return 0;
+    }
 
     return major*1000000 + minor*10000 + sub;
 }

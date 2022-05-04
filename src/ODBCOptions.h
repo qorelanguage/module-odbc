@@ -4,7 +4,7 @@
 
   Qore ODBC module
 
-  Copyright (C) 2016 Qore Technologies s.r.o.
+  Copyright (C) 2016 - 2022 Qore Technologies s.r.o.
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -34,6 +34,7 @@
 #define OPT_FRAC_PRECISION "fractional-precision"    //!< fractional seconds precision
 #define OPT_LOGIN_TIMEOUT "login-timeout"            //!< timeout value in seconds used for logging in to the connection (connecting)
 #define OPT_CONN_TIMEOUT "connection-timeout"        //!< timeout value in seconds used for the connection
+#define OPT_PRESERVE_CASE "preserve-case"            //!< preserve the case of column names
 
 namespace odbc {
 
@@ -52,34 +53,25 @@ enum NumericOption {
 
 struct ODBCOptions {
 public:
-    ODBCOptions() :
-        bigint(EBO_NATIVE),
-        numeric(ENO_OPTIMAL),
-        frPrec(3),
-        loginTimeout(60),
-        connTimeout(60) {}
-
-    ODBCOptions(BigintOption bo, NumericOption no, SQLSMALLINT fp, SQLUINTEGER lt, SQLUINTEGER ct) :
-        bigint(bo),
-        numeric(no),
-        frPrec(fp),
-        loginTimeout(lt),
-        connTimeout(ct) {}
+    DLLLOCAL ODBCOptions() {}
 
     //! Option used for deciding how BIGINT parameters will be bound.
-    BigintOption bigint;
+    BigintOption bigint = EBO_NATIVE;
 
     //! Option used for deciding how NUMERIC results will be returned.
-    NumericOption numeric;
+    NumericOption numeric = ENO_OPTIMAL;
 
     //! Fractional seconds precision (1-9).
-    SQLSMALLINT frPrec;
+    SQLSMALLINT frPrec = 3;
 
     //! Connection login timeout.
-    SQLUINTEGER loginTimeout;
+    SQLUINTEGER loginTimeout = 60;
 
     //! Connection timeout.
-    SQLUINTEGER connTimeout;
+    SQLUINTEGER connTimeout = 60;
+
+    //! preserve case in column names
+    bool preserve_case = false;
 };
 
 } // namespace odbc

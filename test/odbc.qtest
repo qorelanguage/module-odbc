@@ -378,6 +378,7 @@ class OdbcTest inherits QUnit::Test {
         bool oracleDB = False;
         bool mssqlDB = False;
         bool sybaseDB = False;
+        bool firebirdDB = False;
     }
 
     constructor() : QUnit::Test("OdbcTest", "1.0", \ARGV) {
@@ -398,8 +399,7 @@ class OdbcTest inherits QUnit::Test {
 
         try {
             initDatasource();
-        }
-        catch (hash ex) {
+        } catch (hash<ExceptionInfo> ex) {
             printf("Exception happened during datasource initialization:\n%s: %s\n", ex.err, ex.desc);
             exit(1);
         }
@@ -411,9 +411,8 @@ class OdbcTest inherits QUnit::Test {
         if (ds) {
             try {
                 ds.exec("DROP TABLE " + tableName);
-            }
-            catch (hash ex) {
-                if (ex.err != "DBI:ODBC:EXEC-ERROR")
+            } catch (hash<ExceptionInfo> ex) {
+                if (ex.err != "ODBC-EXEC-ERROR")
                     rethrow;
             }
             ds.commit();
@@ -443,23 +442,24 @@ class OdbcTest inherits QUnit::Test {
         }
         ds.open();
 
-        int serverVer = ds.getServerVersion();
-        int clientVer = ds.getClientVersion();
-        printf("server version: %s (%d)\n", getVersionString(serverVer), serverVer);
-        printf("client version: %s (%d)\n", getVersionString(clientVer), clientVer);
+        if (m_options.verbose > 2) {
+            int serverVer = ds.getServerVersion();
+            int clientVer = ds.getClientVersion();
+            printf("server version: %s (%d)\n", getVersionString(serverVer), serverVer);
+            printf("client version: %s (%d)\n", getVersionString(clientVer), clientVer);
+        }
     }
 
     prepareDBSpecificInit() {
         string typesTable = "odbc_types_test";
-        try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
+        try { ds.exec("DROP TABLE " + typesTable); } catch (hash<ExceptionInfo> e) {}
 
         # Test if connected to a MySQL database.
         try { # LINESTRING is a MySQL-only datatype.
             ds.exec("CREATE TABLE " + typesTable + " (ls LINESTRING)");
             mysqlDB = True;
-            try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
-        }
-        catch (hash ex) {
+            try { ds.exec("DROP TABLE " + typesTable); } catch (hash<ExceptionInfo> e) {}
+        } catch (hash<ExceptionInfo> e) {
             mysqlDB = False;
         }
 
@@ -467,9 +467,8 @@ class OdbcTest inherits QUnit::Test {
         try { # BYTEA is a PostgreSQL-only datatype.
             ds.exec("CREATE TABLE " + typesTable + " (bt bytea)");
             pgsqlDB = True;
-            try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
-        }
-        catch (hash ex) {
+            try { ds.exec("DROP TABLE " + typesTable); } catch (hash<ExceptionInfo> e) {}
+        } catch (hash<ExceptionInfo> e) {
             pgsqlDB = False;
         }
 
@@ -477,9 +476,8 @@ class OdbcTest inherits QUnit::Test {
         try { # BINARY_FLOAT is an Oracle-only datatype.
             ds.exec("CREATE TABLE " + typesTable + " (bf BINARY_FLOAT)");
             oracleDB = True;
-            try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
-        }
-        catch (hash ex) {
+            try { ds.exec("DROP TABLE " + typesTable); } catch (hash<ExceptionInfo> e) {}
+        } catch (hash<ExceptionInfo> e) {
             oracleDB = False;
         }
 
@@ -487,9 +485,8 @@ class OdbcTest inherits QUnit::Test {
         try { # IMAGE is a MSSQL-only datatype.
             ds.exec("CREATE TABLE " + typesTable + " (img IMAGE)");
             mssqlDB = True;
-            try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
-        }
-        catch (hash ex) {
+            try { ds.exec("DROP TABLE " + typesTable); } catch (hash<ExceptionInfo> e) {}
+        } catch (hash<ExceptionInfo> e) {
             mssqlDB = False;
         }
 
@@ -497,34 +494,46 @@ class OdbcTest inherits QUnit::Test {
         try { # UNIQUEIDENTIFIERSTR is a Sybase-only datatype.
             ds.exec("CREATE TABLE " + typesTable + " (uis UNIQUEIDENTIFIERSTR)");
             sybaseDB = True;
-            try { ds.exec("DROP TABLE " + typesTable); } catch (e) {}
-        }
-        catch (hash ex) {
+            try { ds.exec("DROP TABLE " + typesTable); } catch (hash<ExceptionInfo> e) {}
+        } catch (hash<ExceptionInfo> e) {
             sybaseDB = False;
         }
 
-        if (oracleDB)
-            mysqlDB = False;
-        if (sybaseDB)
-            mssqlDB = False;
+        # Test if connected to Firebird
+        try {
+            ds.exec("CREATE TABLE " + typesTable + " (clob blob sub_type text)");
+            firebirdDB = True;
+            try { ds.exec("DROP TABLE " + typesTable); } catch (hash<ExceptionInfo> e) {}
+        } catch (hash<ExceptionInfo> ex) {
+            firebirdDB = False;
+        }
 
-        printf("MySQL DB: %s\n", mysqlDB ? "True" : "False");
-        printf("PostgreSQL DB: %s\n", pgsqlDB ? "True" : "False");
-        printf("Oracle DB: %s\n", oracleDB ? "True" : "False");
-        printf("MSSQL DB: %s\n", mssqlDB ? "True" : "False");
-        printf("Sybase DB: %s\n", sybaseDB ? "True" : "False");
+        if (oracleDB) {
+            mysqlDB = False;
+        }
+        if (sybaseDB) {
+            mssqlDB = False;
+        }
+
+        if (m_options.verbose > 2) {
+            printf("MySQL DB: %s\n", mysqlDB ? "True" : "False");
+            printf("PostgreSQL DB: %s\n", pgsqlDB ? "True" : "False");
+            printf("Oracle DB: %s\n", oracleDB ? "True" : "False");
+            printf("MSSQL DB: %s\n", mssqlDB ? "True" : "False");
+            printf("Sybase DB: %s\n", sybaseDB ? "True" : "False");
+            printf("Firebird DB: %s\n", firebirdDB ? "True" : "False");
+        }
 
         # Try additional MySQL types.
         if (mysqlDB) {
             string mysqlTable = "mysql_types_test";
-            try { ds.exec("DROP TABLE " + mysqlTable); } catch (e) {}
+            try { ds.exec("DROP TABLE " + mysqlTable); } catch (hash<ExceptionInfo> e) {}
             HashIterator mysql(MysqlColumns);
             while (mysql.next()) {
                 try {
                     ds.exec("CREATE TABLE " + mysqlTable + " (" + mysql.getKey() + " " + mysql.getValue().type + ")");
-                }
-                catch (hash ex) { continue; }
-                try { ds.exec("DROP TABLE " + mysqlTable); } catch (e) {}
+                } catch (hash<ExceptionInfo> e) { continue; }
+                try { ds.exec("DROP TABLE " + mysqlTable); } catch (hash<ExceptionInfo> e) {}
 
                 # Add the type to the typesTest Columns.
                 Columns{mysql.getKey()} = mysql.getValue();
@@ -536,13 +545,11 @@ class OdbcTest inherits QUnit::Test {
                         for (int j = exp.size(); j < 64; j++)
                             exp += <00>;
                     }
-                }
-                else if (mysql.getKey() == "mydtime") {
+                } else if (mysql.getKey() == "mydtime") {
                     for (int i = 0; i < Columns.mydtime.values.size(); i++) {
                         push Columns.mydtime.expected, utcTz.date(Columns.mydtime.values[i]);
                     }
-                }
-                else if (mysql.getKey() == "mytstamp") {
+                } else if (mysql.getKey() == "mytstamp") {
                     for (int i = 0; i < Columns.mytstamp.values.size(); i++) {
                         push Columns.mytstamp.expected, utcTz.date(Columns.mytstamp.values[i]);
                     }
@@ -553,14 +560,13 @@ class OdbcTest inherits QUnit::Test {
         # Try additional PostgreSQL types.
         if (pgsqlDB) {
             string pgsqlTable = "pgsql_types_test";
-            try { ds.exec("DROP TABLE " + pgsqlTable); } catch (e) {}
+            try { ds.exec("DROP TABLE " + pgsqlTable); } catch (hash<ExceptionInfo> e) {}
             HashIterator pgsql(PgsqlColumns);
             while (pgsql.next()) {
                 try {
                     ds.exec("CREATE TABLE " + pgsqlTable + " (" + pgsql.getKey() + " " + pgsql.getValue().type + ")");
-                }
-                catch (hash ex) { continue; }
-                try { ds.exec("DROP TABLE " + pgsqlTable); } catch (e) {}
+                } catch (hash<ExceptionInfo> e) { continue; }
+                try { ds.exec("DROP TABLE " + pgsqlTable); } catch (hash<ExceptionInfo> e) {}
 
                 # Add the type to the typesTest Columns.
                 Columns{pgsql.getKey()} = pgsql.getValue();
@@ -576,14 +582,13 @@ class OdbcTest inherits QUnit::Test {
         # Try additional Oracle types.
         if (oracleDB) {
             string oracleTable = "oracle_types_test";
-            try { ds.exec("DROP TABLE " + oracleTable); } catch (e) {}
+            try { ds.exec("DROP TABLE " + oracleTable); } catch (hash<ExceptionInfo> e) {}
             HashIterator oracle(OracleColumns);
             while (oracle.next()) {
                 try {
                     ds.exec("CREATE TABLE " + oracleTable + " (" + oracle.getKey() + " " + oracle.getValue().type + ")");
-                }
-                catch (hash ex) { continue; }
-                try { ds.exec("DROP TABLE " + oracleTable); } catch (e) {}
+                } catch (hash<ExceptionInfo> e) { continue; }
+                try { ds.exec("DROP TABLE " + oracleTable); } catch (hash<ExceptionInfo> e) {}
 
                 # Add the type to the typesTest Columns.
                 Columns{oracle.getKey()} = oracle.getValue();
@@ -603,14 +608,13 @@ class OdbcTest inherits QUnit::Test {
         # Try additional MSSQL types.
         if (mssqlDB) {
             string mssqlTable = "mssql_types_test";
-            try { ds.exec("DROP TABLE " + mssqlTable); } catch (e) {}
+            try { ds.exec("DROP TABLE " + mssqlTable); } catch (hash<ExceptionInfo> e) {}
             HashIterator mssql(MssqlColumns);
             while (mssql.next()) {
                 try {
                     ds.exec("CREATE TABLE " + mssqlTable + " (" + mssql.getKey() + " " + mssql.getValue().type + ")");
-                }
-                catch (hash ex) { continue; }
-                try { ds.exec("DROP TABLE " + mssqlTable); } catch (e) {}
+                } catch (hash<ExceptionInfo> e) { continue; }
+                try { ds.exec("DROP TABLE " + mssqlTable); } catch (hash<ExceptionInfo> e) {}
 
                 # Add the type to the typesTest Columns.
                 Columns{mssql.getKey()} = mssql.getValue();
@@ -619,8 +623,7 @@ class OdbcTest inherits QUnit::Test {
                     for (int i = 0; i < Columns.msdtime.values.size(); i++) {
                         push Columns.msdtime.expected, utcTz.date(Columns.msdtime.values[i]);
                     }
-                }
-                else if (mssql.getKey() == "msbin") {
+                } else if (mssql.getKey() == "msbin") {
                     for (int i = 0; i < Columns.msbin.values.size(); i++) {
                         push Columns.msbin.expected, Columns.msbin.values[i];
                         reference exp = \Columns.msbin.expected[i];
@@ -637,28 +640,13 @@ class OdbcTest inherits QUnit::Test {
         }
     }
 
-    hash hashLowercaseKeys(hash h) {
-        hash nh;
-        foreach hash item in (h.pairIterator()) {
-            nh{item.key.lwr()} = item.value;
-        }
-        return nh;
-    }
-
-    list hashListLowercaseKeys(list lst) {
-        for (int i = 0; i < lst.size(); i++) {
-            lst[i] = hashLowercaseKeys(lst[i]);
-        }
-        return lst;
-    }
-
-    trimHashOfLists(reference h) {
+    trimHashOfLists(reference<auto> h) {
         foreach string k in (keys h) {
             h{k} = trim h{k};
         }
     }
 
-    trimListOfHashes(reference lst) {
+    trimListOfHashes(reference<auto> lst) {
         for (int i = 0; i < lst.size(); i++) {
             lst[i] = trim lst[i];
         }
@@ -667,56 +655,45 @@ class OdbcTest inherits QUnit::Test {
     basicTest() {
         {
             Datasource test = new Datasource("odbc", "abc", "xyz");
-            assertThrows("DBI:ODBC:CONNECTION-ERROR", sub() { test.open(); });
+            assertThrows("ODBC-CONNECTION-ERROR", sub() { test.open(); });
         }
 
-        try {
-            ds.exec("DROP TABLE " + tableName);
-        }
-        catch (hash ex) {
-            if (ex.err != "DBI:ODBC:EXEC-ERROR")
-                rethrow;
-        }
-        ds.commit();
+        assertThrows("ODBC-EXEC-ERROR", \ds.exec(), "DROP TABLE " + tableName);
+        #ds.commit();
 
-        any ret = ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, txt varchar(128))");
+        auto ret = ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, txt varchar(128))");
         assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);
         ds.commit();
 
         assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (1, 'abcdef123456')"));
         ds.commit();
 
-        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 2, "test 789 abc lorem ipsum"));
+        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 2,
+            "test 789 abc lorem ipsum"));
         ds.commit();
 
-        assertThrows("DBI:ODBC:BIND-ERROR", "not enough parameters passed for binding",
+        assertThrows("ODBC-BIND-ERROR", "not enough parameters passed for binding",
             sub() { ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 3); });
-        assertThrows("DBI:ODBC:BIND-ERROR", "hash parameter not in correct format for odbc_bind",
+        assertThrows("ODBC-BIND-ERROR", "hash parameter not in correct format for odbc_bind",
             sub() { ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 3, {}); });
 
-        assertThrows("DBI:ODBC:EXEC-ERROR", "error during statement execution", sub() { ds.exec("bla bla bla"); });
+        assertThrows("ODBC-EXEC-ERROR", "error during statement execution", sub() { ds.exec("bla bla bla"); });
 
         hash results1 = {"id": (1, 2), "txt": ("abcdef123456", "test 789 abc lorem ipsum")};
         list results2 = ({"id": 1, "txt": "abcdef123456"}, {"id": 2, "txt": "test 789 abc lorem ipsum"});
 
         on_error ds.rollback();
         ret = ds.exec("SELECT * FROM " + tableName);
-        if (oracleDB)
-            ret = hashLowercaseKeys(ret);
         if (mssqlDB)
             trimHashOfLists(\ret);
         assertEq(results1, ret);
 
         ret = ds.select("SELECT * FROM " + tableName);
-        if (oracleDB)
-            ret = hashLowercaseKeys(ret);
         if (mssqlDB)
             trimHashOfLists(\ret);
         assertEq(results1, ret);
 
         ret = ds.selectRows("SELECT * FROM " + tableName);
-        if (oracleDB)
-            ret = hashListLowercaseKeys(ret);
         if (mssqlDB)
             trimListOfHashes(\ret);
         assertEq(results2, ret);
@@ -726,19 +703,20 @@ class OdbcTest inherits QUnit::Test {
     }
 
     typesTest() {
-        printf("\n**************************\n");
-        printf("The following columns and their types are tested in the 'types test':\n");
-        foreach string col in (ColumnNamesAndTypes.iterator()) {
-            printf("%s\n", col);
+        if (m_options.verbose > 2) {
+            printf("\n**************************\n");
+            printf("The following columns and their types are tested in the 'types test':\n");
+            foreach string col in (ColumnNamesAndTypes.iterator()) {
+                printf("%s\n", col);
+            }
+            printf("**************************\n\n");
         }
-        printf("**************************\n\n");
 
         ds.setOption("numeric-numbers", True);
         try {
             ds.exec("DROP TABLE " + tableName);
-        }
-        catch (hash ex) {
-            if (ex.err != "DBI:ODBC:EXEC-ERROR")
+        } catch (hash<ExceptionInfo> ex) {
+            if (ex.err != "ODBC-EXEC-ERROR")
                 rethrow;
         }
         ds.commit();
@@ -760,22 +738,27 @@ class OdbcTest inherits QUnit::Test {
 
         SQLStatement stmt = new SQLStatement(ds);
         on_error stmt.rollback();
-        stmt.prepare("INSERT INTO " + tableName + sprintf(" (%s) VALUES (", foldl $1 + ", " + $2, Columns.keys()) + valdef + ")");
+        stmt.prepare("INSERT INTO " + tableName + sprintf(" (%s) VALUES (",
+            foldl $1 + ", " + $2, keys Columns) + valdef + ")");
         stmt.bindArgs(arguments);
         stmt.exec();
         stmt.commit();
 
+        # bulk SQL is not working for firebird
+        if (firebirdDB) {
+            return;
+        }
+
         hash results = Columns;
-        foreach string key in (results.keys()) {
-            if (exists results{key}.expected)
+        foreach string key in (keys results) {
+            if (exists results{key}.expected) {
                 results{key} = results{key}.expected;
-            else
+            } else {
                 results{key} = results{key}.values;
+            }
         }
 
         ret = ds.select("SELECT * FROM " + tableName);
-        if (oracleDB)
-            ret = hashLowercaseKeys(ret);
         if (mssqlDB)
             trimHashOfLists(\ret);
         #printf("types test expected results: %N\n\n", results);
@@ -793,9 +776,8 @@ class OdbcTest inherits QUnit::Test {
 
         try {
             tzDs.exec("DROP TABLE " + tableName);
-        }
-        catch (hash ex) {
-            if (ex.err != "DBI:ODBC:EXEC-ERROR")
+        } catch (hash<ExceptionInfo> ex) {
+            if (ex.err != "ODBC-EXEC-ERROR")
                 rethrow;
         }
         tzDs.commit();
@@ -813,19 +795,21 @@ class OdbcTest inherits QUnit::Test {
         hash h = {"id": (1, 2), "t": (2016-01-11T09:00:00+09:00, 2016-01-11T09:00:00+09:00)};
 
         ret = tzDs.select("SELECT * FROM " + tableName);
-        if (oracleDB)
-            ret = hashLowercaseKeys(ret);
         assertEq(h, ret);
 
         tzDs.close();
     }
 
     arrayBindTest() {
+        # bulk SQL is not working for firebird
+        if (firebirdDB) {
+            return;
+        }
+
         try {
             ds.exec("DROP TABLE " + tableName);
-        }
-        catch (hash ex) {
-            if (ex.err != "DBI:ODBC:EXEC-ERROR")
+        } catch (hash<ExceptionInfo> ex) {
+            if (ex.err != "ODBC-EXEC-ERROR")
                 rethrow;
         }
         ds.commit();
@@ -850,12 +834,11 @@ class OdbcTest inherits QUnit::Test {
         stmt.commit();
 
         hash h = {"id": (2, 2, 2, 4, 5, 6), "txt": ("text", "abc", "lorem", "ipsum", "dolor", "sit")};
-        if (oracleDB)
+        if (oracleDB) {
             h.id = (2n, 2n, 2n, 4n, 5n, 6n);
+        }
 
         ret = ds.select("SELECT * FROM " + tableName);
-        if (oracleDB)
-            ret = hashLowercaseKeys(ret);
         if (mssqlDB)
             trimHashOfLists(\ret);
         /*printf("ret: %N\n", ret);

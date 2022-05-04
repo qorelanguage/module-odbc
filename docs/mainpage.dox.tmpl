@@ -21,29 +21,33 @@
 
     @section odbcintro Introduction to the ODBC Module
 
-    The odbc module provides an ODBC driver to Qore's DBI system, allowing Qore programs to access many different databases using the ODBC interface through the \c Datasource, \c DatasourcePool, and \c SQLStatement classes.
+    The odbc module provides an ODBC driver to Qore's DBI system, allowing Qore programs to access many different
+    databases using the ODBC interface through the \c Datasource, \c DatasourcePool, and \c SQLStatement classes.
 
     This module is released under the MIT license (see LICENSE.txt in the source distribution for more information).
-    .
-    The module is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the %Qore library was initialized).
+    The module is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how
+    the %Qore library was initialized).
 
     Example of creating an ODBC Datasource using DSN-less connection:
     @code
+# Firebird
+Datasource db("odbc:user/pass@{conn=driver=firebird;dbname=localhost:/var/lib/firebird/data/employee.fdb");
+
 # MySQL
 Datasource db = new Datasource(SQL::DSODBC, user, pass, NOTHING, "UTF8", NOTHING,
-    NOTHING, {"DRIVER": "MySQL ODBC 5.3 Unicode Driver", "Server": "192.168.15.1", "Database": "omquser"});
+    NOTHING, {"conn": "driver=MySQL ODBC 5.3 Unicode Driver;Server=192.168.15.1;Database=omquser"});
 
 # PostgreSQL
 db = new Datasource(SQL::DSODBC, user, pass, NOTHING, "UTF8", NOTHING,
-    NOTHING, {"DRIVER": "PostgreSQL Unicode", "Server": "192.168.15.1", "Database": "omquser", "fractional-precision": 6});
+    NOTHING, {"conn": "driver=PostgreSQL Unicode;Server=192.168.15.1;Database=omquser", "fractional-precision": 6});
 
 # Oracle
 db = new Datasource(SQL::DSODBC, user, pass, NOTHING, NOTHING, NOTHING,
-    NOTHING, {"DRIVER": "Oracle 12c ODBC driver", "Dbq": "192.168.15.1:1521/lorem", "bigint-string": True});
+    NOTHING, {"conn": "driver=Oracle 12c ODBC driver;Dbq=192.168.15.1:1521/lorem", "bigint-string": True});
 
 # MS-SQL
 db = new Datasource(SQL::DSODBC, user, pass, NOTHING, NOTHING, NOTHING,
-    NOTHING, {"DRIVER": "ODBC Driver 11 for SQL Server", "Server": "192.168.15.1", "Database": "omquser"});
+    NOTHING, {"conn": "driver=ODBC Driver 11 for SQL Server;Server=192.168.15.1;Database=omquser"});
     @endcode
 
     Example of creating an ODBC Datasource using DSN connection:
@@ -86,20 +90,33 @@ major_version * 1000000 + minor_version * 10000 + sub_version
     @section odbcoptions Driver Options
 
     The odbc driver supports the following DBI options:
-    - \c "optimal-numbers": return received \c SQL_NUMERIC and \c SQL_DECIMAL values as integers if possible, if not return them as an arbitrary-precision numbers; this is the default
-    - \c "string-numbers": return received \c SQL_NUMERIC and \c SQL_DECIMAL values as strings (for backwards-compatibility)
-    - \c "numeric-numbers": return received \c SQL_NUMERIC and \c SQL_DECIMAL values as arbitrary-precision numbers (Qore number values)
-    - \c "bigint-native": bind Qore int values as native \c SQL_C_SBIGINT values to ODBC statements; this is the default
+    - \c "bigint-native": bind Qore int values as native \c SQL_C_SBIGINT values to ODBC statements; this is the
+      default
     - \c "bigint-string": bind Qore int values as \c SQL_C_CHAR values (strings) to ODBC statements
-    - \c "fractional-precision": precision to use for the fractional seconds part of date, time, timestamp and interval values; in the range 1-9 (default is 3)
-    - \c "qore-timezone": accepts a string argument that can be either a region name (ex: \c "Europe/Prague") or a UTC offset (ex: \c "+01:00") to set the server's timezone rules; this is useful if connecting to a database server in a different timezone; if this option is not set then the server's timezone is assumed to be the same as the client's timezone
-    - \c "login-timeout": timeout value in seconds used for logging in to the connection (connecting); possible values are integers from 0 up (default is 60); setting the timeout to 0 means to wait indefinitely
-    - \c "connection-timeout": timeout value in seconds used for the connection; possible values are integers from 0 up (default is 60); setting the timeout to 0 means to wait indefinitely
+    - \c "conn": the ODBC connection string (ex: \c "driver=xyz;server=abc" etc)
+    - \c "fractional-precision": precision to use for the fractional seconds part of date, time, timestamp and
+      interval values; in the range 1-9 (default is 3)
+    - \c "login-timeout": timeout value in seconds used for logging in to the connection (connecting); possible values
+      are integers from 0 up (default is 60); setting the timeout to 0 means to wait indefinitely
+    - \c "connection-timeout": timeout value in seconds used for the connection; possible values are integers from 0
+      up (default is 60); setting the timeout to 0 means to wait indefinitely
+    - \c "numeric-numbers": return received \c SQL_NUMERIC and \c SQL_DECIMAL values as arbitrary-precision numbers
+      (Qore number values)
+    - \c "optimal-numbers": return received \c SQL_NUMERIC and \c SQL_DECIMAL values as integers if possible, if not
+      return them as an arbitrary-precision numbers; this is the default
+    - \c "preserve-case": the case of column names will be preserved; by default this is disabled and column names
+      are converted to lower-case
+    - \c "qore-timezone": accepts a string argument that can be either a region name (ex: \c "Europe/Prague") or a UTC
+      offset (ex: \c "+01:00") to set the server's timezone rules; this is useful if connecting to a database server
+      in a different timezone; if this option is not set then the server's timezone is assumed to be the same as the
+      client's timezone
+    - \c "string-numbers": return received \c SQL_NUMERIC and \c SQL_DECIMAL values as strings (for backwards-
+      compatibility)
 
     Options can be set in the \c Datasource or \c DatasourcePool constructors as in the following examples:
     @code
     Datasource ds("odbc:user/pass@dsn{numeric-numbers}");
-    DatasourcePool dsp("odbc:user/pass@{optimal-numbers,DRIVER=MySQL ODBC 5.3 Unicode Driver,Server=192.168.20.1,Database=omquser}");
+    DatasourcePool dsp("odbc:user/pass@{optimal-numbers,conn-DRIVER=MySQL ODBC 5.3 Unicode Driver;Server=192.168.20.1;Database=omquser}");
     @endcode
 
     Options are stored separately for each connection.
@@ -261,6 +278,10 @@ hash: (1 member)
     @endverbatim
 
     @section odbcreleasenotes Release Notes
+
+    @subsection odbcv1_1 odbc Driver Version 1.1
+    - updated to run with the latest unixODBC versions
+      (<a href="https://github.com/qorelanguage/qore/issues/4507">issue 4507</a>)
 
     @subsection odbcv1_0 odbc Driver Version 1.0
     - initial release

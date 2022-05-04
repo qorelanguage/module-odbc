@@ -4,8 +4,6 @@ stages:
 default:
   tags:
     - docker-exec
-  services:
-    - name: postgres:13
   before_script:
     - |
         curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}?access_token=${GITHUB_ACCESS_TOKEN}" \
@@ -15,7 +13,7 @@ default:
 
 variables:
   POSTGRES_PASSWORD: omq
-  QORE_DB_CONNSTR_ODBC: 'odbc:postgres/omq@(UTF8){DRIVER=PostgreSQL Unicode,Server=postgres,Database=postgres}'
+  QORE_DB_CONNSTR_ODBC: 'odbc:postgres/omq@(UTF8){conn=driver=PostgreSQL Unicode;Server=postgres;Database=postgres}'
   REPO_NAME: module-odbc
 
 test-ubuntu:
@@ -24,12 +22,14 @@ test-ubuntu:
   script:
     - |
         if test/docker_test/test-ubuntu.sh; then
-          curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}?access_token=${GITHUB_ACCESS_TOKEN}" \
+          curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}" \
+            -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" \
             -X POST -H "Content-Type: application/json" \
             -d "{\"state\": \"success\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
           exit 0
         else
-          curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}?access_token=${GITHUB_ACCESS_TOKEN}" \
+          curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}" \
+            -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" \
             -X POST -H "Content-Type: application/json" \
             -d "{\"state\": \"failure\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
           exit 1
@@ -41,12 +41,14 @@ test-alpine:
   script:
     - |
         if test/docker_test/test-alpine.sh; then
-          curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}?access_token=${GITHUB_ACCESS_TOKEN}" \
+          curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}" \
+            -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" \
             -X POST -H "Content-Type: application/json" \
             -d "{\"state\": \"success\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
           exit 0
         else
-          curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}?access_token=${GITHUB_ACCESS_TOKEN}" \
+          curl "https://api.github.com/repos/qorelanguage/${REPO_NAME}/statuses/${CI_COMMIT_SHA}" \
+            -H "Authorization: token ${GITHUB_ACCESS_TOKEN}" \
             -X POST -H "Content-Type: application/json" \
             -d "{\"state\": \"failure\", \"context\": \"${REPO_NAME}\", \"description\": \"Gitlab CI\", \"target_url\": \"${CI_JOB_URL}\"}"
           exit 1
