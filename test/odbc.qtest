@@ -170,10 +170,10 @@ class OdbcTest inherits QUnit::Test {
                 "type": "CHAR(64)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
                 "expected": (
-                    "text                                                            ",
-                    "lorem                                                           ",
-                    "Příliš žluťoučký kůň úpěl ďábelské ódy                          ",
-                    "ipsum dolor                                                     "
+                    "text",
+                    "lorem",
+                    "Příliš žluťoučký kůň úpěl ďábelské ódy",
+                    "ipsum dolor"
                 ),
             },
             "pgbin": {
@@ -235,10 +235,10 @@ class OdbcTest inherits QUnit::Test {
                 "type": "CHAR(60)",
                 "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
                 "expected": (
-                    "text                                                        ",
-                    "lorem                                                       ",
-                    "Prilis zlutoucky kun upel dabelske ody       ",
-                    "ipsum dolor                                                 "
+                    "TEXT",
+                    "lorem",
+                    "Prilis zlutoucky kun upel dabelske ody",
+                    "ipsum dolor"
                 ),
             },
             "oravc": {
@@ -260,10 +260,10 @@ class OdbcTest inherits QUnit::Test {
                     convert_encoding("ipsum dolor", "UTF16")
                 ),
                 "expected": (
-                    convert_encoding("text                                    ", "UTF16"),
-                    convert_encoding("lorem                                   ", "UTF16"),
-                    convert_encoding("Příliš žluťoučký kůň úpěl ďábelské ódy  ", "UTF16"),
-                    convert_encoding("ipsum dolor                             ", "UTF16")
+                    convert_encoding("text", "UTF16"),
+                    convert_encoding("lorem", "UTF16"),
+                    convert_encoding("Příliš žluťoučký kůň úpěl ďábelské ódy", "UTF16"),
+                    convert_encoding("ipsum dolor", "UTF16")
                 ),
             },
             "oranvc2": {
@@ -400,7 +400,7 @@ class OdbcTest inherits QUnit::Test {
         try {
             initDatasource();
         } catch (hash<ExceptionInfo> ex) {
-            printf("Exception happened during datasource initialization:\n%s: %s\n", ex.err, ex.desc);
+            printf("Exception happened in datasource initialization:\n%s: %s\n", ex.err, ex.desc);
             exit(1);
         }
 
@@ -431,13 +431,14 @@ class OdbcTest inherits QUnit::Test {
     initDatasource() {
         connStr = ENV.QORE_DB_CONNSTR_ODBC;
         if (!connStr) {
-            printf("No connection string set. Cannot run the tests.\n");
+            printf("No connection string set; cannot run tests\n");
             exit(1);
         }
 
         ds = new Datasource(connStr);
         if (ds.getDriverName() != "odbc") {
-            printf("Cannot execute the odbc tests on a connection using driver %y.\n", ds.getDriverName());
+            printf("Cannot execute the odbc tests on a connection using driver %y (expecting \"odbc\")\n",
+                ds.getDriverName());
             exit(1);
         }
         ds.open();
@@ -672,12 +673,12 @@ class OdbcTest inherits QUnit::Test {
             "test 789 abc lorem ipsum"));
         ds.commit();
 
-        assertThrows("ODBC-BIND-ERROR", "not enough parameters passed for binding",
-            sub() { ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 3); });
+        assertThrows("ODBC-BIND-ERROR", "bind.*object",
+            sub() { ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", new Mutex()); });
         assertThrows("ODBC-BIND-ERROR", "hash parameter not in correct format for odbc_bind",
             sub() { ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 3, {}); });
 
-        assertThrows("ODBC-EXEC-ERROR", "error during statement execution", sub() { ds.exec("bla bla bla"); });
+        assertThrows("ODBC-EXEC-ERROR", "error in statement execution", sub() { ds.exec("bla bla bla"); });
 
         hash results1 = {"id": (1, 2), "txt": ("abcdef123456", "test 789 abc lorem ipsum")};
         list results2 = ({"id": 1, "txt": "abcdef123456"}, {"id": 2, "txt": "test 789 abc lorem ipsum"});

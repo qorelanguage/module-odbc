@@ -1204,6 +1204,9 @@ inline QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rco
                             return (bool)((buffer[0])-48);
                         }
                     }
+                    if (rcol.dataType == SQL_CHAR) {
+                        str->trim_trailing(" ");
+                    }
 
                     if (indicator > 0)
                         continue;
@@ -1286,11 +1289,9 @@ inline QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rco
                     if (afterDot->equals(0LL))
                         return strtoll(val, 0, 10);
                     return new QoreNumberNode(val);
-                }
-                else if (options.numeric == ENO_STRING) {
+                } else if (options.numeric == ENO_STRING) {
                     return new QoreStringNode(val, QCS_UTF8);
-                }
-                else {
+                } else {
                     return new QoreNumberNode(val);
                 }
             }
@@ -1438,7 +1439,8 @@ inline QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rco
         }
         case SQL_INTERVAL_DAY_TO_MINUTE: {
             SQL_INTERVAL_STRUCT val;
-            ret = SQLGetData(stmt, column, SQL_C_INTERVAL_DAY_TO_MINUTE, &val, sizeof(SQL_INTERVAL_STRUCT), &indicator);
+            ret = SQLGetData(stmt, column, SQL_C_INTERVAL_DAY_TO_MINUTE, &val, sizeof(SQL_INTERVAL_STRUCT),
+                &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 assert(val.interval_type == SQL_IS_DAY_TO_MINUTE);
                 SimpleRefHolder<DateTimeNode> d(new DateTimeNode(0, 0, val.intval.day_second.day,
@@ -1451,11 +1453,14 @@ inline QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rco
         }
         case SQL_INTERVAL_DAY_TO_SECOND: {
             SQL_INTERVAL_STRUCT val;
-            ret = SQLGetData(stmt, column, SQL_C_INTERVAL_DAY_TO_SECOND, &val, sizeof(SQL_INTERVAL_STRUCT), &indicator);
+            ret = SQLGetData(stmt, column, SQL_C_INTERVAL_DAY_TO_SECOND, &val, sizeof(SQL_INTERVAL_STRUCT),
+                &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 assert(val.interval_type == SQL_IS_DAY_TO_SECOND);
-                SimpleRefHolder<DateTimeNode> d(new DateTimeNode(0, 0, val.intval.day_second.day, val.intval.day_second.hour,
-                    val.intval.day_second.minute, val.intval.day_second.second, val.intval.day_second.fraction/1000, true));
+                SimpleRefHolder<DateTimeNode> d(new DateTimeNode(0, 0, val.intval.day_second.day,
+                    val.intval.day_second.hour,
+                    val.intval.day_second.minute, val.intval.day_second.second, val.intval.day_second.fraction/1000,
+                    true));
                 if (val.interval_sign == SQL_TRUE)
                     d = d->unaryMinus();
                 return d.release();
@@ -1464,7 +1469,8 @@ inline QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rco
         }
         case SQL_INTERVAL_HOUR_TO_MINUTE: {
             SQL_INTERVAL_STRUCT val;
-            ret = SQLGetData(stmt, column, SQL_C_INTERVAL_HOUR_TO_MINUTE, &val, sizeof(SQL_INTERVAL_STRUCT), &indicator);
+            ret = SQLGetData(stmt, column, SQL_C_INTERVAL_HOUR_TO_MINUTE, &val, sizeof(SQL_INTERVAL_STRUCT),
+                &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 assert(val.interval_type == SQL_IS_HOUR_TO_MINUTE);
                 SimpleRefHolder<DateTimeNode> d(new DateTimeNode(0, 0, 0, val.intval.day_second.hour,
@@ -1477,10 +1483,12 @@ inline QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rco
         }
         case SQL_INTERVAL_HOUR_TO_SECOND: {
             SQL_INTERVAL_STRUCT val;
-            ret = SQLGetData(stmt, column, SQL_C_INTERVAL_HOUR_TO_SECOND, &val, sizeof(SQL_INTERVAL_STRUCT), &indicator);
+            ret = SQLGetData(stmt, column, SQL_C_INTERVAL_HOUR_TO_SECOND, &val, sizeof(SQL_INTERVAL_STRUCT),
+                &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 assert(val.interval_type == SQL_IS_HOUR_TO_SECOND);
-                SimpleRefHolder<DateTimeNode> d(new DateTimeNode(0, 0, 0, val.intval.day_second.hour, val.intval.day_second.minute,
+                SimpleRefHolder<DateTimeNode> d(new DateTimeNode(0, 0, 0, val.intval.day_second.hour,
+                    val.intval.day_second.minute,
                     val.intval.day_second.second, val.intval.day_second.fraction/1000, true));
                 if (val.interval_sign == SQL_TRUE)
                     d = d->unaryMinus();
@@ -1490,7 +1498,8 @@ inline QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rco
         }
         case SQL_INTERVAL_MINUTE_TO_SECOND: {
             SQL_INTERVAL_STRUCT val;
-            ret = SQLGetData(stmt, column, SQL_C_INTERVAL_MINUTE_TO_SECOND, &val, sizeof(SQL_INTERVAL_STRUCT), &indicator);
+            ret = SQLGetData(stmt, column, SQL_C_INTERVAL_MINUTE_TO_SECOND, &val, sizeof(SQL_INTERVAL_STRUCT),
+                &indicator);
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
                 assert(val.interval_type == SQL_IS_MINUTE_TO_SECOND);
                 SimpleRefHolder<DateTimeNode> d(new DateTimeNode(0, 0, 0, 0, val.intval.day_second.minute,
@@ -1508,7 +1517,8 @@ inline QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rco
                 SimpleRefHolder<QoreStringNode> s(new QoreStringNode);
                 if (*s) {
                     s->sprintf("%x-%x-%x-%x-", val.Data1, val.Data2, val.Data3, val.Data4[0], val.Data4[1]);
-                    s->sprintf("%x%x%x%x%x%x", val.Data4[2], val.Data4[3], val.Data4[4], val.Data4[5], val.Data4[6], val.Data4[7]);
+                    s->sprintf("%x%x%x%x%x%x", val.Data4[2], val.Data4[3], val.Data4[4], val.Data4[5], val.Data4[6],
+                        val.Data4[7]);
                 }
                 return s.release();
             }
@@ -1550,13 +1560,16 @@ char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, size_t& len, 
 
     // Remove BOM if present and encoding is UTF-16.
     if ((enc == QCS_UTF16 || enc == QCS_UTF16LE || enc == QCS_UTF16BE) && len >= 2) {
+        tstr.makeTemp();
         unsigned char* buf = reinterpret_cast<unsigned char*>(const_cast<char*>(tstr->c_str()));
         if ((buf[0] == 0xFF && buf[1] == 0xFE) || (buf[0] == 0xFE && buf[1] == 0xFF)) {
-            memmove((void*)buf, (void*)(buf+2), len-2);
-            buf[len-2] = '\0';
-     } else if (len >= 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF) {
-            memmove((void*)buf, (void*)(buf+3), len-3);
-            buf[len-3] = '\0';
+            len -= 2;
+            memmove((void*)buf, (void*)(buf+2), len);
+            buf[len] = '\0';
+        } else if (len >= 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF) {
+            len -= 3;
+            memmove((void*)buf, (void*)(buf+3), len);
+            buf[len] = '\0';
         }
     }
     return tstr.giveBuffer();

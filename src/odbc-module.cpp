@@ -97,7 +97,7 @@ static int odbc_close(Datasource* ds) {
 }
 
 static QoreValue odbc_select(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
-    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection*>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();
@@ -107,7 +107,7 @@ static QoreValue odbc_select(Datasource* ds, const QoreString* qstr, const QoreL
 
 #ifdef _QORE_HAS_DBI_SELECT_ROW
 static QoreHashNode* odbc_select_row(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
-    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection*>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return nullptr;
@@ -117,7 +117,7 @@ static QoreHashNode* odbc_select_row(Datasource* ds, const QoreString* qstr, con
 #endif
 
 static QoreValue odbc_select_rows(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
-    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection*>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();
@@ -126,7 +126,7 @@ static QoreValue odbc_select_rows(Datasource* ds, const QoreString* qstr, const 
 }
 
 static QoreValue odbc_exec(Datasource* ds, const QoreString* qstr, const QoreListNode* args, ExceptionSink* xsink) {
-    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection*>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();
@@ -135,7 +135,7 @@ static QoreValue odbc_exec(Datasource* ds, const QoreString* qstr, const QoreLis
 }
 
 static QoreValue odbc_execRaw(Datasource* ds, const QoreString* qstr, ExceptionSink* xsink) {
-    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection*>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();
@@ -148,7 +148,7 @@ static int odbc_begin_transaction(Datasource* ds, ExceptionSink* xsink) {
 }
 
 static int odbc_commit(Datasource* ds, ExceptionSink* xsink) {
-    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection*>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return -1;
@@ -157,7 +157,7 @@ static int odbc_commit(Datasource* ds, ExceptionSink* xsink) {
 }
 
 static int odbc_rollback(Datasource* ds, ExceptionSink* xsink) {
-    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection*>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return -1;
@@ -166,7 +166,7 @@ static int odbc_rollback(Datasource* ds, ExceptionSink* xsink) {
 }
 
 static QoreValue odbc_get_client_version(const Datasource* ds, ExceptionSink* xsink) {
-    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection*>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();
@@ -175,7 +175,7 @@ static QoreValue odbc_get_client_version(const Datasource* ds, ExceptionSink* xs
 }
 
 static QoreValue odbc_get_server_version(Datasource* ds, ExceptionSink* xsink) {
-    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection *>(ds->getPrivateData());
+    odbc::ODBCConnection* conn = static_cast<odbc::ODBCConnection*>(ds->getPrivateData());
     if (!conn) {
         xsink->raiseException("ODBC-NO-CONNECTION-ERROR", "there is no open connection");
         return QoreValue();

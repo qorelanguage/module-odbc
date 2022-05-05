@@ -575,17 +575,19 @@ int ODBCStatement::execIntern(const char* str, SQLINTEGER textLen, ExceptionSink
 
             // Re-execute.
             if (str) {
-                ret = SQLExecDirectW(stmt, reinterpret_cast<SQLWCHAR*>(const_cast<char*>(str)), textLen);
+                ret = SQLExecDirectA(stmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(str)), textLen);
             } else {
                 ret = SQLExecute(stmt);
             }
             if (!SQL_SUCCEEDED(ret)) { // error
-                handleStmtError("ODBC-EXEC-ERROR", "error during statement execution", xsink);
+                QoreStringMaker err("error in statement execution (sql: '%s', ret: %d)", str ? str : "n/a", (int)ret);
+                handleStmtError("ODBC-EXEC-ERROR", err.c_str(), xsink);
                 affectedRowCount = -1;
                 return -1;
             }
         } else { // Exec failed but for some other reason than lost connection.
-            handleStmtError("ODBC-EXEC-ERROR", "error during statement execution", xsink);
+            QoreStringMaker err("error in statement execution (sql: '%s', ret: %d)", str ? str : "n/a", (int)ret);
+            handleStmtError("ODBC-EXEC-ERROR", err.c_str(), xsink);
             affectedRowCount = -1;
             return -1;
         }
@@ -666,12 +668,14 @@ int ODBCStatement::parse(QoreString* str, const QoreListNode* args, ExceptionSin
                     continue;
                 }
                 if ((*p) != 'v') {
-                    xsink->raiseException("ODBC-PARSE-ERROR", "invalid value specification (expecting '%v' or '%%d', got %%%c)", *p);
+                    xsink->raiseException("ODBC-PARSE-ERROR", "invalid value specification (expecting '%v' or '%%d', "
+                        "got %%%c)", *p);
                     return -1;
                 }
                 p++;
                 if (isalpha(*p)) {
-                    xsink->raiseException("ODBC-PARSE-ERROR", "invalid value specification (expecting '%v' or '%%d', got %%v%c*)", *p);
+                    xsink->raiseException("ODBC-PARSE-ERROR", "invalid value specification (expecting '%v' or '%%d', "
+                        "got %%v%c*)", *p);
                     return -1;
                 }
 
@@ -728,7 +732,7 @@ QoreHashNode* ODBCStatement::getRowIntern(GetRowInternStatus& status, ExceptionS
     for (int i = 0; i < columns; i++) {
         ODBCResultColumn& col = resColumns[i];
         ValueHolder n(xsink);
-        n = getColumnValue(i+1, col, xsink);
+        n = getColumnValue(i + 1, col, xsink);
         if (*xsink) {
             status = EGRIS_ERROR;
             return 0;
@@ -776,13 +780,7 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
     arrayHolder.clear();
     paramHolder.clear();
 
-    // Check that enough parameters were passed for binding.
-    if (args && paramCountInSql > args->size()) {
-        xsink->raiseException("ODBC-BIND-ERROR", "not enough parameters passed for binding; %u required but only %u passed",
-            paramCountInSql, args->size());
-        return -1;
-    }
-
+    // Any parameters without a bind argument will be bound as null
     // Set parameter array size to 1.
     size_t one = 1;
     SQLSetStmtAttr(stmt, SQL_ATTR_PARAMSET_SIZE, reinterpret_cast<SQLPOINTER>(one), 0);
@@ -794,11 +792,11 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
 
         if (arg.isNullOrNothing()) { // Bind NULL argument.
             SQLLEN* len = paramHolder.addLength(SQL_NULL_DATA);
-            ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 0, 0, 0, 0, len);
+            ret = SQLBindParameter(stmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, 0, 0, 0, 0, len);
             if (!SQL_SUCCEEDED(ret)) { // error
-                std::string s("failed binding NULL parameter with index %d (column %d)");
+                std::string s("failed binding NULL parameter with index %u (column %u)");
                 ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-                xsink->raiseException("ODBC-BIND-ERROR", s.c_str(), i, i+1);
+                xsink->raiseException("ODBC-BIND-ERROR", s.c_str(), i, i + 1);
                 return -1;
             }
             continue;
@@ -814,10 +812,10 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
                     return -1;
                 SQLLEN* indPtr = paramHolder.addLength(len);
                 if (serverEnc && notUtf16Enc) {
-                    ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
+                    ret = SQLBindParameter(stmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
                         len, 0, reinterpret_cast<SQLCHAR*>(cstr), len, indPtr);
                 } else  {
-                    ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR,
+                    ret = SQLBindParameter(stmt, i + 1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WCHAR,
                         len, 0, reinterpret_cast<SQLWCHAR*>(cstr), len, indPtr);
                 }
                 break;
@@ -829,18 +827,18 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
                 size_t len = vh->strlen();
                 SQLLEN* indPtr = paramHolder.addLength(len);
                 char* cstr = paramHolder.addChars(vh.giveBuffer());
-                ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, cstr, len, indPtr);
+                ret = SQLBindParameter(stmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, cstr, len, indPtr);
                 break;
             }
             case NT_DATE: {
                 const DateTimeNode* date = arg.get<const DateTimeNode>();
                 if (date->isAbsolute()) {
                     TIMESTAMP_STRUCT* tval = paramHolder.addTimestamp(getTimestampFromDate(date));
-                    ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP, SQL_TYPE_TIMESTAMP,
+                    ret = SQLBindParameter(stmt, i + 1, SQL_PARAM_INPUT, SQL_C_TYPE_TIMESTAMP, SQL_TYPE_TIMESTAMP,
                         getTimestampColsize(options), options.frPrec, tval, sizeof(TIMESTAMP_STRUCT), 0);
                 } else {
                     SQL_INTERVAL_STRUCT* tval = paramHolder.addInterval(getIntervalFromDate(date));
-                    ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
+                    ret = SQLBindParameter(stmt, i + 1, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
                         SQL_INTERVAL_DAY_TO_SECOND,
                         getIntDaySecondColsize(options), options.frPrec, tval, sizeof(SQL_INTERVAL_STRUCT), 0);
                 }
@@ -849,7 +847,7 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
             case NT_INT: {
                 if (options.bigint == EBO_NATIVE) {
                     const int64* ival = paramHolder.addInt64(arg.getAsBigInt());
-                    ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_SBIGINT,
+                    ret = SQLBindParameter(stmt, i + 1, SQL_PARAM_INPUT, SQL_C_SBIGINT,
                         SQL_BIGINT, BIGINT_COLSIZE, 0, const_cast<int64*>(ival), sizeof(int64), 0);
                 } else if (options.bigint == EBO_STRING) {
                     QoreStringValueHelper vh(arg, QCS_USASCII, xsink);
@@ -858,20 +856,20 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
                     size_t len = vh->strlen();
                     SQLLEN* indPtr = paramHolder.addLength(len);
                     char* cstr = paramHolder.addChars(vh.giveBuffer());
-                    ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, cstr, len, indPtr);
+                    ret = SQLBindParameter(stmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR, len, 0, cstr, len, indPtr);
                 }
                 break;
             }
             case NT_FLOAT: {
                 const double* f = paramHolder.addDouble(arg.getAsFloat());
-                ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_DOUBLE,
+                ret = SQLBindParameter(stmt, i + 1, SQL_PARAM_INPUT, SQL_C_DOUBLE,
                     SQL_DOUBLE, DOUBLE_COLSIZE, 0, const_cast<double*>(f), sizeof(double), 0);
                 break;
             }
             case NT_BOOLEAN: {
                 bool b = arg.getAsBool();
                 int8_t* bval = paramHolder.addInt8(b);
-                ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_STINYINT,
+                ret = SQLBindParameter(stmt, i + 1, SQL_PARAM_INPUT, SQL_C_STINYINT,
                     SQL_TINYINT, 3, 0, bval, sizeof(int8_t), 0);
                 break;
             }
@@ -879,7 +877,7 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
                 const BinaryNode* b = arg.get<const BinaryNode>();
                 size_t len = b->size();
                 SQLLEN* indPtr = paramHolder.addLength(len);
-                ret = SQLBindParameter(stmt, i+1, SQL_PARAM_INPUT, SQL_C_BINARY,
+                ret = SQLBindParameter(stmt, i + 1, SQL_PARAM_INPUT, SQL_C_BINARY,
                     SQL_BINARY, len, 0, const_cast<void*>(b->getPtr()), len, indPtr);
                 break;
             }
@@ -895,95 +893,95 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
                 int64 odbcType = odbct.getAsBigInt();
                 switch (odbcType) {
                     case SQL_C_SLONG:
-                        if (bindTypeSLong(i+1, value, ret, xsink))
+                        if (bindTypeSLong(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_ULONG:
-                        if (bindTypeULong(i+1, value, ret, xsink))
+                        if (bindTypeULong(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_SSHORT:
-                        if (bindTypeSShort(i+1, value, ret, xsink))
+                        if (bindTypeSShort(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_USHORT:
-                        if (bindTypeUShort(i+1, value, ret, xsink))
+                        if (bindTypeUShort(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_STINYINT:
-                        if (bindTypeSTinyint(i+1, value, ret, xsink))
+                        if (bindTypeSTinyint(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_UTINYINT:
-                        if (bindTypeUTinyint(i+1, value, ret, xsink))
+                        if (bindTypeUTinyint(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_FLOAT:
-                        if (bindTypeFloat(i+1, value, ret, xsink))
+                        if (bindTypeFloat(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_TYPE_DATE:
-                        if (bindTypeDate(i+1, value, ret, xsink))
+                        if (bindTypeDate(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_TYPE_TIME:
-                        if (bindTypeTime(i+1, value, ret, xsink))
+                        if (bindTypeTime(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_TYPE_TIMESTAMP:
-                        if (bindTypeTimestamp(i+1, value, ret, xsink))
+                        if (bindTypeTimestamp(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_MONTH:
-                        if (bindTypeIntMonth(i+1, value, ret, xsink))
+                        if (bindTypeIntMonth(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_YEAR:
-                        if (bindTypeIntYear(i+1, value, ret, xsink))
+                        if (bindTypeIntYear(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_YEAR_TO_MONTH:
-                        if (bindTypeIntMonth(i+1, value, ret, xsink))
+                        if (bindTypeIntMonth(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_DAY:
-                        if (bindTypeIntDay(i+1, value, ret, xsink))
+                        if (bindTypeIntDay(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_HOUR:
-                        if (bindTypeIntHour(i+1, value, ret, xsink))
+                        if (bindTypeIntHour(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_MINUTE:
-                        if (bindTypeIntMinute(i+1, value, ret, xsink))
+                        if (bindTypeIntMinute(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_SECOND:
-                        if (bindTypeIntSecond(i+1, value, ret, xsink))
+                        if (bindTypeIntSecond(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_DAY_TO_HOUR:
-                        if (bindTypeIntDayHour(i+1, value, ret, xsink))
+                        if (bindTypeIntDayHour(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_DAY_TO_MINUTE:
-                        if (bindTypeIntDayMinute(i+1, value, ret, xsink))
+                        if (bindTypeIntDayMinute(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_DAY_TO_SECOND:
-                        if (bindTypeIntDaySecond(i+1, value, ret, xsink))
+                        if (bindTypeIntDaySecond(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_HOUR_TO_MINUTE:
-                        if (bindTypeIntHourMinute(i+1, value, ret, xsink))
+                        if (bindTypeIntHourMinute(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_HOUR_TO_SECOND:
-                        if (bindTypeIntHourSecond(i+1, value, ret, xsink))
+                        if (bindTypeIntHourSecond(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     case SQL_C_INTERVAL_MINUTE_TO_SECOND:
-                        if (bindTypeIntMinuteSecond(i+1, value, ret, xsink))
+                        if (bindTypeIntMinuteSecond(i + 1, value, ret, xsink))
                             return -1;
                         break;
                     default:
@@ -1000,9 +998,9 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
         } // switch
 
         if (!SQL_SUCCEEDED(ret)) { // error
-            std::string s("failed binding parameter with index %d (column #%d) of type '%s'");
+            std::string s("failed binding parameter with index %u (column #%u) of type '%s'");
             ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("ODBC-BIND-ERROR", s.c_str(), i, i+1, arg.getTypeName());
+            xsink->raiseException("ODBC-BIND-ERROR", s.c_str(), i, i + 1, arg.getTypeName());
             return -1;
         }
     } // for
@@ -1018,9 +1016,8 @@ int ODBCStatement::bindInternArray(const QoreListNode* args, ExceptionSink* xsin
     // Check that enough parameters were passed for binding.
     if (args && paramCountInSql != args->size()) {
         xsink->raiseException("ODBC-BIND-ERROR",
-            "mismatch between the parameter list size and number of parameters in the SQL command; %u required, %u "
-            "passed",
-            paramCountInSql, args->size());
+            "mismatch between the parameter list size and number of parameters in the SQL command; %lu "
+            "required, %lu passed", paramCountInSql, args->size());
         return -1;
     }
 
@@ -1048,14 +1045,14 @@ int ODBCStatement::bindInternArray(const QoreListNode* args, ExceptionSink* xsin
         QoreValue arg = args->retrieveEntry(i);
 
         if (arg.isNullOrNothing()) { // Handle NULL argument.
-            bindParamArraySingleValue(i+1, arg, xsink);
+            bindParamArraySingleValue(i + 1, arg, xsink);
             continue;
         }
 
         qore_type_t ntype = arg.getType();
         switch (ntype) {
             case NT_LIST:
-                if (bindParamArrayList(i+1, arg.get<const QoreListNode>(), xsink)) {
+                if (bindParamArrayList(i + 1, arg.get<const QoreListNode>(), xsink)) {
                     return -1;
                 }
                 break;
@@ -1066,7 +1063,7 @@ int ODBCStatement::bindInternArray(const QoreListNode* args, ExceptionSink* xsin
             case NT_FLOAT:
             case NT_BOOLEAN:
             case NT_BINARY:
-                if (bindParamArraySingleValue(i+1, arg, xsink))
+                if (bindParamArraySingleValue(i + 1, arg, xsink))
                     return -1;
                 break;
             case NT_HASH: {
@@ -1078,7 +1075,7 @@ int ODBCStatement::bindInternArray(const QoreListNode* args, ExceptionSink* xsin
                         "the odbc module cannot bind hash values");
                     return -1;
                 }
-                if (bindParamArrayBindHash(i+1, h, xsink))
+                if (bindParamArrayBindHash(i + 1, h, xsink))
                     return -1;
                 break;
             }
@@ -1108,24 +1105,24 @@ int ODBCStatement::fetchResultColumnMetadata(ExceptionSink* xsink) {
     char name[512];
     name[0] = '\0';
     resColumns.resize(columns);
-    for (int i = 0; i < columns; i++) {
+    for (int i = 0; i < columns; ++i) {
         ODBCResultColumn& col = resColumns[i];
-        col.number = i+1;
+        col.number = i + 1;
         SQLSMALLINT nameLength;
-        ret = SQLDescribeColA(stmt, i+1, reinterpret_cast<SQLCHAR*>(name), 512, &nameLength, &col.dataType,
+        ret = SQLDescribeColA(stmt, i + 1, reinterpret_cast<SQLCHAR*>(name), 512, &nameLength, &col.dataType,
             &col.colSize, &col.decimalDigits, &col.nullable);
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("error occured when fetching result column metadata with index #%d (column #%d)");
             ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("ODBC-COLUMN-METADATA-ERROR", s.c_str(), i, i+1);
+            xsink->raiseException("ODBC-COLUMN-METADATA-ERROR", s.c_str(), i, i + 1);
             return -1;
         }
 
-        ret = SQLColAttributeA(stmt, i+1, SQL_DESC_OCTET_LENGTH, 0, 0, 0, &col.byteSize);
+        ret = SQLColAttributeA(stmt, i + 1, SQL_DESC_OCTET_LENGTH, 0, 0, 0, &col.byteSize);
         if (!SQL_SUCCEEDED(ret)) { // error
             std::string s("error occured when fetching result column metadata with index #%d (column #%d)");
             ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
-            xsink->raiseException("ODBC-COLUMN-METADATA-ERROR", s.c_str(), i, i+1);
+            xsink->raiseException("ODBC-COLUMN-METADATA-ERROR", s.c_str(), i, i + 1);
             return -1;
         }
         if (!conn->preserveCase()) {
@@ -1325,7 +1322,8 @@ int ODBCStatement::bindParamArraySingleValue(int column, QoreValue arg, Exceptio
                 SQL_INTERVAL_STRUCT* array;
                 if (createArrayFromRelativeDate(date, array, xsink))
                     return -1;
-                ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND, SQL_INTERVAL_DAY_TO_SECOND,
+                ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_DAY_TO_SECOND,
+                    SQL_INTERVAL_DAY_TO_SECOND,
                     getIntDaySecondColsize(options), options.frPrec, array, sizeof(SQL_INTERVAL_STRUCT), 0);
             }
             break;
@@ -1373,7 +1371,8 @@ int ODBCStatement::bindParamArraySingleValue(int column, QoreValue arg, Exceptio
         }
         default: {
             assert(false);
-            xsink->raiseException("ODBC-BIND-ERROR", "do not know how to bind values of type '%s'", arg.getTypeName());
+            xsink->raiseException("ODBC-BIND-ERROR", "do not know how to bind values of type '%s'",
+                arg.getFullTypeName());
             return -1;
         }
     } // switch
@@ -1487,7 +1486,8 @@ int ODBCStatement::bindParamArrayBindHash(int column, const QoreHashNode* h, Exc
                 return -1;
             break;
         default:
-            xsink->raiseException("ODBC-BIND-ERROR", "odbc_bind used with an unknown type identifier: " QLLD, odbcType);
+            xsink->raiseException("ODBC-BIND-ERROR", "odbc_bind used with an unknown type identifier: " QLLD,
+                odbcType);
             return -1;
     }
 
@@ -1509,7 +1509,8 @@ int ODBCStatement::bindTypeSLong(int column, QoreValue arg, SQLRETURN& ret, Exce
     }
     int64 n = arg.getAsBigInt();
     if (n < static_cast<int64>(LONG_MIN) || n > static_cast<int64>(LONG_MAX)) {
-        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_SLONG odbc_bind", n);
+        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_SLONG odbc_bind",
+            n);
         return -1;
     }
 
@@ -1527,7 +1528,8 @@ int ODBCStatement::bindTypeULong(int column, QoreValue arg, SQLRETURN& ret, Exce
     }
     int64 n = arg.getAsBigInt();
     if (n < 0 || n > static_cast<int64>(ULONG_MAX)) {
-        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_ULONG odbc_bind", n);
+        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_ULONG odbc_bind",
+            n);
         return -1;
     }
 
@@ -1545,7 +1547,8 @@ int ODBCStatement::bindTypeSShort(int column, QoreValue arg, SQLRETURN& ret, Exc
     }
     int64 n = arg.getAsBigInt();
     if (n < static_cast<int64>(SHRT_MIN) || n > static_cast<int64>(SHRT_MAX)) {
-        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_SSHORT odbc_bind", n);
+        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_SSHORT "
+            "odbc_bind", n);
         return -1;
     }
 
@@ -1563,7 +1566,8 @@ int ODBCStatement::bindTypeUShort(int column, QoreValue arg, SQLRETURN& ret, Exc
     }
     int64 n = arg.getAsBigInt();
     if (n < 0 || n > static_cast<int64>(USHRT_MAX)) {
-        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_USHORT odbc_bind", n);
+        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_USHORT "
+            "odbc_bind", n);
         return -1;
     }
 
@@ -1581,7 +1585,8 @@ int ODBCStatement::bindTypeSTinyint(int column, QoreValue arg, SQLRETURN& ret, E
     }
     int64 n = arg.getAsBigInt();
     if (n < static_cast<int64>(SCHAR_MIN) || n > static_cast<int64>(SCHAR_MAX)) {
-        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_STINYINT odbc_bind", n);
+        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_STINYINT "
+            "odbc_bind", n);
         return -1;
     }
 
@@ -1599,7 +1604,8 @@ int ODBCStatement::bindTypeUTinyint(int column, QoreValue arg, SQLRETURN& ret, E
     }
     int64 n = arg.getAsBigInt();
     if (n < 0 || n > static_cast<int64>(UCHAR_MAX)) {
-        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_UTINYINT odbc_bind", n);
+        xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_UTINYINT "
+            "odbc_bind", n);
         return -1;
     }
 
@@ -1935,14 +1941,15 @@ int ODBCStatement::bindTypeSLongArray(int column, QoreValue arg, SQLRETURN& ret,
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
         for (size_t i = 0; i < arraySize; i++) {
             int64 n = lst->retrieveEntry(i).getAsBigInt();
             if (n < static_cast<int64>(LONG_MIN) || n > static_cast<int64>(LONG_MAX)) {
-                xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_SLONG odbc_bind", n);
+                xsink->raiseException("ODBC-BIND-ERROR", "integer value " QLLD " does not fit the limits of "
+                    "ODBCT_SLONG odbc_bind", n);
                 return -1;
             }
             array[i] = static_cast<int32_t>(n);
@@ -1950,7 +1957,8 @@ int ODBCStatement::bindTypeSLongArray(int column, QoreValue arg, SQLRETURN& ret,
     } else if (argtype == NT_INT) {
         int64 n = arg.getAsBigInt();
         if (n < static_cast<int64>(LONG_MIN) || n > static_cast<int64>(LONG_MAX)) {
-            xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_SLONG odbc_bind", n);
+            xsink->raiseException("ODBC-BIND-ERROR", "integer value " QLLD " does not fit the limits of "
+                "ODBCT_SLONG odbc_bind", n);
             return -1;
         }
 
@@ -1977,14 +1985,15 @@ int ODBCStatement::bindTypeULongArray(int column, QoreValue arg, SQLRETURN& ret,
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
         for (size_t i = 0; i < arraySize; i++) {
             int64 n = lst->retrieveEntry(i).getAsBigInt();
             if (n < 0 || n > static_cast<int64>(ULONG_MAX)) {
-                xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_ULONG odbc_bind", n);
+                xsink->raiseException("ODBC-BIND-ERROR", "integer value " QLLD " does not fit the limits of "
+                    "ODBCT_ULONG odbc_bind", n);
                 return -1;
             }
             array[i] = static_cast<uint32_t>(n);
@@ -1992,7 +2001,8 @@ int ODBCStatement::bindTypeULongArray(int column, QoreValue arg, SQLRETURN& ret,
     } else if (argtype == NT_INT) {
         int64 n = arg.getAsBigInt();
         if (n < 0 || n > static_cast<int64>(ULONG_MAX)) {
-            xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_ULONG odbc_bind", n);
+            xsink->raiseException("ODBC-BIND-ERROR", "integer value " QLLD " does not fit the limits of ODBCT_ULONG "
+                "odbc_bind", n);
             return -1;
         }
 
@@ -2019,14 +2029,15 @@ int ODBCStatement::bindTypeSShortArray(int column, QoreValue arg, SQLRETURN& ret
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
         for (size_t i = 0; i < arraySize; i++) {
             int64 n = lst->retrieveEntry(i).getAsBigInt();
             if (n < static_cast<int64>(SHRT_MIN) || n > static_cast<int64>(SHRT_MAX)) {
-                xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_SSHORT odbc_bind", n);
+                xsink->raiseException("ODBC-BIND-ERROR", "integer value " QLLD " does not fit the limits of "
+                    "ODBCT_SSHORT odbc_bind", n);
                 return -1;
             }
             array[i] = static_cast<int16_t>(n);
@@ -2034,7 +2045,8 @@ int ODBCStatement::bindTypeSShortArray(int column, QoreValue arg, SQLRETURN& ret
     } else if (argtype == NT_INT) {
         int64 n = arg.getAsBigInt();
         if (n < static_cast<int64>(SHRT_MIN) || n > static_cast<int64>(SHRT_MAX)) {
-            xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_SSHORT odbc_bind", n);
+            xsink->raiseException("ODBC-BIND-ERROR", "integer value " QLLD " does not fit the limits of ODBCT_SSHORT "
+                "odbc_bind", n);
             return -1;
         }
 
@@ -2061,14 +2073,15 @@ int ODBCStatement::bindTypeUShortArray(int column, QoreValue arg, SQLRETURN& ret
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
         for (size_t i = 0; i < arraySize; i++) {
             int64 n = lst->retrieveEntry(i).getAsBigInt();
             if (n < 0 || n > static_cast<int64>(USHRT_MAX)) {
-                xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_USHORT odbc_bind", n);
+                xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld " QLLD " does not fit the limits of "
+                    "ODBCT_USHORT odbc_bind", n);
                 return -1;
             }
             array[i] = static_cast<uint16_t>(n);
@@ -2076,7 +2089,8 @@ int ODBCStatement::bindTypeUShortArray(int column, QoreValue arg, SQLRETURN& ret
     } else if (argtype == NT_INT) {
         int64 n = arg.getAsBigInt();
         if (n < 0 || n > static_cast<int64>(USHRT_MAX)) {
-            xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_USHORT odbc_bind", n);
+            xsink->raiseException("ODBC-BIND-ERROR", "integer value " QLLD " does not fit the limits of ODBCT_USHORT "
+                "odbc_bind", n);
             return -1;
         }
 
@@ -2103,14 +2117,15 @@ int ODBCStatement::bindTypeSTinyintArray(int column, QoreValue arg, SQLRETURN& r
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
         for (size_t i = 0; i < arraySize; i++) {
             int64 n = lst->retrieveEntry(i).getAsBigInt();
             if (n < static_cast<int64>(SCHAR_MIN) || n > static_cast<int64>(SCHAR_MAX)) {
-                xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_STINYINT odbc_bind", n);
+                xsink->raiseException("ODBC-BIND-ERROR", "integer value " QLLD " does not fit the limits of "
+                    "ODBCT_STINYINT odbc_bind", n);
                 return -1;
             }
             array[i] = static_cast<int8_t>(n);
@@ -2118,14 +2133,16 @@ int ODBCStatement::bindTypeSTinyintArray(int column, QoreValue arg, SQLRETURN& r
     } else if (argtype == NT_INT) {
         int64 n = arg.getAsBigInt();
         if (n < static_cast<int64>(SCHAR_MIN) || n > static_cast<int64>(SCHAR_MAX)) {
-            xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_STINYINT odbc_bind", n);
+            xsink->raiseException("ODBC-BIND-ERROR", "integer value " QLLD " does not fit the limits of "
+                "ODBCT_STINYINT odbc_bind", n);
             return -1;
         }
 
         for (size_t i = 0; i < arraySize; i++)
             array[i] = static_cast<int8_t>(n);
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-int value or non-int list passed with ODBCT_STINYINT odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-int value or non-int list passed with ODBCT_STINYINT "
+            "odbc_bind");
         return -1;
     }
 
@@ -2145,14 +2162,16 @@ int ODBCStatement::bindTypeUTinyintArray(int column, QoreValue arg, SQLRETURN& r
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                    "required, %lu passed",
                 column-1, column, arraySize, lst->size());
             return -1;
         }
         for (size_t i = 0; i < arraySize; i++) {
             int64 n = lst->retrieveEntry(i).getAsBigInt();
             if (n < 0 || n > static_cast<int64>(UCHAR_MAX)) {
-                xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_UTINYINT odbc_bind", n);
+                xsink->raiseException("ODBC-BIND-ERROR", "integer value " QLLD " does not fit the limits of "
+                    "ODBCT_UTINYINT odbc_bind", n);
                 return -1;
             }
             array[i] = static_cast<uint8_t>(n);
@@ -2160,14 +2179,16 @@ int ODBCStatement::bindTypeUTinyintArray(int column, QoreValue arg, SQLRETURN& r
     } else if (argtype == NT_INT) {
         int64 n = arg.getAsBigInt();
         if (n < 0 || n > static_cast<int64>(UCHAR_MAX)) {
-            xsink->raiseException("ODBC-BIND-ERROR", "integer value %ld does not fit the limits of ODBCT_UTINYINT odbc_bind", n);
+            xsink->raiseException("ODBC-BIND-ERROR", "integer value " QLLD " does not fit the limits of "
+                "ODBCT_UTINYINT odbc_bind", n);
             return -1;
         }
 
         for (size_t i = 0; i < arraySize; i++)
             array[i] = static_cast<uint8_t>(n);
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-int value or non-int list passed with ODBCT_UTINYINT odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-int value or non-int list passed with ODBCT_UTINYINT "
+            "odbc_bind");
         return -1;
     }
 
@@ -2187,8 +2208,8 @@ int ODBCStatement::bindTypeFloatArray(int column, QoreValue arg, SQLRETURN& ret,
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
         for (size_t i = 0; i < arraySize; i++) {
@@ -2200,7 +2221,8 @@ int ODBCStatement::bindTypeFloatArray(int column, QoreValue arg, SQLRETURN& ret,
         for (size_t i = 0; i < arraySize; i++)
             array[i] = n;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-float value or non-float list passed with ODBCT_FLOAT odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-float value or non-float list passed with ODBCT_FLOAT "
+            "odbc_bind");
         return -1;
     }
 
@@ -2220,8 +2242,8 @@ int ODBCStatement::bindTypeDateArray(int column, QoreValue arg, SQLRETURN& ret, 
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
         for (size_t i = 0; i < arraySize; i++) {
@@ -2272,8 +2294,8 @@ int ODBCStatement::bindTypeTimeArray(int column, QoreValue arg, SQLRETURN& ret, 
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
         for (size_t i = 0; i < arraySize; i++) {
@@ -2324,8 +2346,8 @@ int ODBCStatement::bindTypeTimestampArray(int column, QoreValue arg, SQLRETURN& 
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
         for (size_t i = 0; i < arraySize; i++) {
@@ -2344,7 +2366,8 @@ int ODBCStatement::bindTypeTimestampArray(int column, QoreValue arg, SQLRETURN& 
         for (size_t i = 0; i < arraySize; i++)
             array[i] = t;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_TIMESTAMP odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_TIMESTAMP "
+            "odbc_bind");
         return -1;
     }
 
@@ -2364,8 +2387,8 @@ int ODBCStatement::bindTypeIntYearArray(int column, QoreValue arg, SQLRETURN& re
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                    "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2384,7 +2407,8 @@ int ODBCStatement::bindTypeIntYearArray(int column, QoreValue arg, SQLRETURN& re
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_YEAR odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_YEAR "
+            "odbc_bind");
         return -1;
     }
 
@@ -2404,8 +2428,8 @@ int ODBCStatement::bindTypeIntMonthArray(int column, QoreValue arg, SQLRETURN& r
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2424,7 +2448,8 @@ int ODBCStatement::bindTypeIntMonthArray(int column, QoreValue arg, SQLRETURN& r
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_MONTH odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_MONTH "
+            "odbc_bind");
         return -1;
     }
 
@@ -2444,8 +2469,8 @@ int ODBCStatement::bindTypeIntYearMonthArray(int column, QoreValue arg, SQLRETUR
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2456,7 +2481,8 @@ int ODBCStatement::bindTypeIntYearMonthArray(int column, QoreValue arg, SQLRETUR
     } else if (argtype == NT_DATE) {
         const DateTimeNode* date = arg.get<const DateTimeNode>();
         if (date->isAbsolute()) {
-            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_YEARMONTH odbc_bind");
+            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_YEARMONTH "
+                "odbc_bind");
             return -1;
         }
 
@@ -2464,7 +2490,8 @@ int ODBCStatement::bindTypeIntYearMonthArray(int column, QoreValue arg, SQLRETUR
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_YEARMONTH odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_YEARMONTH "
+            "odbc_bind");
         return -1;
     }
 
@@ -2484,8 +2511,8 @@ int ODBCStatement::bindTypeIntDayArray(int column, QoreValue arg, SQLRETURN& ret
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2504,7 +2531,8 @@ int ODBCStatement::bindTypeIntDayArray(int column, QoreValue arg, SQLRETURN& ret
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAY odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAY "
+            "odbc_bind");
         return -1;
     }
 
@@ -2524,8 +2552,8 @@ int ODBCStatement::bindTypeIntHourArray(int column, QoreValue arg, SQLRETURN& re
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2544,7 +2572,8 @@ int ODBCStatement::bindTypeIntHourArray(int column, QoreValue arg, SQLRETURN& re
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_HOUR odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_HOUR "
+            "odbc_bind");
         return -1;
     }
 
@@ -2564,8 +2593,8 @@ int ODBCStatement::bindTypeIntMinuteArray(int column, QoreValue arg, SQLRETURN& 
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2584,7 +2613,8 @@ int ODBCStatement::bindTypeIntMinuteArray(int column, QoreValue arg, SQLRETURN& 
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_MINUTE odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_MINUTE "
+            "odbc_bind");
         return -1;
     }
 
@@ -2604,8 +2634,8 @@ int ODBCStatement::bindTypeIntSecondArray(int column, QoreValue arg, SQLRETURN& 
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2624,7 +2654,8 @@ int ODBCStatement::bindTypeIntSecondArray(int column, QoreValue arg, SQLRETURN& 
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_SECOND odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_SECOND "
+            "odbc_bind");
         return -1;
     }
 
@@ -2644,8 +2675,8 @@ int ODBCStatement::bindTypeIntDayHourArray(int column, QoreValue arg, SQLRETURN&
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2656,7 +2687,8 @@ int ODBCStatement::bindTypeIntDayHourArray(int column, QoreValue arg, SQLRETURN&
     } else if (argtype == NT_DATE) {
         const DateTimeNode* date = arg.get<const DateTimeNode>();
         if (date->isAbsolute()) {
-            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYHOUR odbc_bind");
+            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYHOUR "
+                "odbc_bind");
             return -1;
         }
 
@@ -2664,7 +2696,8 @@ int ODBCStatement::bindTypeIntDayHourArray(int column, QoreValue arg, SQLRETURN&
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAYHOUR odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAYHOUR "
+            "odbc_bind");
         return -1;
     }
 
@@ -2684,8 +2717,8 @@ int ODBCStatement::bindTypeIntDayMinuteArray(int column, QoreValue arg, SQLRETUR
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2696,7 +2729,8 @@ int ODBCStatement::bindTypeIntDayMinuteArray(int column, QoreValue arg, SQLRETUR
     } else if (argtype == NT_DATE) {
         const DateTimeNode* date = arg.get<const DateTimeNode>();
         if (date->isAbsolute()) {
-            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYMINUTE odbc_bind");
+            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYMINUTE "
+                "odbc_bind");
             return -1;
         }
 
@@ -2704,7 +2738,8 @@ int ODBCStatement::bindTypeIntDayMinuteArray(int column, QoreValue arg, SQLRETUR
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAYMINUTE odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAYMINUTE "
+            "odbc_bind");
         return -1;
     }
 
@@ -2724,8 +2759,8 @@ int ODBCStatement::bindTypeIntDaySecondArray(int column, QoreValue arg, SQLRETUR
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2736,7 +2771,8 @@ int ODBCStatement::bindTypeIntDaySecondArray(int column, QoreValue arg, SQLRETUR
     } else if (argtype == NT_DATE) {
         const DateTimeNode* date = arg.get<const DateTimeNode>();
         if (date->isAbsolute()) {
-            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYSECOND odbc_bind");
+            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_DAYSECOND "
+                "odbc_bind");
             return -1;
         }
 
@@ -2744,7 +2780,8 @@ int ODBCStatement::bindTypeIntDaySecondArray(int column, QoreValue arg, SQLRETUR
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAYSECOND odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_DAYSECOND "
+            "odbc_bind");
         return -1;
     }
 
@@ -2764,8 +2801,8 @@ int ODBCStatement::bindTypeIntHourMinuteArray(int column, QoreValue arg, SQLRETU
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2776,7 +2813,8 @@ int ODBCStatement::bindTypeIntHourMinuteArray(int column, QoreValue arg, SQLRETU
     } else if (argtype == NT_DATE) {
         const DateTimeNode* date = arg.get<const DateTimeNode>();
         if (date->isAbsolute()) {
-            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_HOURMINUTE odbc_bind");
+            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_HOURMINUTE "
+                "odbc_bind");
             return -1;
         }
 
@@ -2784,7 +2822,8 @@ int ODBCStatement::bindTypeIntHourMinuteArray(int column, QoreValue arg, SQLRETU
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_HOURMINUTE odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_HOURMINUTE "
+            "odbc_bind");
         return -1;
     }
 
@@ -2804,8 +2843,8 @@ int ODBCStatement::bindTypeIntHourSecondArray(int column, QoreValue arg, SQLRETU
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2816,7 +2855,8 @@ int ODBCStatement::bindTypeIntHourSecondArray(int column, QoreValue arg, SQLRETU
     } else if (argtype == NT_DATE) {
         const DateTimeNode* date = arg.get<const DateTimeNode>();
         if (date->isAbsolute()) {
-            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_HOURSECOND odbc_bind");
+            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_HOURSECOND "
+                "odbc_bind");
             return -1;
         }
 
@@ -2824,7 +2864,8 @@ int ODBCStatement::bindTypeIntHourSecondArray(int column, QoreValue arg, SQLRETU
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_HOURSECOND odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_HOURSECOND "
+            "odbc_bind");
         return -1;
     }
 
@@ -2844,8 +2885,8 @@ int ODBCStatement::bindTypeIntMinuteSecondArray(int column, QoreValue arg, SQLRE
         const QoreListNode* lst = arg.get<const QoreListNode>();
         if (lst->size() != arraySize) {
             xsink->raiseException("ODBC-BIND-ERROR",
-                "mismatch between the list size and required number of list elements, index #%d (column #%d); %u required, %u passed",
-                column-1, column, arraySize, lst->size());
+                "mismatch between the list size and required number of list elements, index #%d (column #%d); %lu "
+                "required, %lu passed", column-1, column, arraySize, lst->size());
             return -1;
         }
 
@@ -2856,7 +2897,8 @@ int ODBCStatement::bindTypeIntMinuteSecondArray(int column, QoreValue arg, SQLRE
     } else if (argtype == NT_DATE) {
         const DateTimeNode* date = arg.get<const DateTimeNode>();
         if (date->isAbsolute()) {
-            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_MINUTESECOND odbc_bind");
+            xsink->raiseException("ODBC-BIND-ERROR", "an absolute date value passed with ODBCT_INT_MINUTESECOND "
+                "odbc_bind");
             return -1;
         }
 
@@ -2864,16 +2906,19 @@ int ODBCStatement::bindTypeIntMinuteSecondArray(int column, QoreValue arg, SQLRE
         for (size_t i = 0; i < arraySize; i++)
             array[i] = interval;
     } else {
-        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_MINUTESECOND odbc_bind");
+        xsink->raiseException("ODBC-BIND-ERROR", "non-date value or non-date list passed with ODBCT_INT_MINUTESECOND "
+            "odbc_bind");
         return -1;
     }
 
-    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE_TO_SECOND, SQL_INTERVAL_MINUTE_TO_SECOND,
-        getIntMinuteSecondColsize(options), options.frPrec, array, sizeof(SQL_INTERVAL_STRUCT), 0);
+    ret = SQLBindParameter(stmt, column, SQL_PARAM_INPUT, SQL_C_INTERVAL_MINUTE_TO_SECOND,
+        SQL_INTERVAL_MINUTE_TO_SECOND, getIntMinuteSecondColsize(options), options.frPrec, array,
+        sizeof(SQL_INTERVAL_STRUCT), 0);
     return 0;
 }
 
-int ODBCStatement::createArrayFromStringList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, size_t& maxlen, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromStringList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, size_t& maxlen,
+        ExceptionSink* xsink) {
     char** stringArray = arrayHolder.addCharArray(xsink);
     if (!stringArray)
         return -1;
@@ -2900,8 +2945,8 @@ int ODBCStatement::createArrayFromStringList(const QoreListNode* arg, char*& arr
     // We have to create one big array and put all the strings in it one after another.
     array = paramHolder.addChars(new (std::nothrow) char[arraySize * maxlen]);
     if (!array) {
-        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %d bytes",
-            arraySize*maxlen);
+        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %ld bytes",
+            arraySize * maxlen);
         return -1;
     }
     for (size_t i = 0; i < arraySize; i++) {
@@ -2945,7 +2990,8 @@ int ODBCStatement::createArrayFromNumberList(const QoreListNode* arg, char*& arr
     // We have to create one big array and put all the strings in it one after another.
     array = paramHolder.addChars(new (std::nothrow) char[arraySize * maxlen]);
     if (!array) {
-        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*maxlen);
+        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %ld bytes",
+            arraySize * maxlen);
         return -1;
     }
     for (size_t i = 0; i < arraySize; i++) {
@@ -2958,7 +3004,8 @@ int ODBCStatement::createArrayFromNumberList(const QoreListNode* arg, char*& arr
     return 0;
 }
 
-int ODBCStatement::createArrayFromBinaryList(const QoreListNode* arg, void*& array, SQLLEN*& indArray, size_t& maxlen, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromBinaryList(const QoreListNode* arg, void*& array, SQLLEN*& indArray, size_t& maxlen,
+        ExceptionSink* xsink) {
     indArray = arrayHolder.addIndArray(xsink);
     if (!indArray)
         return -1;
@@ -2975,16 +3022,17 @@ int ODBCStatement::createArrayFromBinaryList(const QoreListNode* arg, void*& arr
         maxlen = (maxlen >= static_cast<size_t>(indArray[i])) ? maxlen : indArray[i];
     }
 
-    // We have to create one big array and put all the binaries in it one after another (kind of very inefficient).
+    // We have to create one big array and put all the binaries in it one after another (very inefficient).
     char* charArray = paramHolder.addChars(new (std::nothrow) char[arraySize * maxlen]);
     array = static_cast<void*>(charArray);
     if (!array) {
-        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*maxlen);
+        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %ld bytes",
+            arraySize * maxlen);
         return -1;
     }
     for (size_t i = 0; i < arraySize; i++) {
         if (indArray[i] == 0 || indArray[i] == SQL_NULL_DATA) {
-            charArray[i*maxlen] = 0;
+            charArray[i*maxlen] = '\0';
             continue;
         }
         const BinaryNode* bin = arg->retrieveEntry(i).get<const BinaryNode>();
@@ -2993,7 +3041,8 @@ int ODBCStatement::createArrayFromBinaryList(const QoreListNode* arg, void*& arr
     return 0;
 }
 
-int ODBCStatement::createArrayFromAbsoluteDateList(const QoreListNode* arg, TIMESTAMP_STRUCT*& array, SQLLEN*& indArray, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromAbsoluteDateList(const QoreListNode* arg, TIMESTAMP_STRUCT*& array,
+        SQLLEN*& indArray, ExceptionSink* xsink) {
     array = arrayHolder.addTimestampArray(xsink);
     if (!array)
         return -1;
@@ -3014,7 +3063,8 @@ int ODBCStatement::createArrayFromAbsoluteDateList(const QoreListNode* arg, TIME
     return 0;
 }
 
-int ODBCStatement::createArrayFromRelativeDateList(const QoreListNode* arg, SQL_INTERVAL_STRUCT*& array, SQLLEN*& indArray, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromRelativeDateList(const QoreListNode* arg, SQL_INTERVAL_STRUCT*& array,
+        SQLLEN*& indArray, ExceptionSink* xsink) {
     array = arrayHolder.addIntervalArray(xsink);
     if (!array)
         return -1;
@@ -3035,7 +3085,8 @@ int ODBCStatement::createArrayFromRelativeDateList(const QoreListNode* arg, SQL_
     return 0;
 }
 
-int ODBCStatement::createArrayFromBoolList(const QoreListNode* arg, int8_t*& array, SQLLEN*& indArray, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromBoolList(const QoreListNode* arg, int8_t*& array, SQLLEN*& indArray,
+        ExceptionSink* xsink) {
     array = arrayHolder.addInt8Array(xsink);
     if (!array)
         return -1;
@@ -3056,7 +3107,8 @@ int ODBCStatement::createArrayFromBoolList(const QoreListNode* arg, int8_t*& arr
     return 0;
 }
 
-int ODBCStatement::createArrayFromIntList(const QoreListNode* arg, int64*& array, SQLLEN*& indArray, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromIntList(const QoreListNode* arg, int64*& array, SQLLEN*& indArray,
+        ExceptionSink* xsink) {
     array = arrayHolder.addInt64Array(xsink);
     if (!array)
         return -1;
@@ -3078,7 +3130,8 @@ int ODBCStatement::createArrayFromIntList(const QoreListNode* arg, int64*& array
     return 0;
 }
 
-int ODBCStatement::createStrArrayFromIntList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, size_t& maxlen, ExceptionSink* xsink) {
+int ODBCStatement::createStrArrayFromIntList(const QoreListNode* arg, char*& array, SQLLEN*& indArray, size_t& maxlen,
+        ExceptionSink* xsink) {
     char** stringArray = arrayHolder.addCharArray(xsink);
     if (!stringArray)
         return -1;
@@ -3108,7 +3161,8 @@ int ODBCStatement::createStrArrayFromIntList(const QoreListNode* arg, char*& arr
     // We have to create one big array and put all the strings in it one after another.
     array = paramHolder.addChars(new (std::nothrow) char[arraySize * maxlen]);
     if (!array) {
-        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*maxlen);
+        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %ld bytes",
+            arraySize * maxlen);
         return -1;
     }
     for (size_t i = 0; i < arraySize; i++) {
@@ -3121,7 +3175,8 @@ int ODBCStatement::createStrArrayFromIntList(const QoreListNode* arg, char*& arr
     return 0;
 }
 
-int ODBCStatement::createArrayFromFloatList(const QoreListNode* arg, double*& array, SQLLEN*& indArray, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromFloatList(const QoreListNode* arg, double*& array, SQLLEN*& indArray,
+        ExceptionSink* xsink) {
     array = arrayHolder.addDoubleArray(xsink);
     if (!array)
         return -1;
@@ -3143,7 +3198,8 @@ int ODBCStatement::createArrayFromFloatList(const QoreListNode* arg, double*& ar
     return 0;
 }
 
-int ODBCStatement::createArrayFromString(const QoreStringNode* arg, char*& array, SQLLEN*& indArray, size_t& len, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromString(const QoreStringNode* arg, char*& array, SQLLEN*& indArray, size_t& len,
+        ExceptionSink* xsink) {
     indArray = arrayHolder.addIndArray(xsink);
     if (!indArray)
         return -1;
@@ -3153,7 +3209,8 @@ int ODBCStatement::createArrayFromString(const QoreStringNode* arg, char*& array
         return -1;
     array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
     if (!array) {
-        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*len);
+        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %ld bytes",
+            arraySize * len);
         return -1;
     }
     for (size_t i = 0; i < arraySize; i++) {
@@ -3164,7 +3221,8 @@ int ODBCStatement::createArrayFromString(const QoreStringNode* arg, char*& array
     return 0;
 }
 
-int ODBCStatement::createArrayFromNumber(const QoreNumberNode* arg, char*& array, SQLLEN*& indArray, size_t& len, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromNumber(const QoreNumberNode* arg, char*& array, SQLLEN*& indArray, size_t& len,
+        ExceptionSink* xsink) {
     indArray = arrayHolder.addIndArray(xsink);
     if (!indArray)
         return -1;
@@ -3176,7 +3234,8 @@ int ODBCStatement::createArrayFromNumber(const QoreNumberNode* arg, char*& array
     char* val = paramHolder.addChars(vh.giveBuffer());
     array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
     if (!array) {
-        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*len);
+        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %ld bytes",
+            arraySize * len);
         return -1;
     }
     for (size_t i = 0; i < arraySize; i++) {
@@ -3187,7 +3246,8 @@ int ODBCStatement::createArrayFromNumber(const QoreNumberNode* arg, char*& array
     return 0;
 }
 
-int ODBCStatement::createArrayFromBinary(const BinaryNode* arg, void*& array, SQLLEN*& indArray, size_t& len, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromBinary(const BinaryNode* arg, void*& array, SQLLEN*& indArray, size_t& len,
+        ExceptionSink* xsink) {
     indArray = arrayHolder.addIndArray(xsink);
     if (!indArray)
         return -1;
@@ -3196,7 +3256,8 @@ int ODBCStatement::createArrayFromBinary(const BinaryNode* arg, void*& array, SQ
     void* val = const_cast<void*>(arg->getPtr());
     char* charArray = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
     if (!charArray) {
-        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %d bytes", arraySize*len);
+        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %d bytes",
+            arraySize * len);
         return -1;
     }
     array = static_cast<void*>(charArray);
@@ -3208,26 +3269,29 @@ int ODBCStatement::createArrayFromBinary(const BinaryNode* arg, void*& array, SQ
     return 0;
 }
 
-int ODBCStatement::createArrayFromAbsoluteDate(const DateTimeNode* arg, TIMESTAMP_STRUCT*& array, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromAbsoluteDate(const DateTimeNode* arg, TIMESTAMP_STRUCT*& array,
+        ExceptionSink* xsink) {
     assert(arg->isAbsolute());
     TIMESTAMP_STRUCT val = getTimestampFromDate(arg);
     array = arrayHolder.addTimestampArray(xsink);
     if (!array)
         return -1;
     size_t arraySize = arrayHolder.getArraySize();
-    for (size_t i = 0; i < arraySize; i++)
+    for (size_t i = 0; i < arraySize; ++i) {
         array[i] = val;
+    }
     return 0;
 }
 
-int ODBCStatement::createArrayFromRelativeDate(const DateTimeNode* arg, SQL_INTERVAL_STRUCT*& array, ExceptionSink* xsink) {
+int ODBCStatement::createArrayFromRelativeDate(const DateTimeNode* arg, SQL_INTERVAL_STRUCT*& array,
+        ExceptionSink* xsink) {
     assert(arg->isRelative());
     SQL_INTERVAL_STRUCT val = getIntervalFromDate(arg);
     array = arrayHolder.addIntervalArray(xsink);
     if (!array)
         return -1;
     size_t arraySize = arrayHolder.getArraySize();
-    for (size_t i = 0; i < arraySize; i++)
+    for (size_t i = 0; i < arraySize; ++i)
         array[i] = val;
     return 0;
 }
@@ -3237,7 +3301,7 @@ int ODBCStatement::createArrayFromBool(bool val, int8_t*& array, ExceptionSink* 
     if (!array)
         return -1;
     size_t arraySize = arrayHolder.getArraySize();
-    for (size_t i = 0; i < arraySize; i++)
+    for (size_t i = 0; i < arraySize; ++i)
         array[i] = val;
     return 0;
 }
@@ -3247,7 +3311,7 @@ int ODBCStatement::createArrayFromInt(int64 val, int64*& array, ExceptionSink* x
     if (!array)
         return -1;
     size_t arraySize = arrayHolder.getArraySize();
-    for (size_t i = 0; i < arraySize; i++)
+    for (size_t i = 0; i < arraySize; ++i)
         array[i] = val;
     return 0;
 }
@@ -3265,7 +3329,7 @@ int ODBCStatement::createStrArrayFromInt(QoreValue arg, char*& array, SQLLEN*& i
     char* val = paramHolder.addChars(vh.giveBuffer());
     array = paramHolder.addChars(new (std::nothrow) char[arraySize * len]);
     if (!array) {
-        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %d bytes",
+        xsink->raiseException("ODBC-MEMORY-ERROR", "could not allocate char array with size of %ld bytes",
             arraySize*len);
         return -1;
     }

@@ -567,7 +567,7 @@ int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
     }
 
     if (ds->getPassword()) {
-        connStr.sprintf("PASSWORD=%s;", ds->getPassword());
+        connStr.sprintf("PASSWORD=%s;PWD=%s;", ds->getPassword(), ds->getPassword());
     }
 
     ConstHashIterator hi(ds->getConnectOptions());
