@@ -52,8 +52,17 @@ db = new Datasource(SQL::DSODBC, user, pass, NOTHING, NOTHING, NOTHING,
 
     Example of creating an ODBC Datasource using DSN connection:
     @code
-Datasource db = new Datasource(SQL::DSODBC, user, pass, dsn, "UTF8");
+Datasource db(SQL::DSODBC, user, pass, dsn, "UTF8");
     @endcode
+
+    The ODBC connection string can be given as the \c conn option; if the datasource has a username, it is added as
+    both \c USER and \c UID in the connection string, whereas any password is added as both \c PASSWORD and \c PWD in
+    the connection string.  To avoid this, use datasource connection parameters without a username or password and add
+    the required connection parameters directly to the \c conn option separated by semicolons (\c ";") as in the above
+    examples.
+
+    If a database name if provided in the datasource connection arguments, it is added as the \c DSN option in the
+    ODBC connection string.
 
     This driver supports the following DBI capabilities:
     - \c DBI_CAP_TIME_ZONE_SUPPORT
