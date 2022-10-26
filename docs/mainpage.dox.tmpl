@@ -288,6 +288,11 @@ hash: (1 member)
 
     @section odbcreleasenotes Release Notes
 
+    @subsection odbcv1_1_1 odbc Driver Version 1.1.1
+    - fixed a bug where the \c conn option would be used to build the connection, but the value was not returned as an
+      option value
+      (<a href="https://github.com/qorelanguage/qore/issues/4613">issue 4613</a>)
+
     @subsection odbcv1_1 odbc Driver Version 1.1
     - automatically strip trailing spaces \c from CHAR column values
       (<a href="https://github.com/qorelanguage/qore/issues/4508">issue 4508</a>)

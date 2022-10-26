@@ -331,6 +331,10 @@ QoreValue ODBCConnection::getOption(const char* opt) {
     if (!strcasecmp(opt, OPT_CONN_TIMEOUT))
         return static_cast<int64>(options.loginTimeout);
 
+    if (!strcasecmp(opt, OPT_CONN)) {
+        return new QoreStringNode(options.conn);
+    }
+
     return QoreValue();
 }
 
@@ -421,6 +425,17 @@ int ODBCConnection::parseOptions(ExceptionSink* xsink) {
             QoreValue val = hi.get();
             if (setConnectionTimeoutOption(val, xsink))
                 return -1;
+            continue;
+        }
+        if (!strcasecmp(OPT_CONN, hi.getKey())) {
+            QoreValue val = hi.get();
+            if (val.getType() != NT_STRING) {
+                xsink->raiseException("ODBC-OPTION-ERROR", "non-string value passed for the '%s' option",
+                    OPT_QORE_TIMEZONE);
+                return -1;
+            }
+            const QoreStringNode* str = val.get<const QoreStringNode>();
+            options.conn = str->c_str();
             continue;
         }
     }
