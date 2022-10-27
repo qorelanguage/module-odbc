@@ -693,20 +693,25 @@ QoreHashNode* ODBCStatement::getRowIntern(GetRowInternStatus& status, ExceptionS
     SQLRETURN ret = SQLFetch(stmt);
     if (ret == SQL_NO_DATA) { // Reached the end of the result-set.
         status = EGRIS_END;
-        return 0;
+        return nullptr;
     }
     if (!SQL_SUCCEEDED(ret)) { // error
         std::string s("error occured when fetching row #%d");
         ODBCErrorHelper::extractDiag(SQL_HANDLE_STMT, stmt, s);
         xsink->raiseException("ODBC-FETCH-ERROR", s.c_str(), readRows);
         status = EGRIS_ERROR;
-        return 0;
+        return nullptr;
     }
 
-    ReferenceHolder<QoreHashNode> h(new QoreHashNode, xsink); // Row hash.
+    // issue #4616: fetch column metadata if necessary
+    if (!resColumns.size() && fetchResultColumnMetadata(xsink)) {
+        return nullptr;
+    }
+
+    ReferenceHolder<QoreHashNode> h(new QoreHashNode(autoTypeInfo), xsink); // Row hash.
 
     int columns = resColumns.size();
-    for (int i = 0; i < columns; i++) {
+    for (int i = 0; i < columns; ++i) {
         ODBCResultColumn& col = resColumns[i];
         ValueHolder n(xsink);
         n = getColumnValue(i + 1, col, xsink);
@@ -731,7 +736,7 @@ QoreHashNode* ODBCStatement::getRowIntern(GetRowInternStatus& status, ExceptionS
 
         hah.assign(n.release(), xsink);
     }
-    readRows++;
+    ++readRows;
 
     status = EGRIS_OK;
     return h.release();

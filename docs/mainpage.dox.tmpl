@@ -292,6 +292,8 @@ hash: (1 member)
     @section odbcreleasenotes Release Notes
 
     @subsection odbcv1_1_1 odbc Driver Version 1.1.1
+    - fixed a bug iterating result sets with the \c SQLStatement class
+      (<a href="https://github.com/qorelanguage/qore/issues/4616">issue 4616</a>)
     - fixed handling character encoding issues; UTF-8 strings are used for binding and retrieving now; eliminated
       special logic for handling UTF-16 strings that caused crashes in some cases
       (<a href="https://github.com/qorelanguage/qore/issues/4615">issue 4615</a>)

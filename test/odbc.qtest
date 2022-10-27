@@ -701,6 +701,13 @@ class OdbcTest inherits QUnit::Test {
             trimListOfHashes(\ret);
         assertEq(results2, ret);
 
+        {
+            SQLStatement stmt = ds.getSQLStatement();
+            stmt.prepare("select * from " + tableName);
+            list<hash<auto>> rows = map $1, stmt;
+            assertEq(results2, rows);
+        }
+
         ds.exec("DROP TABLE " + tableName);
         ds.commit();
     }
@@ -725,12 +732,12 @@ class OdbcTest inherits QUnit::Test {
         ds.commit();
 
         string def = sprintf(" (%s)", foldl $1 + ", " + $2, ColumnNamesAndTypes);
-        any ret = ds.exec("CREATE TABLE " + tableName + def);
+        auto ret = ds.exec("CREATE TABLE " + tableName + def);
         assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);
         ds.commit();
 
-        list arguments = ();
-        foreach hash col in (Columns.pairIterator()) {
+        list<auto> arguments = ();
+        foreach hash<auto> col in (Columns.pairIterator()) {
             push arguments, col.value.values;
         }
 
@@ -752,7 +759,7 @@ class OdbcTest inherits QUnit::Test {
             return;
         }
 
-        hash results = Columns;
+        hash<auto> results = Columns;
         foreach string key in (keys results) {
             if (exists results{key}.expected) {
                 results{key} = results{key}.expected;
@@ -817,7 +824,7 @@ class OdbcTest inherits QUnit::Test {
         }
         ds.commit();
 
-        any ret = ds.exec("CREATE TABLE " + tableName + " (id int, txt varchar(48))");
+        auto ret = ds.exec("CREATE TABLE " + tableName + " (id int, txt varchar(48))");
         assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);
         ds.commit();
 
@@ -825,7 +832,7 @@ class OdbcTest inherits QUnit::Test {
         on_error stmt.rollback();
         stmt.prepare("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)");
 
-        stmt.bindArgs((2, ("text", "abc", "lorem")));
+        stmt.bindArgs((2, ("abc", "lorem", "text")));
         stmt.exec();
         stmt.commit();
 
@@ -836,12 +843,12 @@ class OdbcTest inherits QUnit::Test {
         stmt.execArgs( ((6,), "sit") );
         stmt.commit();
 
-        hash h = {"id": (2, 2, 2, 4, 5, 6), "txt": ("text", "abc", "lorem", "ipsum", "dolor", "sit")};
+        hash<auto> h = {"id": (2, 2, 2, 4, 5, 6), "txt": ("abc", "lorem", "text", "ipsum", "dolor", "sit")};
         if (oracleDB) {
             h.id = (2n, 2n, 2n, 4n, 5n, 6n);
         }
 
-        ret = ds.select("SELECT * FROM " + tableName);
+        ret = ds.select("SELECT * FROM " + tableName + " order by id, txt");
         if (mssqlDB)
             trimHashOfLists(\ret);
         /*printf("ret: %N\n", ret);
@@ -854,5 +861,16 @@ class OdbcTest inherits QUnit::Test {
             printf("%s: %d bytes, %d chars, %s\n", s, s.size(), s.length(), s.encoding());
         }*/
         assertEq(h, ret);
+
+        stmt = ds.getSQLStatement();
+        stmt.prepare("select * from " + tableName + " order by id, txt");
+        on_exit stmt.rollback();
+        assertEq(h, stmt.fetchColumns(-1));
+
+        stmt.prepare("select * from " + tableName + " order by id, txt");
+        foreach hash<auto> row in (h.contextIterator()) {
+            stmt.next();
+            assertEq(row, stmt.getValue());
+        }
     }
 }
