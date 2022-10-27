@@ -502,9 +502,8 @@ class OdbcTest inherits QUnit::Test {
 
         # Test if connected to Firebird
         try {
-            ds.exec("CREATE TABLE " + typesTable + " (clob blob sub_type text)");
+            ds.select("select rdb$relation_name as name from rdb$relations where rdb$relation_name = 'x'");
             firebirdDB = True;
-            try { ds.exec("DROP TABLE " + typesTable); } catch (hash<ExceptionInfo> e) {}
         } catch (hash<ExceptionInfo> ex) {
             firebirdDB = False;
         }
@@ -659,8 +658,11 @@ class OdbcTest inherits QUnit::Test {
             assertThrows("ODBC-CONNECTION-ERROR", sub() { test.open(); });
         }
 
-        assertThrows("ODBC-EXEC-ERROR", \ds.exec(), "DROP TABLE " + tableName);
-        #ds.commit();
+        try {
+            ds.exec("drop table " + tableName);
+        } catch (hash<ExceptionInfo> ex) {
+            # ignore exception
+        }
 
         auto ret = ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, txt varchar(128))");
         assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);

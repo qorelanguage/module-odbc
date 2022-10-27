@@ -199,9 +199,6 @@ private:
     //! Connection string.
     QoreString connStr;
 
-    //! UTF-16 connection string.
-    std::unique_ptr<QoreString> connStrUTF16;
-
     //! Whether an ODBC connection has been opened.
     bool connected = false;
 

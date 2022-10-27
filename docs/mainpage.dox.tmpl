@@ -190,11 +190,9 @@ major_version * 1000000 + minor_version * 10000 + sub_version
 
     @subsection odbc_encoding_support Character Encoding Support
 
-    ODBC module supports using all of Qore's charsets to transfer data between Qore and the databases.
-
-    If no encoding is set when creating an ODBC datasource, the module converts all outbound text data to UTF-16 strings and binds them as \c SQL_C_WCHAR datatype. Incoming \c SQL_WCHAR data is received as \c UTF-16, while incoming \c SQL_CHAR data is assumed to be in Qore's default encoding.
-
-    If encoding is set when creating an ODBC datasource, the module converts all outbound text data to it and binds it as either \c SQL_C_CHAR or \c SQL_C_WCHAR datatypes depending on the specific encoding. Incoming \c SQL_WCHAR data is received as \c UTF-16, while incoming \c SQL_CHAR data is assumed to be of the set encoding.
+    The \c odbc module uses UTF-8 to transfer strings to and from databases in all cases.  Conversions are made to
+    UTF-8 for strings inbound to the DB, if necessary, and all string data retrieved from the DB is tagged as UTF-8 as
+    well.
 
     @subsection odbc_oracle_support Oracle Support
 
@@ -211,12 +209,17 @@ major_version * 1000000 + minor_version * 10000 + sub_version
     The following table gives data mapping when binding qore types by value.
 
     |!QoreType|!ODBC C Type|!ODBC SQL Type|!Description
-    |\c int|\c SQL_C_SBIGINT, \c SQL_C_CHAR|\c SQL_BIGINT|Converting from a BIGINT type to smaller integer types is done automatically by the specific ODBC DB driver. Qore ints can be bound either as SQL_C_SBIGINT values (default) or as character strings (needed for Oracle database).
+    |\c int|\c SQL_C_SBIGINT, \c SQL_C_CHAR|\c SQL_BIGINT|Converting from a BIGINT type to smaller integer types is \
+        done automatically by the specific ODBC DB driver. Qore ints can be bound either as SQL_C_SBIGINT values \
+        (default) or as character strings (needed for Oracle database).
     |\c float|\c SQL_C_DOUBLE|\c SQL_DOUBLE|Qore float data is converted directly to ODBC DOUBLE data.
     |\c number|\c SQL_C_CHAR|\c SQL_CHAR|Qore number data is converted to strings before sending.
-    |\c string|\c SQL_C_CHAR, \c SQL_C_WCHAR|\c SQL_CHAR, \c SQL_WCHAR|The character encoding is converted to the encoding specified for the connection if necessary and bound as SQL_CHAR values; if no encoding is specified, strings are converted to UTF-16 instead and bound as SQL_WCHAR strings
+    |\c string|\c SQL_C_CHAR, \c SQL_C_WCHAR|\c SQL_CHAR, \c SQL_WCHAR|The character encoding is converted to UTF-8 \
+        if necessary and bound as SQL_CHAR values
     |\c bool|\c SQL_C_BIT|\c SQL_CHAR|Qore boolean values are sourced as BIT values and sent as CHAR values.
-    |\c date|\c SQL_C_INTERVAL_DAY_TO_SECOND, \c SQL_C_TYPE_TIMESTAMP|\c SQL_INTERVAL_DAY_TO_SECOND, \c SQL_TYPE_TIMESTAMP|Relative date/time values are bound as interval data, absolute date/time values are bound as timestamp data
+    |\c date|\c SQL_C_INTERVAL_DAY_TO_SECOND, \c SQL_C_TYPE_TIMESTAMP|\c SQL_INTERVAL_DAY_TO_SECOND, \
+        \c SQL_TYPE_TIMESTAMP|Relative date/time values are bound as interval data, absolute date/time values are \
+        bound as timestamp data
     |\c binary|\c SQL_C_BINARY|\c SQL_BINARY|Qore binary data is bound directly as binary data.
 
     @subsection odbc_to_qore ODBC to Qore Type Mappings
@@ -226,12 +229,12 @@ major_version * 1000000 + minor_version * 10000 + sub_version
     |\c SQL_BINARY|\c binary|direct conversion
     |\c SQL_VARBINARY|\c binary|direct conversion
     |\c SQL_LONGVARBINARY|\c binary|direct conversion
-    |\c SQL_CHAR|\c string|if character encoding is specified, the strings are received and set as Qore strings with the specified encoding; if no encoding is specified, the strings are received as SQL_WCHAR strings instead
-    |\c SQL_VARCHAR|\c string|direct conversion
-    |\c SQL_LONGVARCHAR|\c string|direct conversion
-    |\c SQL_WCHAR|\c string|direct conversion
-    |\c SQL_WVARCHAR|\c string|direct conversion
-    |\c SQL_WLONGVARCHAR|\c string|direct conversion
+    |\c SQL_CHAR|\c string|direct conversion as UTF-8-encoded strings
+    |\c SQL_VARCHAR|\c string|direct conversion as UTF-8-encoded strings
+    |\c SQL_LONGVARCHAR|\c string|direct conversion as UTF-8-encoded strings
+    |\c SQL_WCHAR|\c string|direct conversion as UTF-8-encoded strings
+    |\c SQL_WVARCHAR|\c string|direct conversion as UTF-8-encoded strings
+    |\c SQL_WLONGVARCHAR|\c string|direct conversion as UTF-8-encoded strings
     |\c SQL_INTEGER|\c int|direct conversion
     |\c SQL_BIGINT|\c int|direct conversion
     |\c SQL_SMALLINT|\c int|direct conversion
@@ -289,6 +292,9 @@ hash: (1 member)
     @section odbcreleasenotes Release Notes
 
     @subsection odbcv1_1_1 odbc Driver Version 1.1.1
+    - fixed handling character encoding issues; UTF-8 strings are used for binding and retrieving now; eliminated
+      special logic for handling UTF-16 strings that caused crashes in some cases
+      (<a href="https://github.com/qorelanguage/qore/issues/4615">issue 4615</a>)
     - fixed a bug where the \c conn option would be used to build the connection, but the value was not returned as an
       option value
       (<a href="https://github.com/qorelanguage/qore/issues/4613">issue 4613</a>)
