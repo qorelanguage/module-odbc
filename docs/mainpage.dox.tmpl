@@ -190,9 +190,9 @@ major_version * 1000000 + minor_version * 10000 + sub_version
 
     @subsection odbc_encoding_support Character Encoding Support
 
-    The \c odbc module uses UTF-8 to transfer strings to and from databases in all cases.  Conversions are made to
-    UTF-8 for strings inbound to the DB, if necessary, and all string data retrieved from the DB is tagged as UTF-8 as
-    well.
+    The \c odbc module uses the datasource encoding to transfer strings to and from databases in all cases.
+    Conversions are made to the datasource encoding for strings inbound to the DB, if necessary, and all string data
+    retrieved from the DB is tagged with the datasource's encoding as well.
 
     @subsection odbc_oracle_support Oracle Support
 
@@ -292,10 +292,11 @@ hash: (1 member)
     @section odbcreleasenotes Release Notes
 
     @subsection odbcv1_1_1 odbc Driver Version 1.1.1
+      (<a href="https://github.com/qorelanguage/qore/issues/4618">issue 4618</a>)
     - fixed a bug iterating result sets with the \c SQLStatement class
       (<a href="https://github.com/qorelanguage/qore/issues/4616">issue 4616</a>)
-    - fixed handling character encoding issues; UTF-8 strings are used for binding and retrieving now; eliminated
-      special logic for handling UTF-16 strings that caused crashes in some cases
+    - fixed handling character encoding issues; strings are bound and retrieved using the DB encoding for the
+      datasource; eliminated special logic for handling UTF-16 strings that caused crashes in some cases
       (<a href="https://github.com/qorelanguage/qore/issues/4615">issue 4615</a>)
     - fixed a bug where the \c conn option would be used to build the connection, but the value was not returned as an
       option value

@@ -47,6 +47,12 @@ ODBCConnection::ODBCConnection(Datasource* d, ExceptionSink* xsink) : ds(d), con
         serverTz = d.getZone();
     }
 
+    // set Qore encoding directly from DB encoding
+    {
+        const char* enc = d->getDBEncoding();
+        d->setQoreEncoding(enc ? enc : "UTF-8");
+    }
+
     // Initialize environment.
     if (envInit(xsink)) {
         return;
@@ -274,9 +280,9 @@ int ODBCConnection::setOption(const char* opt, QoreValue val, ExceptionSink* xsi
             serverTz = find_create_timezone(tzName->c_str(), xsink);
             if (*xsink)
                 return -1;
-        }
-        else {
-            xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires a name of a timezone (e.g. \"Europe/Prague\") or a time offset string (e.g. \"+02:00\")", OPT_QORE_TIMEZONE);
+        } else {
+            xsink->raiseException("ODBC-OPTION-ERROR", "'%s' option requires a name of a timezone (e.g. "
+                "\"Europe/Prague\") or a time offset string (e.g. \"+02:00\")", OPT_QORE_TIMEZONE);
             return -1;
         }
     } else if (!strcasecmp(opt, OPT_LOGIN_TIMEOUT)) {
@@ -319,8 +325,7 @@ QoreValue ODBCConnection::getOption(const char* opt) {
             qore_tm info;
             x.getInfo(info);
             return new QoreStringNode(info.regionName());
-        }
-        else {
+        } else {
             return new QoreStringNode("UTC");
         }
     }

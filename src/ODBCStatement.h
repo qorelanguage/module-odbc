@@ -137,6 +137,9 @@ public:
     //! Completely reset and clear.
     DLLLOCAL void reset(ExceptionSink* xsink);
 
+    //! Returns the Qore character encoding for the connection
+    DLLLOCAL const QoreEncoding* getQoreEncoding() const;
+
 protected:
     //! ODBC statement handle.
     SQLHSTMT stmt = SQL_NULL_HSTMT;
@@ -1107,14 +1110,14 @@ public:
 };
 
 char* ODBCStatement::getCharsFromString(const QoreStringNode* arg, size_t& len, ExceptionSink* xsink) {
-    TempEncodingHelper tstr(arg, QCS_UTF8, xsink);
+    TempEncodingHelper tstr(arg, getQoreEncoding(), xsink);
     if (*xsink) {
         return nullptr;
     }
     len = tstr->size();
-
     /*
     // Remove BOM if present and encoding is UTF-16.
+    const QoreEncoding* enc = getQoreEncoding();
     if ((enc == QCS_UTF16 || enc == QCS_UTF16LE || enc == QCS_UTF16BE) && len >= 2) {
         tstr.makeTemp();
         unsigned char* buf = reinterpret_cast<unsigned char*>(const_cast<char*>(tstr->c_str()));

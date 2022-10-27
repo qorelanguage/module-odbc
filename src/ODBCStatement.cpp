@@ -75,6 +75,10 @@ bool ODBCStatement::hasResultData() {
     return columns > 0;
 }
 
+const QoreEncoding* ODBCStatement::getQoreEncoding() const {
+    return conn->getDatasource()->getQoreEncoding();
+}
+
 QoreHashNode* ODBCStatement::describe(ExceptionSink* xsink) {
     if (fetchResultColumnMetadata(xsink))
         return 0;
@@ -384,7 +388,7 @@ int ODBCStatement::exec(const QoreString* qstr, const QoreListNode* args, Except
     command = qstr;
 
     // Convert string to required character encoding.
-    TempEncodingHelper str(qstr, QCS_UTF8, xsink);
+    TempEncodingHelper str(qstr, getQoreEncoding(), xsink);
     if (*xsink) {
         return -1;
     }
@@ -411,7 +415,7 @@ int ODBCStatement::exec(const QoreString* qstr, ExceptionSink* xsink) {
     command = qstr;
 
     // Convert string to required character encoding.
-    TempEncodingHelper str(qstr, QCS_UTF8, xsink);
+    TempEncodingHelper str(qstr, getQoreEncoding(), xsink);
     if (*xsink) {
         return -1;
     }
@@ -452,7 +456,7 @@ void ODBCStatement::handleStmtError(const char* err, const char* desc, Exception
 
 int ODBCStatement::resetAfterLostConnection(ExceptionSink* xsink) {
     // Convert string to required character encoding.
-    TempEncodingHelper str(command, QCS_UTF8, xsink);
+    TempEncodingHelper str(command, conn->getDatasource()->getQoreEncoding(), xsink);
     if (*xsink) {
         return -1;
     }
@@ -3406,7 +3410,7 @@ QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, Exce
         case SQL_LONGVARCHAR: {
             char buffer[512];
             buffer[0] = '\0';
-            SimpleRefHolder<QoreStringNode> str(new QoreStringNode("", QCS_UTF8));
+            SimpleRefHolder<QoreStringNode> str(new QoreStringNode("", getQoreEncoding()));
             while (true) {
                 ret = SQLGetData(stmt, column, SQL_C_CHAR, buffer, 512, &indicator);
                 if (ret == SQL_NO_DATA) // No (more) data.
@@ -3456,7 +3460,7 @@ QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, Exce
                 ret = SQLGetData(stmt, column, SQL_C_CHAR, reinterpret_cast<SQLWCHAR*>(buf.get()), buflen,
                     &indicator);
                 if (SQL_SUCCEEDED(ret)) {
-                    QoreStringNodeHolder rv(new QoreStringNode(buf.release(), indicator, buflen, QCS_UTF8));
+                    QoreStringNodeHolder rv(new QoreStringNode(buf.release(), indicator, buflen, getQoreEncoding()));
                     rv->trim_trailing(' ');
                     return rv.release();
                 }
@@ -3510,7 +3514,7 @@ QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, Exce
                         return strtoll(val, 0, 10);
                     return new QoreNumberNode(val);
                 } else if (options.numeric == ENO_STRING) {
-                    return new QoreStringNode(val, QCS_UTF8);
+                    return new QoreStringNode(val, conn->getDatasource()->getQoreEncoding());
                 } else {
                     return new QoreNumberNode(val);
                 }

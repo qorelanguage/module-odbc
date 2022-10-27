@@ -49,7 +49,7 @@ int ODBCPreparedStatement::prepare(const QoreString& qstr, const QoreListNode* a
     command = qstr;
 
     // Convert string to required character encoding.
-    TempEncodingHelper str(qstr, QCS_UTF8, xsink);
+    TempEncodingHelper str(qstr, getQoreEncoding(), xsink);
     if (*xsink) {
         return -1;
     }
