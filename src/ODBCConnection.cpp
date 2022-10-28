@@ -635,7 +635,7 @@ int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
                 if (*xsink) {
                     return -1;
                 }
-                if (*hi.getKeyString() == "conn") {
+                if (!strcmp(hi.getKey(), "conn")) {
                     connStr.concat(tstr->c_str());
                 } else {
                     QoreString key(hi.getKey());

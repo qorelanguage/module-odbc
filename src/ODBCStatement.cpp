@@ -832,8 +832,9 @@ int ODBCStatement::bindIntern(const QoreListNode* args, ExceptionSink* xsink) {
                         SQL_BIGINT, BIGINT_COLSIZE, 0, const_cast<int64*>(ival), sizeof(int64), 0);
                 } else if (options.bigint == EBO_STRING) {
                     QoreStringValueHelper vh(arg, QCS_USASCII, xsink);
-                    if (*xsink)
+                    if (*xsink) {
                         return -1;
+                    }
                     size_t len = vh->strlen();
                     SQLLEN* indPtr = paramHolder.addLength(len);
                     char* cstr = paramHolder.addChars(vh.giveBuffer());
@@ -3404,7 +3405,7 @@ QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, Exce
             break;
         }
 
-        // Character types.
+        // Character types
         case SQL_CHAR:
         case SQL_VARCHAR:
         case SQL_LONGVARCHAR: {
@@ -3419,7 +3420,7 @@ QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, Exce
                     str->concat(buffer);
 
                     // PostgreSQL-specific hack.
-                    // Needed because PostgreSQL returns BOOLEAN type as VARCHAR string with values '0' or '1'.
+                    // Needed because PostgreSQL returns BOOLEAN type as VARCHAR string with values '0' or '1'
                     if (str->size() == 1 && (buffer[0] == '0' || buffer[0] == '1')) {
                         char descTypeName[32];
                         SQLColAttributeA(stmt, column, SQL_DESC_TYPE_NAME, descTypeName, 32, 0, 0);
@@ -3428,7 +3429,7 @@ QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, Exce
                         }
                     }
                     if (rcol.dataType == SQL_CHAR) {
-                        str->trim_trailing(" ");
+                        str->trim_trailing(' ');
                     }
 
                     if (indicator > 0)
@@ -3442,14 +3443,15 @@ QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, Exce
         case SQL_WCHAR:
         case SQL_WVARCHAR:
         case SQL_WLONGVARCHAR: {
-            // retrieve UTF-8 data with SQL_C_CHAR
+            // retrieve data with SQL_C_CHAR
             SQLWCHAR unused[1];
-            ret = SQLGetData(stmt, column, SQL_C_CHAR, unused, 0, &indicator); // Find out data size.
-            if (ret == SQL_NO_DATA) // No data, therefore returning empty string.
+            ret = SQLGetData(stmt, column, SQL_C_CHAR, unused, 0, &indicator); // Find out data size
+            if (ret == SQL_NO_DATA) {
+                // No data, therefore returning empty string
                 return new QoreStringNode;
+            }
             if (SQL_SUCCEEDED(ret) && (indicator != SQL_NULL_DATA)) {
-
-                SQLLEN buflen = indicator + 2; // Ending \0 char.
+                SQLLEN buflen = indicator + 1; // Ending \0 char.
                 std::unique_ptr<char> buf(new (std::nothrow) char[buflen]);
                 if (!buf.get()) {
                     xsink->raiseException("DBI:ODBC:MEMORY-ERROR",
@@ -3457,7 +3459,7 @@ QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, Exce
                         readRows, column-1, column);
                     return 0;
                 }
-                ret = SQLGetData(stmt, column, SQL_C_CHAR, reinterpret_cast<SQLWCHAR*>(buf.get()), buflen,
+                ret = SQLGetData(stmt, column, SQL_C_CHAR, reinterpret_cast<SQLPOINTER>(buf.get()), buflen,
                     &indicator);
                 if (SQL_SUCCEEDED(ret)) {
                     QoreStringNodeHolder rv(new QoreStringNode(buf.release(), indicator, buflen, getQoreEncoding()));

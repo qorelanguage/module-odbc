@@ -385,7 +385,14 @@ QoreStringNode *odbc_module_init() {
         "accepted by Timezone::constructor() on the client (ie either a region name or a UTC offset like "
         "\"+01:00\"), if not set the server's time zone will be assumed to be the same as the client's",
         stringTypeInfo);
-    methods.registerOption("conn", "set the ODBC connection string", stringTypeInfo);
+    methods.registerOption(OPT_CONN, "set the ODBC connection string", stringTypeInfo);
+    methods.registerOption(OPT_BIGINT_NATIVE, "sets native bigint support");
+    methods.registerOption(OPT_BIGINT_STRING, "sets string bigint support");
+    methods.registerOption(OPT_QORE_TIMEZONE, "sets the Qore timezone for the connection");
+    methods.registerOption(OPT_FRAC_PRECISION, "sets fractional precision");
+    methods.registerOption(OPT_LOGIN_TIMEOUT, "sets the login timeout in seconds");
+    methods.registerOption(OPT_CONN_TIMEOUT, "sets the connection timeout in seconds");
+    methods.registerOption(OPT_PRESERVE_CASE, "if set, case is preserved in results");
 
     DBID_ODBC = DBI.registerDriver("odbc", methods, DBI_ODBC_CAPS);
 

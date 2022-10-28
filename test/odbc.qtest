@@ -671,8 +671,13 @@ class OdbcTest inherits QUnit::Test {
         assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (1, 'abcdef123456')"));
         ds.commit();
 
-        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 2,
-            "test 789 abc lorem ipsum"));
+        {
+            string str = "test 789 abc lorem ipsum";
+            assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (%v, %v)", 2,
+                str));
+            assertEq(str, ds.selectRow("select * from %s where id = %v", tableName, 2).txt);
+            assertEq(str, ds.selectRow("select * from %s where id = %v and txt = %v", tableName, 2, str).txt);
+        }
         ds.commit();
 
         assertThrows("ODBC-BIND-ERROR", "bind.*object",
