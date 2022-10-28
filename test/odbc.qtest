@@ -664,11 +664,11 @@ class OdbcTest inherits QUnit::Test {
             # ignore exception
         }
 
-        auto ret = ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, txt varchar(128))");
+        auto ret = ds.exec("CREATE TABLE " + tableName + " (id int PRIMARY KEY, txt varchar(128), txt1 char(10))");
         assertTrue(ret == 0 || ret == -1 || ret.typeCode() == NOTHING);
         ds.commit();
 
-        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt) VALUES (1, 'abcdef123456')"));
+        assertEq(1, ds.exec("INSERT INTO " + tableName + " (id, txt, txt1) VALUES (1, 'abcdef123456', 'abc123')"));
         ds.commit();
 
         {
@@ -687,8 +687,8 @@ class OdbcTest inherits QUnit::Test {
 
         assertThrows("ODBC-EXEC-ERROR", "error in statement execution", sub() { ds.exec("bla bla bla"); });
 
-        hash results1 = {"id": (1, 2), "txt": ("abcdef123456", "test 789 abc lorem ipsum")};
-        list results2 = ({"id": 1, "txt": "abcdef123456"}, {"id": 2, "txt": "test 789 abc lorem ipsum"});
+        hash results1 = {"id": (1, 2), "txt": ("abcdef123456", "test 789 abc lorem ipsum"), "txt1": ("abc123", NULL)};
+        list results2 = ({"id": 1, "txt": "abcdef123456", "txt1": "abc123"}, {"id": 2, "txt": "test 789 abc lorem ipsum", "txt1": NULL});
 
         on_error ds.rollback();
         ret = ds.exec("SELECT * FROM " + tableName);
