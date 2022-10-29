@@ -381,14 +381,13 @@ QoreStringNode *odbc_module_init() {
     methods.registerOption(DBI_OPT_NUMBER_NUMERIC, "when set, numeric/decimal values are returned as "
         "arbitrary-precision number values; the argument is ignored; setting this option turns it on and turns off "
         "'string-numbers' and 'optimal-numbers'");
-    methods.registerOption("qore-timezone", "set the server-side timezone, value must be a string in the format "
+    methods.registerOption(OPT_QORE_TIMEZONE, "set the server-side timezone, value must be a string in the format "
         "accepted by Timezone::constructor() on the client (ie either a region name or a UTC offset like "
         "\"+01:00\"), if not set the server's time zone will be assumed to be the same as the client's",
         stringTypeInfo);
     methods.registerOption(OPT_CONN, "set the ODBC connection string", stringTypeInfo);
     methods.registerOption(OPT_BIGINT_NATIVE, "sets native bigint support");
     methods.registerOption(OPT_BIGINT_STRING, "sets string bigint support");
-    methods.registerOption(OPT_QORE_TIMEZONE, "sets the Qore timezone for the connection");
     methods.registerOption(OPT_FRAC_PRECISION, "sets fractional precision");
     methods.registerOption(OPT_LOGIN_TIMEOUT, "sets the login timeout in seconds");
     methods.registerOption(OPT_CONN_TIMEOUT, "sets the connection timeout in seconds");
