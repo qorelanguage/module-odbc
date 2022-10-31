@@ -25,7 +25,7 @@ Requires:       qore >= 1.0
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
-This package contains the msgpack module for the Qore Programming Language.
+This package contains the odbc module for the Qore Programming Language.
 
 %prep
 %setup -q
@@ -49,4 +49,3 @@ make DESTDIR=%{buildroot} install %{?_smp_mflags}
 %changelog
 * Wed Oct 26 2022 David Nichols <david@qore.org>
 - initial 1.1.1 release
-
