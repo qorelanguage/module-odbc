@@ -34,7 +34,7 @@
 
 /** @defgroup odbc_bind_constants Type Constants for odbc_bind()
  */
-//@{
+///@{
 namespace Qore::odbc;
 //! Defines a bind for the ODBC's \c SQL_C_SLONG type.
 const ODBCT_SLONG = SQL_C_SLONG;
@@ -104,11 +104,11 @@ const ODBCT_INT_HOURSECOND = SQL_C_INTERVAL_HOUR_TO_SECOND;
 
 //! Defines a bind for the ODBC's \c SQL_C_INTERVAL_MINUTE_TO_SECOND type.
 const ODBCT_INT_MINUTESECOND = SQL_C_INTERVAL_MINUTE_TO_SECOND;
-//@}
+///@}
 
 /** @defgroup odbc_functions ODBC Functions
  */
-//@{
+///@{
 namespace Qore::odbc;
 //! Creates a hash data structure understood by the ODBC DBI driver when binding values in SQL queries that allows programmers to directly specify the ODBC data type for the bind.
 /** Use the @ref odbc_bind_constants to specify the ODBC data type for the bind. If the value to bind is \c NOTHING or \c NULL, a \c NULL will be bound as the value, regardless of the ODBC type code provided as the first argument.
@@ -138,4 +138,4 @@ hash odbc_bind(softint type, auto value) [flags=RET_VALUE_ONLY] {
     h->setKeyValue("^value^", value.refSelf(), xsink);
     return h;
 }
-//@}
+///@}
