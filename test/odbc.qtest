@@ -379,6 +379,8 @@ class OdbcTest inherits QUnit::Test {
         bool mssqlDB = False;
         bool sybaseDB = False;
         bool firebirdDB = False;
+
+        bool no_odbc;
     }
 
     constructor() : QUnit::Test("OdbcTest", "1.0", \ARGV) {
@@ -393,12 +395,20 @@ class OdbcTest inherits QUnit::Test {
 
     globalSetUp() {
 %ifdef NoOdbc
-        printf("ODBC module is not available. Exiting.\n");
-        exit(0);
+        no_odbc = True;
+        if (no_odbc) {
+            return;
+        }
 %endif
 
+        connStr = ENV.QORE_DB_CONNSTR_ODBC;
+        if (!connStr) {
+            no_odbc = True;
+            return;
+        }
+
         try {
-            initDatasource();
+            initDatasource(connStr);
         } catch (hash<ExceptionInfo> ex) {
             printf("Exception happened in datasource initialization:\n%s: %s\n", ex.err, ex.desc);
             exit(1);
@@ -428,13 +438,7 @@ class OdbcTest inherits QUnit::Test {
         return sprintf("%d.%d.%d", major, minor, version);
     }
 
-    initDatasource() {
-        connStr = ENV.QORE_DB_CONNSTR_ODBC;
-        if (!connStr) {
-            printf("No connection string set; cannot run tests\n");
-            exit(1);
-        }
-
+    initDatasource(string connStr) {
         ds = new Datasource(connStr);
         if (ds.getDriverName() != "odbc") {
             printf("Cannot execute the odbc tests on a connection using driver %y (expecting \"odbc\")\n",
@@ -653,6 +657,10 @@ class OdbcTest inherits QUnit::Test {
     }
 
     basicTest() {
+        if (no_odbc) {
+            testSkip("no ODBC driver present");
+        }
+
         {
             Datasource test = new Datasource("odbc", "abc", "xyz");
             assertThrows("ODBC-CONNECTION-ERROR", sub() { test.open(); });
@@ -718,6 +726,10 @@ class OdbcTest inherits QUnit::Test {
     }
 
     typesTest() {
+        if (no_odbc) {
+            testSkip("no ODBC driver present");
+        }
+
         if (m_options.verbose > 2) {
             printf("\n**************************\n");
             printf("The following columns and their types are tested in the 'types test':\n");
@@ -785,7 +797,11 @@ class OdbcTest inherits QUnit::Test {
     }
 
     timezoneTest() {
-        Datasource tzDs = new Datasource(connStr);
+        if (no_odbc) {
+            testSkip("no ODBC driver present");
+        }
+
+        Datasource tzDs(connStr);
         tzDs.setOption("qore-timezone", "Asia/Tokyo");
         tzDs.open();
 
@@ -816,6 +832,10 @@ class OdbcTest inherits QUnit::Test {
     }
 
     arrayBindTest() {
+        if (no_odbc) {
+            testSkip("no ODBC driver present");
+        }
+
         # bulk SQL is not working for firebird
         if (firebirdDB) {
             return;
