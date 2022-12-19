@@ -5,7 +5,7 @@
 %global user_module_dir %{mydatarootdir}/qore-modules/
 
 Name:           qore-odbc-module
-Version:        1.1.1
+Version:        1.1.2
 Release:        1
 Summary:        Qorus Integration Engine - Qore odbc module
 License:        MIT
@@ -67,5 +67,8 @@ odbc module.
 %doc docs/odbc test
 
 %changelog
+* Mon Dec 19 2022 David Nichols <david@qore.org>
+- initial 1.1.2 release
+
 * Wed Oct 26 2022 David Nichols <david@qore.org>
 - initial 1.1.1 release
