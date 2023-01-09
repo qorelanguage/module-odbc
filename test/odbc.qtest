@@ -164,16 +164,16 @@ class OdbcTest inherits QUnit::Test {
         hash PgsqlColumns = {
             "pgvc": {
                 "type": "VARCHAR(128)",
-                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", ""),
             },
             "pgc": {
                 "type": "CHAR(64)",
-                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", "ipsum dolor"),
+                "values": ("text", "lorem", "Příliš žluťoučký kůň úpěl ďábelské ódy", ""),
                 "expected": (
                     "text",
                     "lorem",
                     "Příliš žluťoučký kůň úpěl ďábelské ódy",
-                    "ipsum dolor"
+                    "",
                 ),
             },
             "pgbin": {
