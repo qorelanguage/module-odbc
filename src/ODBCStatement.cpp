@@ -3457,7 +3457,7 @@ QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, Exce
                             return QoreValue();
                         }
                     }
-                } else if (indicator <= 0) {
+                } else if (indicator < 0) {
                     xsink->raiseException("ODBC-DATA-ERROR", "cannot retrieve character data in row #%d column #%d; "
                         "the ODBC driver indicated invalid length %d for the column", readRows, column,
                         (int)indicator);
@@ -3471,6 +3471,9 @@ QoreValue ODBCStatement::getColumnValue(int column, ODBCResultColumn& rcol, Exce
                             "could not allocate buffer of " QLLD " bytes for character data in row #%d column #%d",
                             buflen, readRows, column);
                         return QoreValue();
+                    }
+                    if (!indicator) {
+                        return new QoreStringNode(getQoreEncoding());
                     }
                     ret = SQLGetData(stmt, column, SQL_C_CHAR, reinterpret_cast<SQLPOINTER>(buf.get()), buflen,
                         &indicator);
