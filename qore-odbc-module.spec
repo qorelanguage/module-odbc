@@ -5,7 +5,7 @@
 %global user_module_dir %{mydatarootdir}/qore-modules/
 
 Name:           qore-odbc-module
-Version:        1.1.3
+Version:        1.2.0
 Release:        1
 Summary:        Qorus Integration Engine - Qore odbc module
 License:        MIT
@@ -17,9 +17,9 @@ BuildRequires:  gcc-c++
 BuildRequires:  devtoolset-7-gcc-c++
 %endif
 BuildRequires:  cmake >= 3.5
-BuildRequires:  qore-devel >= 1.12.4
-BuildRequires:  qore-stdlib >= 1.12.4
-BuildRequires:  qore >= 1.12.4
+BuildRequires:  qore-devel >= 1.14
+BuildRequires:  qore-stdlib >= 1.14
+BuildRequires:  qore >= 1.14
 BuildRequires:  doxygen
 BuildRequires:  unixODBC-devel
 Requires:       unixODBC
@@ -67,11 +67,14 @@ odbc module.
 %doc docs/odbc test
 
 %changelog
+* Sat Jan 28 2023 David Nichols <david@qore.org>
+- 1.2.0 release
+
 * Mon Jan 9 2023 David Nichols <david@qore.org>
-- initial 1.1.3 release
+- 1.1.3 release
 
 * Mon Dec 19 2022 David Nichols <david@qore.org>
-- initial 1.1.2 release
+- 1.1.2 release
 
 * Wed Oct 26 2022 David Nichols <david@qore.org>
 - initial 1.1.1 release

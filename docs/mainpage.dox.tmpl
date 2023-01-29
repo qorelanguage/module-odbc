@@ -31,7 +31,7 @@
     Example of creating an ODBC Datasource using DSN-less connection:
     @code
 # Firebird
-Datasource db("odbc:user/pass@{conn=driver=firebird;dbname=localhost:/var/lib/firebird/data/employee.fdb");
+Datasource db("odbc:user/pass@{conn=driver=firebird;dbname=localhost:/var/lib/firebird/data/employee.fdb}");
 
 # MySQL
 Datasource db = new Datasource(SQL::DSODBC, user, pass, NOTHING, "UTF8", NOTHING,
@@ -279,7 +279,7 @@ $$ language plodbc;
 
     Example Qore code to call this function:
     @code
-any result = db.exec("select int_test(%v)", 11);
+auto result = db.exec("select int_test(%v)", 11);
 printf("%N\n", result);
     @endcode
 
@@ -290,6 +290,10 @@ hash: (1 member)
     @endverbatim
 
     @section odbcreleasenotes Release Notes
+
+    @subsection odbcv1_2_0 odbc Driver Version 1.2.0
+    - added support for returning the ODBC driver name in \c Datasource::getDriverRealName()
+      (<a href="https://github.com/qorelanguage/qore/issues/4690">issue 4690</a>)
 
     @subsection odbcv1_1_3 odbc Driver Version 1.1.3
     - fixed handling retrieving 0-length \c VARCHAR values
