@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 2.8.12)
 project(qore-odbc-module)
 
 set (VERSION_MAJOR 1)
-set (VERSION_MINOR 1)
-set (VERSION_PATCH 3)
+set (VERSION_MINOR 2)
+set (VERSION_PATCH 0)
 
 set(PROJECT_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
@@ -22,7 +22,7 @@ endif ()
 
 add_definitions(-DUNICODE)
 
-FIND_PACKAGE (Qore 0.9 REQUIRED)
+FIND_PACKAGE (Qore 1.14 REQUIRED)
 FIND_PACKAGE (ODBC REQUIRED)
 
 # Check for C++11.

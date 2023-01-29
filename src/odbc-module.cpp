@@ -183,6 +183,12 @@ static QoreValue odbc_get_server_version(Datasource* ds, ExceptionSink* xsink) {
     return conn->getServerVersion();
 }
 
+static QoreStringNode* odbc_get_driver_real_name(Datasource* ds, ExceptionSink* xsink) {
+    odbc::ODBCConnection* conn = ds->getPrivateData<odbc::ODBCConnection>();
+    assert(conn);
+    return conn->getDriverRealName();
+}
+
 static int odbc_stmt_prepare(SQLStatement* stmt, const QoreString& str, const QoreListNode* args, ExceptionSink* xsink) {
     assert(!stmt->getPrivateData());
 
@@ -350,6 +356,7 @@ QoreStringNode *odbc_module_init() {
     methods.add(QDBI_METHOD_BEGIN_TRANSACTION, odbc_begin_transaction);
     methods.add(QDBI_METHOD_GET_CLIENT_VERSION, odbc_get_client_version);
     methods.add(QDBI_METHOD_GET_SERVER_VERSION, odbc_get_server_version);
+    methods.add(QDBI_METHOD_GET_DRIVER_REAL_NAME, odbc_get_driver_real_name);
 
     methods.add(QDBI_METHOD_STMT_PREPARE, odbc_stmt_prepare);
     methods.add(QDBI_METHOD_STMT_PREPARE_RAW, odbc_stmt_prepare_raw);

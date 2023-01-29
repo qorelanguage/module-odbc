@@ -33,6 +33,8 @@
 #include <sql.h>
 #include <sqlext.h>
 
+#include <string>
+
 #include "qore/Qore.h"
 
 #include "ODBCOptions.h"
@@ -159,18 +161,27 @@ public:
         return options.preserve_case;
     }
 
-    //! Return ODBC driver (client) version.
+    //! Return ODBC driver (client) version
     /** @return version in the form: major*1000000 + minor*10000 + sub
      */
     DLLLOCAL int getClientVersion() const {
         return clientVer;
     }
 
-    //! Return DBMS (server) version.
+    //! Return DBMS (server) version
     /** @return version in the form: major*1000000 + minor*10000 + sub
      */
-    DLLLOCAL int getServerVersion() const {
-        return serverVer;
+    DLLLOCAL QoreHashNode* getServerVersion() const {
+        ReferenceHolder<QoreHashNode> h(new QoreHashNode(autoTypeInfo), nullptr);
+        h->setKeyValue("name", new QoreStringNode(serverProductName), nullptr);
+        h->setKeyValue("version", new QoreStringNode(serverVersionString), nullptr);
+        h->setKeyValue("version_code", serverVer, nullptr);
+        h->setKeyValue("dbname", new QoreStringNode(dbName), nullptr);
+        return h.release();
+    }
+
+    DLLLOCAL QoreStringNode* getDriverRealName() const {
+        return new QoreStringNode(serverProductName);
     }
 
     //! Return datasource of the connection.
@@ -213,6 +224,15 @@ private:
 
     //! Version of the used ODBC DB driver.
     int clientVer = 0;
+
+    // Server DB product name
+    std::string serverProductName;
+
+    // Server DB product version string
+    std::string serverVersionString;
+
+    // DB name
+    std::string dbName;
 
     //! Version of the connected DBMS.
     int serverVer = 0;

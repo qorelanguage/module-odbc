@@ -673,19 +673,39 @@ int ODBCConnection::prepareConnectionString(ExceptionSink* xsink) {
 
 void ODBCConnection::getVersions() {
     SQLRETURN ret;
-
-    // Get DBMS (server) version.
-    char verStr[128]; // Will contain ver in the form "01.02.0034"
     SQLSMALLINT unused;
-    ret = SQLGetInfoA(dbc, SQL_DBMS_VER, verStr, 128, &unused);
-    if (SQL_SUCCEEDED(ret)) {
-        serverVer = parseOdbcVersion(verStr);
+
+    char str[256];
+
+    // Get DBMS (server) product name
+    {
+        ret = SQLGetInfoA(dbc, SQL_DBMS_NAME, str, 256, &unused);
+        if (SQL_SUCCEEDED(ret)) {
+            serverProductName = str;
+        }
+    }
+
+    // Get DBMS (server) version
+    {
+        ret = SQLGetInfoA(dbc, SQL_DBMS_VER, str, 256, &unused);
+        if (SQL_SUCCEEDED(ret)) {
+            serverVersionString = str;
+            serverVer = parseOdbcVersion(str);
+        }
+    }
+
+    // Get DB name
+    {
+        ret = SQLGetInfoA(dbc, SQL_DATABASE_NAME, str, 256, &unused);
+        if (SQL_SUCCEEDED(ret)) {
+            dbName = str;
+        }
     }
 
     // Get ODBC DB driver version.
-    ret = SQLGetInfoA(dbc, SQL_DRIVER_VER, verStr, 128, &unused);
+    ret = SQLGetInfoA(dbc, SQL_DRIVER_VER, str, 256, &unused);
     if (SQL_SUCCEEDED(ret)) {
-        clientVer = parseOdbcVersion(verStr);
+        clientVer = parseOdbcVersion(str);
     }
 }
 
