@@ -1,3 +1,4 @@
+%global module_api %(qore --latest-module-api 2>/dev/null)
 %{?_datarootdir: %global mydatarootdir %_datarootdir}
 %{!?_datarootdir: %global mydatarootdir %{buildroot}/usr/share}
 
@@ -52,7 +53,7 @@ make DESTDIR=%{buildroot} install %{?_smp_mflags}
 %{module_dir}
 
 %check
-qore -l ./odbc-api-1.3.qmod test/odbc.qtest
+qore -l ./odbc-api-%{module_api}.qmod test/odbc.qtest
 
 %package doc
 Summary: Documentation and examples for the Qore odbc module
