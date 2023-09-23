@@ -1149,7 +1149,7 @@ TIMESTAMP_STRUCT ODBCStatement::getTimestampFromDate(const DateTimeNode* arg) {
     if (options.frPrec >= 6) { // 6-9
         t.fraction = info.us * 1000;
     } else { // 1-5
-        int n = pow(10, 6-options.frPrec);
+        int n = std::pow(10, 6-options.frPrec);
         t.fraction = info.us / n;
         t.fraction *= n * 1000;
     }
@@ -1238,7 +1238,7 @@ SQL_INTERVAL_STRUCT ODBCStatement::getSecondInterval(const DateTimeNode* arg) {
         i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
     }
     else { // 1-5
-        int n = pow(10, 6-options.frPrec);
+        int n = std::pow(10, 6-options.frPrec);
         i.intval.day_second.fraction = abs(arg->getMicrosecond()) / n;
         i.intval.day_second.fraction *= n * 1000;
     }
@@ -1280,7 +1280,7 @@ SQL_INTERVAL_STRUCT ODBCStatement::getDaySecondInterval(const DateTimeNode* arg)
         i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
     }
     else { // 1-5
-        int n = pow(10, 6-options.frPrec);
+        int n = std::pow(10, 6-options.frPrec);
         i.intval.day_second.fraction = abs(arg->getMicrosecond()) / n;
         i.intval.day_second.fraction *= n * 1000;
     }
@@ -1310,7 +1310,7 @@ SQL_INTERVAL_STRUCT ODBCStatement::getHourSecondInterval(const DateTimeNode* arg
         i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
     }
     else { // 1-5
-        int n = pow(10, 6-options.frPrec);
+        int n = std::pow(10, 6-options.frPrec);
         i.intval.day_second.fraction = abs(arg->getMicrosecond()) / n;
         i.intval.day_second.fraction *= n * 1000;
     }
@@ -1329,7 +1329,7 @@ SQL_INTERVAL_STRUCT ODBCStatement::getMinuteSecondInterval(const DateTimeNode* a
         i.intval.day_second.fraction = abs(arg->getMicrosecond()) * 1000;
     }
     else { // 1-5
-        int n = pow(10, 6-options.frPrec);
+        int n = std::pow(10, 6-options.frPrec);
         i.intval.day_second.fraction = abs(arg->getMicrosecond()) / n;
         i.intval.day_second.fraction *= n * 1000;
     }
