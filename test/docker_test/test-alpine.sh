@@ -10,7 +10,7 @@ ENV_FILE=/tmp/env.sh
 apk add postgresql-client
 
 . test/docker_test/postgres_lib.sh
-setup_postgres_on_rippy
+setup_postgres_on_host
 
 export QORE_DB_CONNSTR_ODBC="odbc:${OMQ_DB_USER}/omq@(UTF8){conn=DRIVER=PostgreSQL Unicode;Server=${OMQ_DB_HOST};Database=${OMQ_DB_NAME}}"
 
@@ -59,7 +59,7 @@ cd ${MODULE_SRC_DIR}
 #    RESULTS="$RESULTS $?"
 #done
 
-cleanup_postgres_on_rippy
+cleanup_postgres_on_host
 
 # check the results
 #for R in $RESULTS; do
