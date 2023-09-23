@@ -10,7 +10,7 @@ ENV_FILE=/tmp/env.sh
 apt update && apt install odbc-postgresql -y
 
 . test/docker_test/postgres_lib.sh
-setup_postgres_on_rippy
+setup_postgres_on_host
 
 export QORE_DB_CONNSTR_ODBC="odbc:${OMQ_DB_USER}/omq@(UTF8){conn=DRIVER=PostgreSQL Unicode;Server=${OMQ_DB_HOST};Database=${OMQ_DB_NAME}}"
 
@@ -55,7 +55,7 @@ for test in test/*.qtest; do
     RESULTS="$RESULTS $?"
 done
 
-cleanup_postgres_on_rippy
+cleanup_postgres_on_host
 
 # check the results
 for R in $RESULTS; do
